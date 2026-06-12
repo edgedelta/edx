@@ -11,6 +11,28 @@ products:
 
 Plus `api` as a raw escape hatch for any endpoint, and `auth` for credentials.
 
+## See it in action
+
+Search logs with CQL:
+
+![edx logs search](assets/edx-logs.gif)
+
+List pipelines across the fleet:
+
+![edx pipelines list](assets/edx-pipelines.gif)
+
+Discover and query metrics:
+
+![edx metrics](assets/edx-metrics.gif)
+
+Surface negative log patterns (clustered error signatures):
+
+![edx patterns](assets/edx-patterns.gif)
+
+The clips are generated with [vhs](https://github.com/charmbracelet/vhs) from
+the tape scripts in [`demo/`](demo/) — re-record with `vhs demo/<name>.tape`
+(requires an authenticated `edx`; no credentials appear on screen).
+
 ## Install
 
 ```bash
