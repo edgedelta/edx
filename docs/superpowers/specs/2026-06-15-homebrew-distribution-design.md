@@ -172,6 +172,17 @@ edx Actions: release.yml → goreleaser release --clean
         brew install edgedelta/pack/edx   (macOS + Linux, amd64 + arm64)
 ```
 
+## Implementation note: Formula vs Cask
+
+GoReleaser has **deprecated** Formula generation (`brews`) in favor of
+`homebrew_casks`. However, **Homebrew Casks are macOS-only** — Linux has no
+cask support. Because `edx` must install on both Linux and macOS, a **Formula**
+is the correct and only cross-platform choice, so we keep `brews` despite the
+deprecation warning. `goreleaser check` exits non-zero on the deprecation, but
+`goreleaser release` runs fine and emits a working formula. Revisit if/when
+Homebrew adds cask support on Linux. This rationale is also documented inline
+in `.goreleaser.yaml`.
+
 ## Out of scope
 
 - Submitting `edx` to `homebrew-core` (the official Homebrew repo).
