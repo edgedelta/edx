@@ -1,0 +1,82 @@
+# GoReleaser config for edx — builds cross-platform binaries, publishes a
+# GitHub Release, and auto-updates the Homebrew formula in edgedelta/homebrew-pack.
+# Validate locally with: go run github.com/goreleaser/goreleaser/v2@latest check
+version: 2
+
+project_name: edx
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: edx
+    main: .
+    binary: edx
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/edgedelta/edx/internal/cli.Version={{ .Version }}
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - id: edx
+    # Produces the Datadog/Homebrew naming convention:
+    #   edx_<version>_Darwin_arm64.tar.gz, edx_<version>_Linux_x86_64.tar.gz, ...
+    name_template: >-
+      {{ .ProjectName }}_{{ .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else }}{{ .Arch }}{{ end }}
+    files:
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  use: github
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+
+# NOTE: `brews` (Formula) is deprecated in GoReleaser in favor of
+# `homebrew_casks`, BUT Homebrew Casks are macOS-only — Linux has no cask
+# support. Since edx must install on both Linux and macOS, a Formula is the
+# correct (and only) cross-platform choice. `goreleaser check` flags the
+# deprecation, but `goreleaser release` runs fine and emits a working formula.
+# Revisit if/when Homebrew supports casks on Linux.
+brews:
+  - name: edx
+    repository:
+      owner: edgedelta
+      name: homebrew-pack
+      branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
+    directory: Formula
+    homepage: "https://github.com/edgedelta/edx"
+    description: "Edge Delta command-line interface"
+    license: "Apache-2.0"
+    commit_author:
+      name: edgedelta-release-bot
+      email: release-bot@edgedelta.com
+    install: |
+      bin.install "edx"
+    test: |
+      assert_match version.to_s, shell_output("#{bin}/edx version")
+
+release:
+  github:
+    owner: edgedelta
+    name: edx

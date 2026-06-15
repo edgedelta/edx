@@ -35,6 +35,17 @@ the tape scripts in [`demo/`](demo/) — re-record with `vhs demo/<name>.tape`
 
 ## Install
 
+Homebrew (macOS and Linux, Intel and Apple Silicon):
+
+```bash
+brew install edgedelta/pack/edx
+# or
+brew tap edgedelta/pack
+brew install edx
+```
+
+Go toolchain:
+
 ```bash
 go install github.com/edgedelta/edx@latest
 # or from a checkout:
