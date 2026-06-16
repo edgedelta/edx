@@ -1,5 +1,5 @@
 # GoReleaser config for edx — builds cross-platform binaries, publishes a
-# GitHub Release, and auto-updates the Homebrew formula in edgedelta/homebrew-pack.
+# GitHub Release, and auto-updates the Homebrew formula in edgedelta/homebrew-tap.
 # Validate locally with: go run github.com/goreleaser/goreleaser/v2@latest check
 version: 2
 
@@ -61,7 +61,7 @@ brews:
   - name: edx
     repository:
       owner: edgedelta
-      name: homebrew-pack
+      name: homebrew-tap
       branch: main
       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     directory: Formula

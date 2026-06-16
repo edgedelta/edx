@@ -33,7 +33,7 @@ jobs:
         env:
           # Creates the release on edgedelta/edx.
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Cross-repo push of the updated formula to edgedelta/homebrew-pack.
+          # Cross-repo push of the updated formula to edgedelta/homebrew-tap.
           # Must be a token with contents:write on the tap repo — the default
           # GITHUB_TOKEN cannot write to another repository.
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}

@@ -11,7 +11,7 @@ modeled on [`datadog-labs/homebrew-pack`](https://github.com/datadog-labs/homebr
 Users should be able to run:
 
 ```bash
-brew install edgedelta/pack/edx
+brew install edgedelta/tap/edx
 ```
 
 on any supported OS/arch and get a working `edx` binary.
@@ -42,7 +42,7 @@ pipeline as well as the tap.
 | Formula updates | **Automatic** via GoReleaser's `brews:` block |
 | Tap license | Apache-2.0 |
 | Execution | Create + push the tap repo; commit pipeline changes to a **branch** in `edx` (no direct push to `main`) |
-| Tap location | Sibling dir: `/Users/yildiz/workspace/gocode/src/github.com/edgedelta/homebrew-pack` |
+| Tap location | Sibling dir: `/Users/yildiz/workspace/gocode/src/github.com/edgedelta/homebrew-tap` |
 | Tap brew-audit CI | Included |
 
 ## Part A — Release pipeline in the `edx` repo
@@ -67,7 +67,7 @@ Delivered on a feature branch (e.g. `homebrew-release-pipeline`), not pushed to 
 - **`checksum`**: `checksums.txt` (sha256).
 - **`changelog`**: enabled, grouping conventional-commit prefixes.
 - **`brews:`** block — the auto-update mechanism:
-  - `repository: { owner: edgedelta, name: homebrew-pack, branch: main }`
+  - `repository: { owner: edgedelta, name: homebrew-tap, branch: main }`
   - `directory: Formula`
   - `homepage: https://github.com/edgedelta/edx`
   - `description: "Edge Delta command line interface"`
@@ -99,13 +99,13 @@ Add an Apache-2.0 `LICENSE` to `edx` so the source license matches the
 Add a "Install via Homebrew" subsection to the existing Install section:
 
 ```bash
-brew install edgedelta/pack/edx
+brew install edgedelta/tap/edx
 # or
-brew tap edgedelta/pack
+brew tap edgedelta/tap
 brew install edx
 ```
 
-## Part B — `edgedelta/homebrew-pack` tap repo
+## Part B — `edgedelta/homebrew-tap` tap repo
 
 Created locally at the sibling path, then `gh repo create` + pushed.
 
@@ -136,7 +136,7 @@ This makes the repo structure reviewable immediately; the first real release
 
 Minimal formula-quality CI on PRs and pushes:
 - Runs on `ubuntu-latest` with Homebrew available.
-- `brew style Formula/edx.rb` and `brew audit --tap edgedelta/pack edx`
+- `brew style Formula/edx.rb` and `brew audit --tap edgedelta/tap edx`
   (audit may be `|| true` until the first real release exists, since audit
   checks live URLs).
 
@@ -145,7 +145,7 @@ Minimal formula-quality CI on PRs and pushes:
 Documented in the tap README and/or a setup note; not automatable here:
 
 1. **Create a cross-repo token**: a fine-grained PAT (or classic PAT) with
-   `contents: write` on `edgedelta/homebrew-pack`. Add it to the **`edx`** repo
+   `contents: write` on `edgedelta/homebrew-tap`. Add it to the **`edx`** repo
    as the Actions secret `HOMEBREW_TAP_GITHUB_TOKEN`. The default `GITHUB_TOKEN`
    cannot push to another repository, so this is required for auto-publishing.
 2. **Cut a release**:
@@ -166,10 +166,10 @@ edx Actions: release.yml → goreleaser release --clean
         │
         ├─ builds 4 tarballs + checksums.txt
         ├─ creates GitHub Release on edgedelta/edx
-        └─ regenerates Formula/edx.rb on edgedelta/homebrew-pack
+        └─ regenerates Formula/edx.rb on edgedelta/homebrew-tap
                 │
                 ▼
-        brew install edgedelta/pack/edx   (macOS + Linux, amd64 + arm64)
+        brew install edgedelta/tap/edx   (macOS + Linux, amd64 + arm64)
 ```
 
 ## Implementation note: Formula vs Cask
