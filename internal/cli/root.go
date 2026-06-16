@@ -72,7 +72,7 @@ EXAMPLES
   edx metrics query --name http.request.duration --agg avg --group-by service.name
   edx pipelines list --output table
   edx capture start <pipeline-id> --duration 2m --nodes my_node
-  edx ai issues list --env staging --output table
+  edx ai issues list --output table
   edx api GET /v1/orgs/{org}/dashboards`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
