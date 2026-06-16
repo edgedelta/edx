@@ -152,18 +152,17 @@ edx capture status <task-id>
 edx capture results <conf-id>
 
 # --- AI Teammate (issues/threads/channels on chat.*, teammates on agent.*) ---
-# The issues API is rolling out to prod; use --env staging until it lands.
-edx ai issues list --env staging                    # open issues
-edx ai issues list --env staging --include-closed --with-threads
-edx ai issues critical --env staging --limit 10     # ranked by criticality
-edx ai issues health --env staging                  # current health score
-edx ai issues timeline --env staging --lookback 24h
-edx ai issues get <issue-id> --env staging --with-threads
-edx ai issues close <issue-id> --env staging
-edx ai channels list --env staging
-edx ai threads list --channel <channel-id> --env staging
-edx ai threads messages --channel <channel-id> <thread-id> --env staging
-edx ai agents list --env staging                    # AI teammates (agents)
+edx ai issues list                                  # open issues
+edx ai issues list --include-closed --with-threads
+edx ai issues critical --limit 10                   # ranked by criticality
+edx ai issues health                                # current health score
+edx ai issues timeline --lookback 24h
+edx ai issues get <issue-id> --with-threads
+edx ai issues close <issue-id>
+edx ai channels list
+edx ai threads list --channel <channel-id>
+edx ai threads messages --channel <channel-id> <thread-id>
+edx ai agents list                                  # AI teammates (agents)
 edx ai connectors list
 edx ai connectors specs
 edx ai connectors update --file connector.json
@@ -173,7 +172,7 @@ edx ai activity
 edx api GET /v1/orgs/{org}/users
 edx api GET /tokens                                 # org-relative shorthand
 edx api POST /pipelines/<conf-id>/save --data @save.json
-edx api GET /issues --service chat --env staging    # hit an AI service host
+edx api GET /issues --service chat                  # hit an AI service host
 ```
 
 ## CQL in 30 seconds

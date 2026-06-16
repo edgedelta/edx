@@ -35,7 +35,7 @@ file or stdin.`,
 		Example: `  edx api GET /v1/orgs/{org}/dashboards
   edx api GET /tokens                              # org-relative shorthand
   edx api POST /pipelines/{conf-id}/save --data @save.json
-  edx api GET /issues --service chat --env staging
+  edx api GET /issues --service chat
   edx api GET /users --param limit=10`,
 		Args: cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {

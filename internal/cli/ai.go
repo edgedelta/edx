@@ -22,8 +22,7 @@ Most AI Teammate data lives on dedicated service hosts, not the main API:
   connectors, activity        main API       (api.edgedelta.com)
 
 The active environment (prod, staging or local) selects which hosts are used,
-so "edx ai issues list --env staging" hits the staging chat service. The issues
-API is rolling out to production; use "--env staging" until it lands in prod.`,
+so "edx --env staging ai issues list" hits the staging chat service.`,
 	}
 	cmd.AddCommand(
 		newAIIssuesCmd(),
@@ -70,8 +69,7 @@ func newAIIssuesCmd() *cobra.Command {
 		Use:   "issues",
 		Short: "List and manage issues raised by AI Teammates",
 		Long: `Issues are problems AI Teammates have surfaced for your organization.
-Served by the chat service; the API is rolling out to production, so use
-"--env staging" until it is live in prod.`,
+Served by the chat service (chat.ai.edgedelta.com).`,
 	}
 	cmd.AddCommand(
 		newAIIssuesListCmd(),
