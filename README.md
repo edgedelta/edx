@@ -7,7 +7,7 @@ products:
 |---------|----------|
 | **Pipeline** | `pipelines`, `fleet`, `capture`, `health`, `ingest` |
 | **Observability** | `logs`, `patterns`, `metrics`, `traces`, `events`, `monitors`, `dashboards`, `facets`, `service-map` |
-| **AI Teammate** | `ai connectors`, `ai activity` |
+| **AI Teammate** | `ai issues`, `ai threads`, `ai channels`, `ai agents`, `ai connectors`, `ai activity` |
 
 Plus `api` as a raw escape hatch for any endpoint, and `auth` for credentials.
 
@@ -66,17 +66,39 @@ Or use environment variables (they override the config file):
 ```bash
 export ED_API_TOKEN=...
 export ED_ORG_ID=...
-export ED_API_URL=https://api.edgedelta.com   # optional
-```
-
-Multiple organizations are supported via profiles:
-
-```bash
-edx auth login --profile staging --api-url https://api.staging.edgedelta.com --token ... --org-id ...
-edx --profile staging pipelines list
+export ED_ENV=staging                          # prod (default), staging or local
 ```
 
 Config lives in `~/.config/edx/config.yaml` (mode 0600).
+
+### Environments and profiles
+
+A profile targets an **environment** — `prod` (default), `staging` or `local` —
+and the environment selects every service host together. This matters because
+the AI Teammate features live on their own hosts, not under `api.edgedelta.com`:
+
+| Environment | Main API | Chat (issues, threads, channels) | Agent (teammates) |
+|-------------|----------|----------------------------------|-------------------|
+| `prod`      | `api.edgedelta.com` | `chat.ai.edgedelta.com` | `agent.ai.edgedelta.com` |
+| `staging`   | `api.staging.edgedelta.com` | `chat.ai.staging.edgedelta.com` | `agent.ai.staging.edgedelta.com` |
+| `local`     | `localhost:4444` | `localhost:3001` | `localhost:3002` |
+
+Switch environments with a profile, the `--env` flag, or `ED_ENV` — never by
+hand-editing a single base URL:
+
+```bash
+edx auth login --profile staging --env staging --token ... --org-id ...
+edx --profile staging ai issues list
+edx --env staging ai issues list          # one-off, no profile needed
+```
+
+A profile is just `env` + `org_id` + `api_token` — there are no per-service URL
+knobs to set; switching the environment moves every host together.
+
+Escape hatch (advanced): to point a single service at a non-standard deployment
+(a branch deploy, an odd local port) without disturbing the rest, set
+`ED_API_URL`, `ED_CHAT_URL` or `ED_AGENT_URL`. When set, each overrides only
+that service's host for the chosen environment.
 
 ## Output
 
@@ -129,7 +151,19 @@ edx capture start <conf-id> --duration 2m --nodes mask_pii
 edx capture status <task-id>
 edx capture results <conf-id>
 
-# --- AI Teammate -------------------------------------------------------------
+# --- AI Teammate (issues/threads/channels on chat.*, teammates on agent.*) ---
+# The issues API is rolling out to prod; use --env staging until it lands.
+edx ai issues list --env staging                    # open issues
+edx ai issues list --env staging --include-closed --with-threads
+edx ai issues critical --env staging --limit 10     # ranked by criticality
+edx ai issues health --env staging                  # current health score
+edx ai issues timeline --env staging --lookback 24h
+edx ai issues get <issue-id> --env staging --with-threads
+edx ai issues close <issue-id> --env staging
+edx ai channels list --env staging
+edx ai threads list --channel <channel-id> --env staging
+edx ai threads messages --channel <channel-id> <thread-id> --env staging
+edx ai agents list --env staging                    # AI teammates (agents)
 edx ai connectors list
 edx ai connectors specs
 edx ai connectors update --file connector.json
@@ -139,6 +173,7 @@ edx ai activity
 edx api GET /v1/orgs/{org}/users
 edx api GET /tokens                                 # org-relative shorthand
 edx api POST /pipelines/<conf-id>/save --data @save.json
+edx api GET /issues --service chat --env staging    # hit an AI service host
 ```
 
 ## CQL in 30 seconds

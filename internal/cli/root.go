@@ -20,8 +20,8 @@ import (
 
 var (
 	flagProfile string
+	flagEnv     string
 	flagOrg     string
-	flagAPIURL  string
 	flagToken   string
 	flagOutput  string
 	flagColumns []string
@@ -48,12 +48,20 @@ func NewRootCmd() *cobra.Command {
 It covers the three Edge Delta products:
   Pipeline       fleet management, pipeline configs, deployments, live capture
   Observability  logs, patterns, metrics, traces, events, monitors, dashboards
-  AI Teammate    connectors and activity
+  AI Teammate    issues, threads, channels, teammates (agents), connectors
+
+ENVIRONMENTS
+  A profile targets an environment (prod, staging or local). The environment
+  selects every service host at once: the main API plus the AI Teammate
+  services, which live on their own hosts (chat.ai.edgedelta.com,
+  agent.ai.edgedelta.com) rather than under api.edgedelta.com. Switch with
+  "--profile <name>", "--env staging" or the ED_ENV variable.
 
 AUTHENTICATION
   Run "edx auth login --token <api-token> --org-id <org-id>" once, or set the
-  ED_API_TOKEN and ED_ORG_ID environment variables. Tokens are created in the
-  Edge Delta web app under Admin > API Tokens.
+  ED_API_TOKEN and ED_ORG_ID environment variables. Add "--env staging" to log
+  in against staging. Tokens are created in the Edge Delta web app under
+  Admin > API Tokens.
 
 OUTPUT
   Responses print as pretty JSON by default. Use --output table|csv|yaml|raw,
@@ -64,6 +72,7 @@ EXAMPLES
   edx metrics query --name http.request.duration --agg avg --group-by service.name
   edx pipelines list --output table
   edx capture start <pipeline-id> --duration 2m --nodes my_node
+  edx ai issues list --env staging --output table
   edx api GET /v1/orgs/{org}/dashboards`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -71,8 +80,8 @@ EXAMPLES
 
 	pf := root.PersistentFlags()
 	pf.StringVar(&flagProfile, "profile", "", "config profile to use (default from config file or EDX_PROFILE)")
+	pf.StringVar(&flagEnv, "env", "", "environment: prod, staging, or local (overrides profile and ED_ENV)")
 	pf.StringVar(&flagOrg, "org", "", "Edge Delta organization ID (overrides profile and ED_ORG_ID)")
-	pf.StringVar(&flagAPIURL, "api-url", "", "API base URL (default https://api.edgedelta.com)")
 	pf.StringVar(&flagToken, "token", "", "API token (overrides profile and ED_API_TOKEN)")
 	pf.StringVarP(&flagOutput, "output", "o", "json", "output format: json, yaml, table, csv, raw")
 	pf.StringSliceVar(&flagColumns, "columns", nil, "columns (dot-paths) for table/csv output")
@@ -104,7 +113,7 @@ EXAMPLES
 
 // newClient resolves configuration and returns an authenticated API client.
 func newClient() (*api.Client, error) {
-	r, err := config.Resolve(flagProfile, flagAPIURL, flagOrg, flagToken)
+	r, err := config.Resolve(flagProfile, flagEnv, flagOrg, flagToken)
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +123,7 @@ func newClient() (*api.Client, error) {
 	if r.OrgID == "" {
 		return nil, fmt.Errorf("no organization ID configured: run `edx auth login` with --org-id, set %s, or pass --org", config.EnvOrgID)
 	}
-	return api.New(r.APIURL, r.OrgID, r.APIToken, flagTimeout), nil
+	return api.New(r.APIURL, r.ChatURL, r.AgentURL, r.OrgID, r.APIToken, flagTimeout), nil
 }
 
 // printResult renders raw response bytes using the global output flags.

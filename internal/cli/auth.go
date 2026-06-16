@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -16,30 +17,43 @@ func newAuthCmd() *cobra.Command {
 		Short: "Manage Edge Delta credentials",
 		Long: `Manage Edge Delta API credentials stored in ~/.config/edx/config.yaml.
 
+Each profile targets an environment (prod, staging or local), which selects
+the main API host and the AI Teammate service hosts together.
+
 Credentials can also be supplied via environment variables, which take
 precedence over the config file:
   ED_API_TOKEN   API token (created under Admin > API Tokens)
   ED_ORG_ID      organization ID
-  ED_API_URL     API base URL (defaults to https://api.edgedelta.com)`,
+  ED_ENV         environment: prod, staging or local`,
 	}
 	cmd.AddCommand(newAuthLoginCmd(), newAuthStatusCmd(), newAuthLogoutCmd())
 	return cmd
 }
 
 func newAuthLoginCmd() *cobra.Command {
-	var token, orgID, apiURL string
+	var token, orgID, env string
 	var setDefault bool
 	cmd := &cobra.Command{
 		Use:   "login",
 		Short: "Save an API token and organization ID to a profile",
 		Example: `  edx auth login --token 00000000-0000-0000-0000-000000000000 --org-id <org-id>
-  edx auth login --profile staging --api-url https://api.staging.edgedelta.com --token ... --org-id ...`,
+  edx auth login --profile staging --env staging --token ... --org-id ...`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if token == "" {
 				return fmt.Errorf("--token is required")
 			}
 			if orgID == "" {
 				return fmt.Errorf("--org-id is required")
+			}
+			// --env on this command takes precedence over the persistent --env;
+			// fall back to the persistent flag so `--env staging login` works too.
+			if env == "" {
+				env = flagEnv
+			}
+			if env != "" {
+				if _, ok := config.EndpointsForEnv(env); !ok {
+					return fmt.Errorf("unknown environment %q (valid: %s)", env, strings.Join(config.KnownEnvs(), ", "))
+				}
 			}
 			cfg, err := config.Load()
 			if err != nil {
@@ -49,7 +63,7 @@ func newAuthLoginCmd() *cobra.Command {
 			if name == "" {
 				name = "default"
 			}
-			cfg.Profiles[name] = &config.Profile{APIURL: apiURL, OrgID: orgID, APIToken: token}
+			cfg.Profiles[name] = &config.Profile{Env: env, OrgID: orgID, APIToken: token}
 			if cfg.DefaultProfile == "" || setDefault {
 				cfg.DefaultProfile = name
 			}
@@ -57,13 +71,17 @@ func newAuthLoginCmd() *cobra.Command {
 				return err
 			}
 			path, _ := config.Path()
-			fmt.Fprintf(os.Stderr, "Saved profile %q to %s\n", name, path)
+			shownEnv := env
+			if shownEnv == "" {
+				shownEnv = config.DefaultEnv
+			}
+			fmt.Fprintf(os.Stderr, "Saved profile %q (env: %s) to %s\n", name, shownEnv, path)
 			return nil
 		},
 	}
 	cmd.Flags().StringVar(&token, "token", "", "Edge Delta API token (required)")
 	cmd.Flags().StringVar(&orgID, "org-id", "", "Edge Delta organization ID (required)")
-	cmd.Flags().StringVar(&apiURL, "api-url", "", "API base URL override for this profile")
+	cmd.Flags().StringVar(&env, "env", "", "environment for this profile: prod, staging or local (default prod)")
 	cmd.Flags().BoolVar(&setDefault, "set-default", false, "make this profile the default")
 	return cmd
 }
@@ -73,12 +91,13 @@ func newAuthStatusCmd() *cobra.Command {
 		Use:   "status",
 		Short: "Show the active profile and verify the token against the API",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			r, err := config.Resolve(flagProfile, flagAPIURL, flagOrg, flagToken)
+			r, err := config.Resolve(flagProfile, flagEnv, flagOrg, flagToken)
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(os.Stderr, "Profile: %s\nAPI URL: %s\nOrg ID:  %s\nToken:   %s\n",
-				r.Profile, r.APIURL, r.OrgID, maskToken(r.APIToken))
+			fmt.Fprintf(os.Stderr,
+				"Profile:   %s\nEnv:       %s\nAPI URL:   %s\nChat URL:  %s\nAgent URL: %s\nOrg ID:    %s\nToken:     %s\n",
+				r.Profile, r.Env, r.APIURL, r.ChatURL, r.AgentURL, r.OrgID, maskToken(r.APIToken))
 
 			c, err := newClient()
 			if err != nil {
