@@ -38,9 +38,9 @@ the tape scripts in [`demo/`](demo/) — re-record with `vhs demo/<name>.tape`
 Homebrew (macOS and Linux, Intel and Apple Silicon):
 
 ```bash
-brew install edgedelta/pack/edx
+brew install edgedelta/tap/edx
 # or
-brew tap edgedelta/pack
+brew tap edgedelta/tap
 brew install edx
 ```
 
