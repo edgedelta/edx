@@ -77,13 +77,39 @@ func Rows(data []byte) ([]map[string]any, error) {
 	}
 	rows := extractRows(v, 0)
 	if rows == nil {
-		// Single object: render as a one-row table.
+		// Unwrap the AI services' {status, data: X} envelope. X is either a
+		// thin collection wrapper ({"issues": [...]}, {"timeline": [...]}) whose
+		// sole array we tabulate, or a single resource object — possibly with an
+		// embedded sub-collection (e.g. a thread carrying its messages), which we
+		// must still render as one row rather than descending into the embed.
 		if m, ok := v.(map[string]any); ok {
+			if inner, ok := m["data"].(map[string]any); ok {
+				if arr := soleArrayValue(inner); arr != nil {
+					return extractRows(arr, 0), nil
+				}
+				return []map[string]any{inner}, nil
+			}
 			return []map[string]any{m}, nil
 		}
 		return nil, fmt.Errorf("could not find a list of rows in the response; use --output json")
 	}
 	return rows, nil
+}
+
+// soleArrayValue returns the array when m is a thin collection wrapper — a
+// single key whose value is an array (e.g. {"issues": [...]}). It returns nil
+// for resource objects, so an embedded sub-collection is never mistaken for the
+// payload.
+func soleArrayValue(m map[string]any) []any {
+	if len(m) != 1 {
+		return nil
+	}
+	for _, v := range m {
+		if arr, ok := v.([]any); ok {
+			return arr
+		}
+	}
+	return nil
 }
 
 func extractRows(v any, depth int) []map[string]any {

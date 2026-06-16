@@ -14,10 +14,32 @@ import (
 	"time"
 )
 
-// Client talks to the Edge Delta API (https://api.edgedelta.com).
-// Authentication uses the X-ED-API-Token header.
+// Service selects which Edge Delta host a request targets. The main API and
+// the AI Teammate services (chat, agent) live on different hosts, so a request
+// must name the service it belongs to.
+type Service int
+
+const (
+	// ServiceAPI is the main Edge Delta API (api.edgedelta.com).
+	ServiceAPI Service = iota
+	// ServiceChat is the AI Teammate chat service (chat.ai.edgedelta.com):
+	// issues, threads, channels, messages.
+	ServiceChat
+	// ServiceAgent is the AI Teammate agent service (agent.ai.edgedelta.com):
+	// teammates (agents) and their versions.
+	ServiceAgent
+)
+
+// Client talks to the Edge Delta services. Authentication uses the
+// X-ED-API-Token header, which every service accepts for org-scoped,
+// token-authenticated requests.
 type Client struct {
+	// BaseURL is the main API host; ChatURL and AgentURL are the AI Teammate
+	// service hosts. All share the /v1/orgs/{org_id} path prefix.
 	BaseURL  string
+	ChatURL  string
+	AgentURL string
+
 	OrgID    string
 	APIToken string
 
@@ -28,8 +50,9 @@ type Client struct {
 	MaxRetries int
 }
 
-// New builds a client with sane transport defaults.
-func New(baseURL, orgID, token string, timeout time.Duration) *Client {
+// New builds a client with sane transport defaults. apiURL, chatURL and
+// agentURL are the base URLs for the main API and the AI Teammate services.
+func New(apiURL, chatURL, agentURL, orgID, token string, timeout time.Duration) *Client {
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
@@ -44,12 +67,26 @@ func New(baseURL, orgID, token string, timeout time.Duration) *Client {
 		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
 	}
 	return &Client{
-		BaseURL:    strings.TrimRight(baseURL, "/"),
+		BaseURL:    strings.TrimRight(apiURL, "/"),
+		ChatURL:    strings.TrimRight(chatURL, "/"),
+		AgentURL:   strings.TrimRight(agentURL, "/"),
 		OrgID:      orgID,
 		APIToken:   token,
 		HTTP:       &http.Client{Transport: transport, Timeout: timeout},
 		UserAgent:  "edx",
 		MaxRetries: 3,
+	}
+}
+
+// baseFor returns the base URL for a service.
+func (c *Client) baseFor(svc Service) string {
+	switch svc {
+	case ServiceChat:
+		return c.ChatURL
+	case ServiceAgent:
+		return c.AgentURL
+	default:
+		return c.BaseURL
 	}
 }
 
@@ -77,11 +114,17 @@ func (c *Client) OrgPath(p string) string {
 	return "/v1/orgs/" + c.OrgID + p
 }
 
-// Do performs an HTTP request against the API and returns the response body.
-// path must be absolute (e.g. /v1/orgs/<id>/pipelines). Transient errors
+// Do performs an HTTP request against the main API and returns the response
+// body. path must be absolute (e.g. /v1/orgs/<id>/pipelines). Transient errors
 // (429, 502, 503, 504, connection failures) are retried with backoff.
 func (c *Client) Do(ctx context.Context, method, path string, query url.Values, body []byte) ([]byte, error) {
-	u := c.BaseURL + path
+	return c.DoOn(ctx, ServiceAPI, method, path, query, body)
+}
+
+// DoOn performs an HTTP request against the named service and returns the
+// response body. path must be absolute (e.g. /v1/orgs/<id>/issues).
+func (c *Client) DoOn(ctx context.Context, svc Service, method, path string, query url.Values, body []byte) ([]byte, error) {
+	u := c.baseFor(svc) + path
 	if len(query) > 0 {
 		u += "?" + query.Encode()
 	}
@@ -155,4 +198,24 @@ func (c *Client) Put(ctx context.Context, orgRelPath string, query url.Values, b
 // Delete performs a DELETE against an org-relative path.
 func (c *Client) Delete(ctx context.Context, orgRelPath string, query url.Values, body []byte) ([]byte, error) {
 	return c.Do(ctx, http.MethodDelete, c.OrgPath(orgRelPath), query, body)
+}
+
+// GetFrom performs a GET against an org-relative path on the named service.
+func (c *Client) GetFrom(ctx context.Context, svc Service, orgRelPath string, query url.Values) ([]byte, error) {
+	return c.DoOn(ctx, svc, http.MethodGet, c.OrgPath(orgRelPath), query, nil)
+}
+
+// PostFrom performs a POST against an org-relative path on the named service.
+func (c *Client) PostFrom(ctx context.Context, svc Service, orgRelPath string, query url.Values, body []byte) ([]byte, error) {
+	return c.DoOn(ctx, svc, http.MethodPost, c.OrgPath(orgRelPath), query, body)
+}
+
+// PutFrom performs a PUT against an org-relative path on the named service.
+func (c *Client) PutFrom(ctx context.Context, svc Service, orgRelPath string, query url.Values, body []byte) ([]byte, error) {
+	return c.DoOn(ctx, svc, http.MethodPut, c.OrgPath(orgRelPath), query, body)
+}
+
+// DeleteFrom performs a DELETE against an org-relative path on the named service.
+func (c *Client) DeleteFrom(ctx context.Context, svc Service, orgRelPath string, query url.Values, body []byte) ([]byte, error) {
+	return c.DoOn(ctx, svc, http.MethodDelete, c.OrgPath(orgRelPath), query, body)
 }

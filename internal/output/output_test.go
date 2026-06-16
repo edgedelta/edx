@@ -65,6 +65,51 @@ func TestPrintSingleObjectTable(t *testing.T) {
 	}
 }
 
+func TestPrintTableNestedCollectionEnvelope(t *testing.T) {
+	// Chat service shape: the collection sits under data.issues, not data.
+	data := []byte(`{"status":200,"data":{"issues":[{"issueId":"i1","severity":"high"},{"issueId":"i2","severity":"low"}]}}`)
+	var buf bytes.Buffer
+	if err := Print(&buf, data, Options{Format: "table", Columns: []string{"issueId", "severity"}}); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	for _, want := range []string{"i1", "high", "i2", "low"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("nested-collection table missing %q:\n%s", want, out)
+		}
+	}
+}
+
+func TestPrintTableSingleResourceEnvelope(t *testing.T) {
+	// Single-resource GET shape: the object sits under data.
+	data := []byte(`{"status":200,"data":{"issueId":"i1","severity":"high","state":"open"}}`)
+	var buf bytes.Buffer
+	if err := Print(&buf, data, Options{Format: "table", Columns: []string{"issueId", "state"}}); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "i1") || !strings.Contains(out, "open") {
+		t.Errorf("single-resource envelope should unwrap data:\n%s", out)
+	}
+}
+
+func TestPrintTableResourceWithEmbeddedCollection(t *testing.T) {
+	// A single resource (thread) that embeds a sub-collection (messages) must
+	// render as one row of the resource, NOT descend into the embed.
+	data := []byte(`{"status":200,"data":{"id":"t1","state":"open","messages":[{"id":"m1"},{"id":"m2"}]}}`)
+	var buf bytes.Buffer
+	if err := Print(&buf, data, Options{Format: "table", Columns: []string{"id", "state"}}); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	if !strings.Contains(out, "t1") || !strings.Contains(out, "open") {
+		t.Errorf("should render the thread resource, got:\n%s", out)
+	}
+	if strings.Contains(out, "m1") || strings.Contains(out, "m2") {
+		t.Errorf("should NOT descend into embedded messages, got:\n%s", out)
+	}
+}
+
 func TestPrintUnknownFormat(t *testing.T) {
 	if err := Print(&bytes.Buffer{}, []byte(`{}`), Options{Format: "bogus"}); err == nil {
 		t.Error("expected error for unknown format")
