@@ -117,13 +117,27 @@ func newClient() (*api.Client, error) {
 	if err != nil {
 		return nil, err
 	}
-	if r.APIToken == "" {
-		return nil, fmt.Errorf("no API token configured: run `edx auth login --token <token> --org-id <org>` or set %s", config.EnvAPIToken)
+	if r.APIToken == "" && !r.UsesOAuth() {
+		return nil, fmt.Errorf("no credentials configured: run `edx auth login --token <token> --org-id <org>` (or `--oauth`), or set %s", config.EnvAPIToken)
 	}
 	if r.OrgID == "" {
 		return nil, fmt.Errorf("no organization ID configured: run `edx auth login` with --org-id, set %s, or pass --org", config.EnvOrgID)
 	}
-	return api.New(r.APIURL, r.ChatURL, r.AgentURL, r.OrgID, r.APIToken, flagTimeout), nil
+	auth := &api.Auth{APIToken: r.APIToken, APIDomain: hostOf(r.APIURL)}
+	if r.UsesOAuth() {
+		expiry, _ := time.Parse(time.RFC3339, r.OAuthExpiry)
+		auth.OAuth = newOAuthTokenSource(r, expiry)
+	}
+	return api.New(r.APIURL, r.ChatURL, r.AgentURL, r.OrgID, auth, flagTimeout), nil
+}
+
+// hostOf returns the bare host (host:port) of a URL, used as X-ED-API-Domain.
+func hostOf(rawURL string) string {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return ""
+	}
+	return u.Host
 }
 
 // printResult renders raw response bytes using the global output flags.

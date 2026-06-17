@@ -4,7 +4,46 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 )
+
+func TestOAuthPersistAndResolve(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	t.Setenv("EDX_CONFIG", cfgPath)
+	for _, e := range []string{EnvAPIToken, EnvOrgID, EnvEnv, EnvProfile, EnvAPIURL, EnvChatURL, EnvAgentURL} {
+		t.Setenv(e, "")
+	}
+
+	exp := time.Now().Add(6 * time.Hour).UTC().Truncate(time.Second)
+	if err := SaveOAuthTokens("work", EnvStaging, "org-1", "client-1", "access-1", "refresh-1", exp); err != nil {
+		t.Fatal(err)
+	}
+
+	r, err := Resolve("work", "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !r.UsesOAuth() {
+		t.Fatalf("expected OAuth profile, got %+v", r)
+	}
+	if r.AuthMethod != AuthMethodOAuth || r.OAuthAccessToken != "access-1" ||
+		r.OAuthRefreshToken != "refresh-1" || r.OAuthClientID != "client-1" {
+		t.Errorf("unexpected resolved oauth fields: %+v", r)
+	}
+	if r.Env != EnvStaging || r.OrgID != "org-1" {
+		t.Errorf("env/org not persisted: %+v", r)
+	}
+	if r.ChatURL != "https://chat.ai.staging.edgedelta.com" {
+		t.Errorf("env should still drive hosts: %+v", r)
+	}
+
+	// A token profile is not OAuth.
+	tr := &Resolved{AuthMethod: AuthMethodToken, APIToken: "x"}
+	if tr.UsesOAuth() {
+		t.Error("token profile should not report UsesOAuth")
+	}
+}
 
 func TestResolvePrecedence(t *testing.T) {
 	dir := t.TempDir()

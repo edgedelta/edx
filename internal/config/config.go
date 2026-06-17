@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -25,6 +26,15 @@ const (
 	EnvLocal   = "local"
 
 	DefaultEnv = EnvProd
+)
+
+// Authentication methods a profile can use.
+const (
+	// AuthMethodToken sends a static API token (X-ED-API-Token). Default.
+	AuthMethodToken = "token"
+	// AuthMethodOAuth sends a Bearer JWT obtained via the OAuth login flow,
+	// refreshing it when it expires.
+	AuthMethodOAuth = "oauth"
 )
 
 const (
@@ -89,9 +99,22 @@ func EndpointsForEnv(env string) (Endpoints, bool) {
 type Profile struct {
 	// Env selects the environment ("prod", "staging", "local") and thus the
 	// full set of service endpoints.
-	Env      string `yaml:"env,omitempty"`
-	OrgID    string `yaml:"org_id,omitempty"`
+	Env   string `yaml:"env,omitempty"`
+	OrgID string `yaml:"org_id,omitempty"`
+
+	// AuthMethod is "token" (default) or "oauth".
+	AuthMethod string `yaml:"auth_method,omitempty"`
+
+	// APIToken is used when AuthMethod is "token" (or as a fallback for
+	// endpoints that do not yet accept OAuth — see api.oauthUnsupported).
 	APIToken string `yaml:"api_token,omitempty"`
+
+	// OAuth* fields hold the credentials minted by `edx auth login --oauth`.
+	// The access token is refreshed automatically using the refresh token.
+	OAuthClientID     string `yaml:"oauth_client_id,omitempty"`
+	OAuthAccessToken  string `yaml:"oauth_access_token,omitempty"`
+	OAuthRefreshToken string `yaml:"oauth_refresh_token,omitempty"`
+	OAuthExpiry       string `yaml:"oauth_expiry,omitempty"` // RFC3339
 }
 
 // File is the on-disk configuration document.
@@ -159,7 +182,19 @@ type Resolved struct {
 	ChatURL  string
 	AgentURL string
 	OrgID    string
-	APIToken string
+
+	AuthMethod string
+	APIToken   string
+
+	OAuthClientID     string
+	OAuthAccessToken  string
+	OAuthRefreshToken string
+	OAuthExpiry       string
+}
+
+// UsesOAuth reports whether the resolved profile authenticates via OAuth.
+func (r *Resolved) UsesOAuth() bool {
+	return r.AuthMethod == AuthMethodOAuth && r.OAuthAccessToken != ""
 }
 
 // Resolve picks the environment and credentials. The environment
@@ -214,7 +249,15 @@ func Resolve(profileFlag, envFlag, orgFlag, tokenFlag string) (*Resolved, error)
 	}
 	if p != nil {
 		r.OrgID = p.OrgID
+		r.AuthMethod = p.AuthMethod
 		r.APIToken = p.APIToken
+		r.OAuthClientID = p.OAuthClientID
+		r.OAuthAccessToken = p.OAuthAccessToken
+		r.OAuthRefreshToken = p.OAuthRefreshToken
+		r.OAuthExpiry = p.OAuthExpiry
+	}
+	if r.AuthMethod == "" {
+		r.AuthMethod = AuthMethodToken
 	}
 
 	// Per-service host overrides (escape hatch): override a single service's
@@ -242,4 +285,36 @@ func Resolve(profileFlag, envFlag, orgFlag, tokenFlag string) (*Resolved, error)
 		r.APIToken = tokenFlag
 	}
 	return r, nil
+}
+
+// SaveOAuthTokens persists a refreshed OAuth credential set onto a profile,
+// creating the profile if it does not exist. Used both by the login flow and
+// by the auto-refresh path so a renewed access token survives across runs.
+func SaveOAuthTokens(profileName, env, orgID, clientID, access, refresh string, expiry time.Time) error {
+	cfg, err := Load()
+	if err != nil {
+		return err
+	}
+	p := cfg.Profiles[profileName]
+	if p == nil {
+		p = &Profile{}
+		cfg.Profiles[profileName] = p
+	}
+	if env != "" {
+		p.Env = env
+	}
+	if orgID != "" {
+		p.OrgID = orgID
+	}
+	p.AuthMethod = AuthMethodOAuth
+	p.OAuthClientID = clientID
+	p.OAuthAccessToken = access
+	if refresh != "" {
+		p.OAuthRefreshToken = refresh
+	}
+	p.OAuthExpiry = expiry.UTC().Format(time.RFC3339)
+	if cfg.DefaultProfile == "" {
+		cfg.DefaultProfile = profileName
+	}
+	return cfg.Save()
 }
