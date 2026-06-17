@@ -110,6 +110,25 @@ func TestPrintTableResourceWithEmbeddedCollection(t *testing.T) {
 	}
 }
 
+func TestPrintYAMLPreservesLargeIntegers(t *testing.T) {
+	// Large integers (counts, epoch-millis timestamps) must render as integers,
+	// not float scientific notation like 1.135995e+06.
+	data := []byte(`{"count":1135995,"timestamp":1781687607032}`)
+	var buf bytes.Buffer
+	if err := Print(&buf, data, Options{Format: "yaml"}); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	for _, want := range []string{"count: 1135995", "timestamp: 1781687607032"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("yaml output should contain %q, got:\n%s", want, out)
+		}
+	}
+	if strings.Contains(out, "e+") {
+		t.Errorf("yaml output must not use scientific notation, got:\n%s", out)
+	}
+}
+
 func TestPrintUnknownFormat(t *testing.T) {
 	if err := Print(&bytes.Buffer{}, []byte(`{}`), Options{Format: "bogus"}); err == nil {
 		t.Error("expected error for unknown format")
