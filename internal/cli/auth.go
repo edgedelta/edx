@@ -21,8 +21,9 @@ func newAuthCmd() *cobra.Command {
 Each profile targets an environment (prod, staging or local), which selects
 the main API host and the AI Teammate service hosts together.
 
-Authenticate either with a static API token (--token) or interactively via
-OAuth in your browser (--oauth). OAuth tokens are refreshed automatically.
+"edx auth login" logs in via OAuth in your browser by default (tokens are
+refreshed automatically). Pass --token <api-token> --org-id <org-id> to use a
+static API token instead (handy for CI).
 
 Credentials can also be supplied via environment variables, which take
 precedence over the config file:
@@ -39,10 +40,10 @@ func newAuthLoginCmd() *cobra.Command {
 	var useOAuth, setDefault bool
 	cmd := &cobra.Command{
 		Use:   "login",
-		Short: "Save credentials to a profile (API token or OAuth)",
-		Example: `  edx auth login --token 00000000-0000-0000-0000-000000000000 --org-id <org-id>
-  edx auth login --oauth
-  edx auth login --profile staging --env staging --oauth`,
+		Short: "Save credentials to a profile (OAuth by default, or an API token)",
+		Example: `  edx auth login                                          # OAuth in your browser (default)
+  edx auth login --profile staging --env staging          # OAuth against staging
+  edx auth login --token 00000000-0000-0000-0000-000000000000 --org-id <org-id>`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// --env on this command takes precedence over the persistent --env;
 			// fall back to the persistent flag so `--env staging login` works too.
@@ -61,10 +62,12 @@ func newAuthLoginCmd() *cobra.Command {
 				name = "default"
 			}
 
-			if useOAuth {
-				if token != "" {
-					return fmt.Errorf("--oauth and --token are mutually exclusive")
-				}
+			if token != "" && useOAuth {
+				return fmt.Errorf("--token and --oauth are mutually exclusive")
+			}
+
+			// OAuth is the default; a static API token is used only with --token.
+			if token == "" {
 				fmt.Fprintf(os.Stderr, "Opening your browser to log in to %s …\n", eps.API)
 				toks, err := oauth.Login(cmd.Context(), eps.API, oauth.LoginOptions{
 					OpenBrowser: true,
@@ -96,9 +99,6 @@ func newAuthLoginCmd() *cobra.Command {
 				return nil
 			}
 
-			if token == "" {
-				return fmt.Errorf("provide --token, or use --oauth to log in via browser")
-			}
 			if orgID == "" {
 				return fmt.Errorf("--org-id is required with --token")
 			}
@@ -118,9 +118,10 @@ func newAuthLoginCmd() *cobra.Command {
 			return nil
 		},
 	}
-	cmd.Flags().StringVar(&token, "token", "", "Edge Delta API token (token auth)")
-	cmd.Flags().BoolVar(&useOAuth, "oauth", false, "log in via OAuth in your browser instead of a token")
-	cmd.Flags().StringVar(&orgID, "org-id", "", "Edge Delta organization ID (required with --token; derived from the token with --oauth)")
+	cmd.Flags().StringVar(&token, "token", "", "use static API token auth instead of OAuth (requires --org-id)")
+	cmd.Flags().BoolVar(&useOAuth, "oauth", false, "")
+	_ = cmd.Flags().MarkHidden("oauth") // OAuth is the default now; flag kept as a no-op for back-compat
+	cmd.Flags().StringVar(&orgID, "org-id", "", "Edge Delta organization ID (required with --token; derived from the token for OAuth)")
 	cmd.Flags().StringVar(&env, "env", "", "environment for this profile: prod, staging or local (default prod)")
 	cmd.Flags().BoolVar(&setDefault, "set-default", false, "make this profile the default")
 	return cmd
