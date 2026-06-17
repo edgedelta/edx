@@ -30,9 +30,9 @@ const (
 	ServiceAgent
 )
 
-// Client talks to the Edge Delta services. Authentication uses the
-// X-ED-API-Token header, which every service accepts for org-scoped,
-// token-authenticated requests.
+// Client talks to the Edge Delta services. Per-request authentication is
+// delegated to Auth, which selects an API token or an OAuth Bearer JWT
+// depending on the profile and the target endpoint.
 type Client struct {
 	// BaseURL is the main API host; ChatURL and AgentURL are the AI Teammate
 	// service hosts. All share the /v1/orgs/{org_id} path prefix.
@@ -40,8 +40,8 @@ type Client struct {
 	ChatURL  string
 	AgentURL string
 
-	OrgID    string
-	APIToken string
+	OrgID string
+	Auth  *Auth
 
 	HTTP      *http.Client
 	UserAgent string
@@ -51,8 +51,9 @@ type Client struct {
 }
 
 // New builds a client with sane transport defaults. apiURL, chatURL and
-// agentURL are the base URLs for the main API and the AI Teammate services.
-func New(apiURL, chatURL, agentURL, orgID, token string, timeout time.Duration) *Client {
+// agentURL are the base URLs for the main API and the AI Teammate services;
+// auth carries the credentials.
+func New(apiURL, chatURL, agentURL, orgID string, auth *Auth, timeout time.Duration) *Client {
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
@@ -66,12 +67,15 @@ func New(apiURL, chatURL, agentURL, orgID, token string, timeout time.Duration) 
 		ExpectContinueTimeout: 1 * time.Second,
 		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
 	}
+	if auth == nil {
+		auth = &Auth{}
+	}
 	return &Client{
 		BaseURL:    strings.TrimRight(apiURL, "/"),
 		ChatURL:    strings.TrimRight(chatURL, "/"),
 		AgentURL:   strings.TrimRight(agentURL, "/"),
 		OrgID:      orgID,
-		APIToken:   token,
+		Auth:       auth,
 		HTTP:       &http.Client{Transport: transport, Timeout: timeout},
 		UserAgent:  "edx",
 		MaxRetries: 3,
@@ -150,7 +154,9 @@ func (c *Client) DoOn(ctx context.Context, svc Service, method, path string, que
 		}
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("User-Agent", c.UserAgent)
-		req.Header.Set("X-ED-API-Token", c.APIToken)
+		if err := c.Auth.apply(ctx, req, svc, path); err != nil {
+			return nil, err
+		}
 
 		resp, err := c.HTTP.Do(req)
 		if err != nil {

@@ -54,12 +54,30 @@ make install
 
 ## Authenticate
 
-Create an API token in the Edge Delta web app (Admin → API Tokens), then:
+Two ways to authenticate:
+
+**API token** — create one in the Edge Delta web app (Admin → API Tokens):
 
 ```bash
 edx auth login --token <api-token> --org-id <org-id>
 edx auth status
 ```
+
+**OAuth** — log in through your browser; the access token is refreshed
+automatically:
+
+```bash
+edx auth login --oauth
+```
+
+Your organization is read from the token, so `--org-id` isn't needed with
+`--oauth`.
+
+OAuth sends a Bearer JWT instead of the API token. A few AI endpoints don't
+accept OAuth yet; for those, edx automatically falls back to the API token if
+the profile has one (the fallback list lives in `internal/api/auth.go` —
+`oauthUnsupported`). Keep a `--token` on the profile if you rely on those
+endpoints.
 
 Or use environment variables (they override the config file):
 
