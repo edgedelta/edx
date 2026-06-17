@@ -41,12 +41,9 @@ func newAuthLoginCmd() *cobra.Command {
 		Use:   "login",
 		Short: "Save credentials to a profile (API token or OAuth)",
 		Example: `  edx auth login --token 00000000-0000-0000-0000-000000000000 --org-id <org-id>
-  edx auth login --oauth --org-id <org-id>
-  edx auth login --profile staging --env staging --oauth --org-id ...`,
+  edx auth login --oauth
+  edx auth login --profile staging --env staging --oauth`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			if orgID == "" {
-				return fmt.Errorf("--org-id is required")
-			}
 			// --env on this command takes precedence over the persistent --env;
 			// fall back to the persistent flag so `--env staging login` works too.
 			if env == "" {
@@ -78,6 +75,14 @@ func newAuthLoginCmd() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("oauth login failed: %w", err)
 				}
+				// The org is carried in the access token; derive it so the user
+				// need not pass --org-id. An explicit --org-id still overrides.
+				if orgID == "" {
+					orgID = oauth.OrgIDFromToken(toks.AccessToken)
+				}
+				if orgID == "" {
+					return fmt.Errorf("could not determine organization from the token; pass --org-id")
+				}
 				if err := config.SaveOAuthTokens(name, env, orgID, toks.ClientID, toks.AccessToken, toks.RefreshToken, toks.Expiry); err != nil {
 					return err
 				}
@@ -93,6 +98,9 @@ func newAuthLoginCmd() *cobra.Command {
 
 			if token == "" {
 				return fmt.Errorf("provide --token, or use --oauth to log in via browser")
+			}
+			if orgID == "" {
+				return fmt.Errorf("--org-id is required with --token")
 			}
 			cfg, err := config.Load()
 			if err != nil {
@@ -112,7 +120,7 @@ func newAuthLoginCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&token, "token", "", "Edge Delta API token (token auth)")
 	cmd.Flags().BoolVar(&useOAuth, "oauth", false, "log in via OAuth in your browser instead of a token")
-	cmd.Flags().StringVar(&orgID, "org-id", "", "Edge Delta organization ID (required)")
+	cmd.Flags().StringVar(&orgID, "org-id", "", "Edge Delta organization ID (required with --token; derived from the token with --oauth)")
 	cmd.Flags().StringVar(&env, "env", "", "environment for this profile: prod, staging or local (default prod)")
 	cmd.Flags().BoolVar(&setDefault, "set-default", false, "make this profile the default")
 	return cmd

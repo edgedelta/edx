@@ -67,8 +67,11 @@ edx auth status
 automatically:
 
 ```bash
-edx auth login --oauth --org-id <org-id>
+edx auth login --oauth
 ```
+
+Your organization is read from the token, so `--org-id` isn't needed with
+`--oauth`.
 
 OAuth sends a Bearer JWT instead of the API token. A few AI endpoints don't
 accept OAuth yet; for those, edx automatically falls back to the API token if

@@ -72,6 +72,36 @@ func TestRefresh(t *testing.T) {
 	}
 }
 
+func TestOrgIDFromToken(t *testing.T) {
+	// Build a JWT-shaped token: header.payload.sig (sig unused).
+	enc := func(v any) string {
+		b, _ := json.Marshal(v)
+		return base64.RawURLEncoding.EncodeToString(b)
+	}
+	mk := func(payload any) string {
+		return enc(map[string]string{"alg": "RS256"}) + "." + enc(payload) + ".sig"
+	}
+
+	// Edge Delta shape: attr.organization_id is a string array.
+	tok := mk(map[string]any{"sub": "u", "attr": map[string][]string{"organization_id": {"org-abc"}}})
+	if got := OrgIDFromToken(tok); got != "org-abc" {
+		t.Errorf("attr.organization_id: got %q", got)
+	}
+
+	// Fallback: top-level string claim.
+	if got := OrgIDFromToken(mk(map[string]any{"organization_id": "org-top"})); got != "org-top" {
+		t.Errorf("top-level organization_id: got %q", got)
+	}
+
+	// Missing claim and malformed token return "".
+	if got := OrgIDFromToken(mk(map[string]any{"sub": "u"})); got != "" {
+		t.Errorf("missing claim should be empty, got %q", got)
+	}
+	if got := OrgIDFromToken("not-a-jwt"); got != "" {
+		t.Errorf("malformed token should be empty, got %q", got)
+	}
+}
+
 func TestRefreshServerError(t *testing.T) {
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadRequest)

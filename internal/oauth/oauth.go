@@ -113,6 +113,42 @@ func Login(ctx context.Context, apiBase string, opts LoginOptions) (Tokens, erro
 	}
 }
 
+// OrgIDFromToken reads the organization_id claim out of a JWT access token
+// (Edge Delta puts it under attr.organization_id). The signature is not
+// verified — the server just issued this token to us — so this is only used
+// to save the caller from passing --org-id. Returns "" if absent/unparseable.
+func OrgIDFromToken(token string) string {
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		return ""
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return ""
+	}
+	var claims struct {
+		Attr           map[string][]string `json:"attr"`
+		OrganizationID any                 `json:"organization_id"`
+	}
+	if err := json.Unmarshal(payload, &claims); err != nil {
+		return ""
+	}
+	if v := claims.Attr["organization_id"]; len(v) > 0 {
+		return v[0]
+	}
+	switch t := claims.OrganizationID.(type) {
+	case string:
+		return t
+	case []any:
+		if len(t) > 0 {
+			if s, ok := t[0].(string); ok {
+				return s
+			}
+		}
+	}
+	return ""
+}
+
 // Refresh exchanges a refresh token for a fresh access token.
 func Refresh(ctx context.Context, apiBase, clientID, refreshToken string, hc *http.Client) (Tokens, error) {
 	if hc == nil {
