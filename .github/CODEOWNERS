@@ -1,0 +1,9 @@
+# Code owners for edx.
+#
+# Every pull request to a protected branch (main) requires approval from one
+# of these owners — enforced by branch protection ("Require review from Code
+# Owners"). Owners must have write access for this to take effect.
+#
+# Any one listed owner approving satisfies the requirement.
+
+*   @yildizfatih @onrylmz @asimerel
