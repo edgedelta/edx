@@ -2,6 +2,7 @@
 package output
 
 import (
+	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
@@ -55,8 +56,9 @@ func printJSON(w io.Writer, data []byte) error {
 }
 
 func printYAML(w io.Writer, data []byte) error {
-	var v any
-	if err := json.Unmarshal(data, &v); err != nil {
+	v, err := decodeNumeric(data)
+	if err != nil {
+		// Not JSON (e.g. plain text or empty body): print as-is.
 		_, werr := fmt.Fprintln(w, strings.TrimSpace(string(data)))
 		return werr
 	}
@@ -66,6 +68,46 @@ func printYAML(w io.Writer, data []byte) error {
 	}
 	_, err = w.Write(out)
 	return err
+}
+
+// decodeNumeric unmarshals JSON, decoding numbers as json.Number and then
+// normalizing each to int64 (when integral) or float64. A plain unmarshal into
+// any decodes every JSON number as float64, which makes yaml.Marshal render
+// large integers — counts, epoch-millis timestamps — in lossy scientific
+// notation (e.g. 1.135995e+06). Keeping integers as int64 avoids that.
+func decodeNumeric(data []byte) (any, error) {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	var v any
+	if err := dec.Decode(&v); err != nil {
+		return nil, err
+	}
+	return normalizeNumbers(v), nil
+}
+
+func normalizeNumbers(v any) any {
+	switch t := v.(type) {
+	case map[string]any:
+		for k, val := range t {
+			t[k] = normalizeNumbers(val)
+		}
+		return t
+	case []any:
+		for i, val := range t {
+			t[i] = normalizeNumbers(val)
+		}
+		return t
+	case json.Number:
+		if i, err := t.Int64(); err == nil {
+			return i
+		}
+		if f, err := t.Float64(); err == nil {
+			return f
+		}
+		return t.String()
+	default:
+		return v
+	}
 }
 
 // Rows extracts a list of row objects from an arbitrary API response. It
