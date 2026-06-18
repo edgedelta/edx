@@ -40,6 +40,11 @@ func resultPage(ok bool, heading, message string) string {
     background:color-mix(in srgb,var(--c) 13%%,#fff);color:var(--c);margin-bottom:20px}
   h1{font-size:19px;font-weight:650;letter-spacing:-.01em;margin:0 0 8px}
   p{margin:0 auto;max-width:30ch;color:var(--muted);font-size:14px}
+  .btn{margin-top:24px;appearance:none;border:0;cursor:pointer;font:inherit;font-weight:600;font-size:14px;
+    color:#fff;background:var(--accent);padding:10px 22px;border-radius:10px;transition:background .15s,transform .04s}
+  .btn:hover{background:#0966c9}
+  .btn:active{transform:translateY(1px)}
+  .hint{margin-top:16px;color:var(--muted);font-size:13px}
   .foot{margin-top:28px;padding-top:18px;border-top:1px solid var(--line);color:#9aa8b6;font-size:12px;letter-spacing:.01em}
   .foot b{color:var(--muted);font-weight:600}
 </style></head>
@@ -49,7 +54,18 @@ func resultPage(ok bool, heading, message string) string {
     <div class="badge">%[4]s</div>
     <h1>%[2]s</h1>
     <p>%[5]s</p>
+    <button id="closeBtn" class="btn" type="button">Close tab</button>
+    <p id="closeHint" class="hint" style="display:none">You can close this tab now — &#8984;/Ctrl + W.</p>
     <div class="foot"><b>edx</b> &middot; Edge Delta CLI</div>
   </main>
+  <script>
+    var b=document.getElementById('closeBtn');
+    b.addEventListener('click',function(){
+      window.close();
+      // If the browser refused to close the tab (it wasn't opened by script),
+      // fall back to a manual-close hint.
+      setTimeout(function(){b.style.display='none';document.getElementById('closeHint').style.display='block';},250);
+    });
+  </script>
 </body></html>`, accent, heading, edgedeltaLogoSVG, icon, message)
 }

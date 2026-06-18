@@ -3,3 +3,4 @@ edx
 *.log
 .DS_Store
 dist/
+.gstack/

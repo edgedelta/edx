@@ -7,7 +7,7 @@ import (
 
 func TestResultPage(t *testing.T) {
 	ok := resultPage(true, "You're signed in", "Close this tab.")
-	for _, want := range []string{"You're signed in", "Close this tab.", "Edge Delta CLI", "<svg", "#16a34a"} {
+	for _, want := range []string{"You're signed in", "Close this tab.", "Edge Delta CLI", "<svg", "#16a34a", "Close tab", "window.close()"} {
 		if !strings.Contains(ok, want) {
 			t.Errorf("success page missing %q", want)
 		}
