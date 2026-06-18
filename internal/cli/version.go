@@ -2,6 +2,7 @@ package cli
 
 import (
 	"fmt"
+	"os"
 
 	"github.com/spf13/cobra"
 )
@@ -14,6 +15,7 @@ func newVersionCmd() *cobra.Command {
 		Use:   "version",
 		Short: "Print the edx version",
 		Run: func(cmd *cobra.Command, args []string) {
+			writeBanner(os.Stdout)
 			fmt.Printf("edx %s\n", Version)
 		},
 	}

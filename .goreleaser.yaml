@@ -75,6 +75,17 @@ brews:
       bin.install "edx"
     test: |
       assert_match version.to_s, shell_output("#{bin}/edx version")
+    # Shown after `brew install` and in `brew info`. Kept free of backslashes:
+    # GoReleaser emits caveats in a Ruby heredoc that would mangle ASCII-art
+    # backslashes — the full wordmark renders via `edx version` / `edx --help`.
+    caveats: |
+      ▲ EDGE DELTA · edx
+
+      Get started:
+        edx auth login      # sign in (opens your browser)
+        edx --help          # explore commands
+
+      Docs: https://github.com/edgedelta/edx
 
 release:
   github:
