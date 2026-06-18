@@ -108,6 +108,15 @@ EXAMPLES
 		newAPICmd(),
 		newVersionCmd(),
 	)
+
+	// Show the Edge Delta wordmark above the root help (and bare `edx`).
+	base := root.HelpFunc()
+	root.SetHelpFunc(func(c *cobra.Command, args []string) {
+		if c == root {
+			writeBanner(os.Stdout)
+		}
+		base(c, args)
+	})
 	return root
 }
 
