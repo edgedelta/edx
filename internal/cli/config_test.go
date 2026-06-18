@@ -16,6 +16,36 @@ func TestFormatConfigPath(t *testing.T) {
 	}
 }
 
+func TestConfigViewFromResolveWithOverrides(t *testing.T) {
+	t.Setenv("EDX_CONFIG", t.TempDir()+"/config.yaml") // no file -> empty config
+	for _, e := range []string{
+		config.EnvAPIToken, config.EnvProfile, config.EnvAPIURL,
+		config.EnvChatURL, config.EnvAgentURL,
+	} {
+		t.Setenv(e, "")
+	}
+	t.Setenv(config.EnvEnv, config.EnvStaging)
+	t.Setenv(config.EnvOrgID, "org-from-env")
+
+	r, err := config.Resolve("", "", "", "")
+	if err != nil {
+		t.Fatalf("resolve must succeed without credentials: %v", err)
+	}
+	v := newConfigView(r)
+	if v.Env != config.EnvStaging {
+		t.Errorf("env override not reflected: %+v", v)
+	}
+	if v.OrgID != "org-from-env" {
+		t.Errorf("org override not reflected: %+v", v)
+	}
+	if v.ChatURL != "https://chat.ai.staging.edgedelta.com" {
+		t.Errorf("env should drive hosts: %+v", v)
+	}
+	if v.APIToken != "(not set)" {
+		t.Errorf("unset token should be %q, got %q", "(not set)", v.APIToken)
+	}
+}
+
 func TestNewConfigViewMasksSecrets(t *testing.T) {
 	r := &config.Resolved{
 		Profile:           "default",
