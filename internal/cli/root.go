@@ -90,6 +90,7 @@ EXAMPLES
 
 	root.AddCommand(
 		newAuthCmd(),
+		newConfigCmd(),
 		newLogsCmd(),
 		newPatternsCmd(),
 		newMetricsCmd(),

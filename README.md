@@ -82,7 +82,18 @@ export ED_ORG_ID=...
 export ED_ENV=staging                          # prod (default), staging or local
 ```
 
-Config lives in `~/.config/edx/config.yaml` (mode 0600).
+Config lives in `~/.config/edx/config.yaml` (mode 0600). To find that path and
+inspect the configuration edx actually resolves (profile + env vars + flags
+merged, secrets masked, no network call):
+
+```bash
+edx config path                                # print the config file location
+edx config show                                # resolved config, secrets masked
+edx config show --output yaml
+```
+
+Unlike `edx auth status`, `config show` prints to stdout and makes no API call,
+so it works offline and pipes cleanly into `jq`.
 
 ### Environments and profiles
 
@@ -180,6 +191,10 @@ edx ai connectors list
 edx ai connectors specs
 edx ai connectors update --file connector.json
 edx ai activity
+
+# --- Config inspection -------------------------------------------------------
+edx config path                                     # where config.yaml lives
+edx config show                                     # resolved config (masked)
 
 # --- Anything else -----------------------------------------------------------
 edx api GET /v1/orgs/{org}/users
