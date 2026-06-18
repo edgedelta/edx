@@ -43,8 +43,9 @@ type Tokens struct {
 type LoginOptions struct {
 	// OpenBrowser opens the authorize URL automatically (default true).
 	OpenBrowser bool
-	// Prompt receives the authorize URL and a human message (default: stderr).
-	Prompt func(url string)
+	// Prompt receives the authorize URL and whether the browser was opened
+	// automatically — show the URL to the user when opened is false.
+	Prompt func(url string, opened bool)
 	// HTTPClient overrides the client used for the register/token calls.
 	HTTPClient *http.Client
 	// Timeout bounds how long to wait for the browser callback (default 3m).
@@ -93,11 +94,12 @@ func Login(ctx context.Context, apiBase string, opts LoginOptions) (Tokens, erro
 	go srv.Serve(ln)
 	defer srv.Close()
 
-	if opts.Prompt != nil {
-		opts.Prompt(authURL)
-	}
+	opened := false
 	if opts.OpenBrowser {
-		_ = openBrowser(authURL)
+		opened = openBrowser(authURL) == nil
+	}
+	if opts.Prompt != nil {
+		opts.Prompt(authURL, opened)
 	}
 
 	select {
@@ -197,13 +199,13 @@ func callbackHandler(wantState string, ch chan<- callbackResult) http.Handler {
 
 func finish(w http.ResponseWriter, ok bool) {
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-	msg := "Login successful — you can close this tab and return to the terminal."
-	if !ok {
-		msg = "Login failed — return to the terminal for details."
+	if ok {
+		fmt.Fprint(w, resultPage(true, "You're signed in",
+			"You can close this tab and head back to your terminal."))
+		return
 	}
-	fmt.Fprintf(w, "<!doctype html><meta charset=utf-8><title>edx</title>"+
-		"<body style=\"font:16px -apple-system,sans-serif;display:grid;place-items:center;height:90vh;color:#1a1a1a\">"+
-		"<div><h2>edx</h2><p>%s</p></div></body>", msg)
+	fmt.Fprint(w, resultPage(false, "Sign-in failed",
+		"Something went wrong. Return to your terminal and run edx auth login again."))
 }
 
 func registerClient(ctx context.Context, hc *http.Client, apiBase, redirectURI string) (string, error) {

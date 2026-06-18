@@ -68,11 +68,14 @@ func newAuthLoginCmd() *cobra.Command {
 
 			// OAuth is the default; a static API token is used only with --token.
 			if token == "" {
-				fmt.Fprintf(os.Stderr, "Opening your browser to log in to %s …\n", eps.API)
+				fmt.Fprintf(os.Stderr, "Signing in to %s via your browser…\n", hostOnly(eps.API))
 				toks, err := oauth.Login(cmd.Context(), eps.API, oauth.LoginOptions{
 					OpenBrowser: true,
-					Prompt: func(u string) {
-						fmt.Fprintf(os.Stderr, "If your browser did not open, visit:\n  %s\n", u)
+					Prompt: func(u string, opened bool) {
+						if !opened {
+							fmt.Fprintf(os.Stderr, "  Couldn't open a browser automatically — open this URL to continue:\n  %s\n", u)
+						}
+						fmt.Fprintln(os.Stderr, dim("  Waiting for you to authorize in the browser…"))
 					},
 				})
 				if err != nil {
@@ -94,8 +97,7 @@ func newAuthLoginCmd() *cobra.Command {
 						return err
 					}
 				}
-				path, _ := config.Path()
-				fmt.Fprintf(os.Stderr, "Logged in via OAuth — saved profile %q (env: %s) to %s\n", name, env, path)
+				fmt.Fprintf(os.Stderr, "%s Signed in — profile %q (env: %s, org %s)\n", okMark(), name, env, shortID(orgID))
 				return nil
 			}
 
