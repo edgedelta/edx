@@ -48,12 +48,12 @@ const edgeDeltaBanner = ` _____ ____   ____ _____   ____  _____ _   _____  _
 | |___| |_| | |_| | |___  | |_| | |___| |___| |/ ___ \
 |_____|____/ \____|_____| |____/|_____|_____|_/_/   \_\`
 
-const brandBlue = "\x1b[38;2;10;120;230m" // #0a78e6
+const brandGreen = "\x1b[38;2;0;218;99m" // #00DA63 (Edge Delta logo green)
 
-// renderBanner returns the wordmark, optionally painted Edge Delta blue.
+// renderBanner returns the wordmark, optionally painted Edge Delta green.
 func renderBanner(color bool) string {
 	if color {
-		return brandBlue + edgeDeltaBanner + "\x1b[0m"
+		return brandGreen + edgeDeltaBanner + "\x1b[0m"
 	}
 	return edgeDeltaBanner
 }
