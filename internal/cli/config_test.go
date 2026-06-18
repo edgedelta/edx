@@ -55,7 +55,7 @@ func TestNewConfigViewMasksSecrets(t *testing.T) {
 		AgentURL:          "https://agent.ai.edgedelta.com",
 		OrgID:             "org-123",
 		AuthMethod:        "oauth",
-		APIToken:          "",
+		APIToken:          "edx_secrettoken_abcdef1234",
 		OAuthClientID:     "client-abcdef",
 		OAuthAccessToken:  "eyJ0aGlzaXNhdG9rZW4Ab3k",
 		OAuthRefreshToken: "refreshtok-abcdef",
@@ -70,13 +70,16 @@ func TestNewConfigViewMasksSecrets(t *testing.T) {
 	if v.OAuthExpiry != "2026-06-18T20:00:00Z" {
 		t.Errorf("expiry must not be masked: %q", v.OAuthExpiry)
 	}
-	// Unset token -> (not set).
-	if v.APIToken != "(not set)" {
-		t.Errorf("empty api_token should be %q, got %q", "(not set)", v.APIToken)
+	// API token must be masked and not leak the raw value.
+	if v.APIToken == "edx_secrettoken_abcdef1234" {
+		t.Errorf("api_token raw value leaked: got %q", v.APIToken)
+	}
+	if !strings.Contains(v.APIToken, "...") {
+		t.Errorf("api_token should be masked, got %q", v.APIToken)
 	}
 	// Secret values must never appear in full.
-	for _, raw := range []string{"eyJ0aGlzaXNhdG9rZW4Ab3k", "refreshtok-abcdef", "client-abcdef"} {
-		if strings.Contains(v.OAuthAccessToken+v.OAuthRefreshToken+v.OAuthClientID, raw) {
+	for _, raw := range []string{"eyJ0aGlzaXNhdG9rZW4Ab3k", "refreshtok-abcdef", "client-abcdef", "edx_secrettoken_abcdef1234"} {
+		if strings.Contains(v.OAuthAccessToken+v.OAuthRefreshToken+v.OAuthClientID+v.APIToken, raw) {
 			t.Errorf("raw secret %q leaked into view: %+v", raw, v)
 		}
 	}
