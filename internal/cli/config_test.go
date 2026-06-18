@@ -7,6 +7,15 @@ import (
 	"github.com/edgedelta/edx/internal/config"
 )
 
+func TestFormatConfigPath(t *testing.T) {
+	if got := formatConfigPath("/x/config.yaml", true); got != "/x/config.yaml (exists)" {
+		t.Errorf("exists case: got %q", got)
+	}
+	if got := formatConfigPath("/x/config.yaml", false); got != "/x/config.yaml (not found)" {
+		t.Errorf("missing case: got %q", got)
+	}
+}
+
 func TestNewConfigViewMasksSecrets(t *testing.T) {
 	r := &config.Resolved{
 		Profile:           "default",

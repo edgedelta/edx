@@ -2,6 +2,8 @@ package cli
 
 import (
 	"encoding/json"
+	"fmt"
+	"os"
 
 	"github.com/edgedelta/edx/internal/config"
 	"github.com/spf13/cobra"
@@ -74,6 +76,27 @@ func newConfigShowCmd() *cobra.Command {
 	}
 }
 
+// formatConfigPath renders the path line, noting whether the file exists.
+func formatConfigPath(path string, exists bool) string {
+	state := "not found"
+	if exists {
+		state = "exists"
+	}
+	return fmt.Sprintf("%s (%s)", path, state)
+}
+
 func newConfigPathCmd() *cobra.Command {
-	return &cobra.Command{Use: "path", Short: "Print the config file path", RunE: func(cmd *cobra.Command, args []string) error { return nil }}
+	return &cobra.Command{
+		Use:   "path",
+		Short: "Print the config file path",
+		RunE: func(cmd *cobra.Command, args []string) error {
+			path, err := config.Path()
+			if err != nil {
+				return err
+			}
+			_, statErr := os.Stat(path)
+			fmt.Fprintln(os.Stdout, formatConfigPath(path, statErr == nil))
+			return nil
+		},
+	}
 }
