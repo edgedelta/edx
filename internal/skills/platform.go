@@ -64,6 +64,28 @@ func Detect(getenv func(string) string) (Platform, bool) {
 	return Platform{}, false
 }
 
+// Installed returns the platforms whose config directory exists under home,
+// i.e. the assistants actually set up on this machine. dirExists reports
+// whether a directory is present (os-backed in production, faked in tests).
+// This is the fallback when environment detection fails — the common case when
+// a human runs `edx skills install` from a normal terminal rather than from
+// inside the agent.
+func Installed(home string, dirExists func(string) bool) []Platform {
+	var out []Platform
+	for _, p := range Platforms {
+		if dirExists(filepath.Join(home, p.markerDir())) {
+			out = append(out, p)
+		}
+	}
+	return out
+}
+
+// markerDir is the assistant's config directory (the parent of its skills
+// directory), used to tell whether the assistant is installed.
+func (p Platform) markerDir() string {
+	return filepath.Dir(filepath.FromSlash(p.globalRel))
+}
+
 // SkillsRoot returns the directory skills install into. When project is true it
 // is relative to the current directory; otherwise it is under home.
 func (p Platform) SkillsRoot(home string, project bool) string {
