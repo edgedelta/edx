@@ -70,6 +70,13 @@ func Install(fsys fs.FS, name, destRoot string) (int, error) {
 	if !exists(fsys, name) {
 		return 0, fmt.Errorf("unknown skill %q", name)
 	}
+	// Replace any existing entry with a fresh, edx-owned directory. RemoveAll on
+	// a symlink unlinks it without touching its target, so we never write
+	// through a symlink into a store edx doesn't own (e.g. ~/.agents/skills),
+	// and stale files from a previous version don't linger.
+	if err := os.RemoveAll(filepath.Join(destRoot, name)); err != nil {
+		return 0, err
+	}
 	written := 0
 	err := fs.WalkDir(fsys, name, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
