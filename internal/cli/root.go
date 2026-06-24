@@ -107,6 +107,7 @@ EXAMPLES
 		newHealthCmd(),
 		newIngestCmd(),
 		newAPICmd(),
+		newSkillsCmd(),
 		newVersionCmd(),
 	)
 

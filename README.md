@@ -196,6 +196,13 @@ edx ai activity
 edx config path                                     # where config.yaml lives
 edx config show                                     # resolved config (masked)
 
+# --- Agent skills ------------------------------------------------------------
+edx skills list                                     # available skills
+edx skills install                                  # auto-detect assistant, install all
+edx skills install claude                           # or: cursor | codex | opencode | all
+edx skills install claude --name ed-monitors        # just one skill
+edx skills show ed-logs                             # print a skill's SKILL.md
+
 # --- Anything else -----------------------------------------------------------
 edx api GET /v1/orgs/{org}/users
 edx api GET /tokens                                 # org-relative shorthand
@@ -217,13 +224,30 @@ Regular expressions are **not** supported. Metrics and traces require
 `field:"value"` syntax (no full-text). Time ranges: `--lookback 15m|1h|24h`
 (Go durations) or `--from/--to` in ISO 8601 (`2006-01-02T15:04:05.000Z`).
 
+## Agent skills
+
+`edx skills install` drops the Edge Delta agent skills (ed-logs, ed-metrics,
+ed-monitors, ...) into your coding assistant so an AI agent knows how to drive
+edx. The platform is auto-detected from the environment, or pass it explicitly
+(`claude`, `cursor`, `codex`, `opencode`, or `all`); `--project` installs into
+the current repo instead of your home directory.
+
+The skills are authored in [edgedelta/agent-skills](https://github.com/edgedelta/agent-skills)
+and embedded in the binary, so an installed skill always matches the edx version
+that wrote it — no network access needed.
+
 ## Development
 
 ```bash
-make build    # bin/edx
+make build         # bin/edx
 make test
 make vet
+make sync-skills   # refresh the embedded skills from ../agent-skills, then commit
 ```
+
+The embedded skills live in `internal/skills/data` (a generated copy of the
+`agent-skills` repo). After skills change upstream, run `make sync-skills`
+(optionally `SKILLS_SRC=/path/to/agent-skills`) and commit the result.
 
 ## Related
 
