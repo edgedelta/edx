@@ -30,8 +30,9 @@ version and install without network access.
 PLATFORMS
   %s
 
-  The platform is auto-detected from the environment when omitted. Pass it
-  explicitly, or "all" to install everywhere.
+  With no argument the platform is auto-detected: from the environment when
+  edx is launched by the agent, otherwise from the assistants installed on
+  this machine. Pass one explicitly, or "all" to install everywhere.
 
 EXAMPLES
   edx skills list
@@ -172,11 +173,32 @@ func resolvePlatforms(args []string) ([]skills.Platform, error) {
 		}
 		return []skills.Platform{p}, nil
 	}
+	// When edx is launched by the agent itself, the environment names it.
 	if p, ok := skills.Detect(os.Getenv); ok {
-		fmt.Fprintf(os.Stderr, "detected %s\n", p.Name)
+		fmt.Fprintf(os.Stderr, "detected %s from the environment\n", p.Name)
 		return []skills.Platform{p}, nil
 	}
+	// Otherwise (a human running this from a normal terminal), fall back to the
+	// assistants actually installed on this machine.
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return nil, fmt.Errorf("cannot determine home directory: %w", err)
+	}
+	if installed := skills.Installed(home, dirExists); len(installed) > 0 {
+		names := make([]string, len(installed))
+		for i, p := range installed {
+			names[i] = p.Name
+		}
+		fmt.Fprintf(os.Stderr, "found installed: %s\n", strings.Join(names, ", "))
+		return installed, nil
+	}
 	return nil, fmt.Errorf("could not detect a coding assistant; specify one: edx skills install <%s|all>", strings.Join(skills.PlatformNames(), "|"))
+}
+
+// dirExists reports whether path is an existing directory.
+func dirExists(path string) bool {
+	fi, err := os.Stat(path)
+	return err == nil && fi.IsDir()
 }
 
 // selectSkillNames returns the skills to install, honoring --name.

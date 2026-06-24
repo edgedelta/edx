@@ -29,6 +29,32 @@ func TestSkillsRootGlobalAndProject(t *testing.T) {
 	}
 }
 
+func TestInstalledDetectsByConfigDir(t *testing.T) {
+	// Only ~/.claude and ~/.config/opencode exist on this fake machine.
+	present := map[string]bool{
+		filepath.FromSlash("/home/x/.claude"):          true,
+		filepath.FromSlash("/home/x/.config/opencode"): true,
+	}
+	got := Installed("/home/x", func(p string) bool { return present[p] })
+
+	names := map[string]bool{}
+	for _, p := range got {
+		names[p.Name] = true
+	}
+	if !names["claude"] || !names["opencode"] {
+		t.Errorf("expected claude and opencode detected, got %v", names)
+	}
+	if names["cursor"] || names["codex"] {
+		t.Errorf("detected an assistant whose dir does not exist: %v", names)
+	}
+}
+
+func TestInstalledNoneWhenNothingPresent(t *testing.T) {
+	if got := Installed("/home/x", func(string) bool { return false }); len(got) != 0 {
+		t.Errorf("expected none installed, got %v", got)
+	}
+}
+
 func TestDetect(t *testing.T) {
 	env := map[string]string{"CURSOR_AGENT": "1"}
 	getenv := func(k string) string { return env[k] }
