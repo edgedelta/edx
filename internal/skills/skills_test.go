@@ -3,6 +3,7 @@ package skills
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"testing/fstest"
 )
@@ -59,6 +60,45 @@ func TestInstallCopiesWholeTree(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(dest, "ed-logs", "reference", "cql.md")); err != nil {
 		t.Errorf("reference file not installed: %v", err)
+	}
+}
+
+func TestInstallReplacesSymlinkWithoutWritingThrough(t *testing.T) {
+	// A canonical store outside the platform dir, symlinked in — the user's
+	// .agents/-style setup. Installing must replace the link with a real dir
+	// and must NOT write through it into the canonical store.
+	canonical := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(canonical, "ed-logs"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(canonical, "ed-logs", "SKILL.md"), []byte("ORIGINAL"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	dest := t.TempDir()
+	if err := os.Symlink(filepath.Join(canonical, "ed-logs"), filepath.Join(dest, "ed-logs")); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := Install(testFS(), "ed-logs", dest); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	// The canonical store must be untouched.
+	if b, _ := os.ReadFile(filepath.Join(canonical, "ed-logs", "SKILL.md")); string(b) != "ORIGINAL" {
+		t.Errorf("install wrote through the symlink into the canonical store: got %q", b)
+	}
+	// The destination entry must now be a real directory, not a symlink.
+	fi, err := os.Lstat(filepath.Join(dest, "ed-logs"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if fi.Mode()&os.ModeSymlink != 0 {
+		t.Error("destination is still a symlink; expected a real directory")
+	}
+	// And it holds the freshly installed content.
+	if b, _ := os.ReadFile(filepath.Join(dest, "ed-logs", "SKILL.md")); !strings.Contains(string(b), "name: ed-logs") {
+		t.Errorf("destination content not installed: %q", b)
 	}
 }
 
