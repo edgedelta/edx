@@ -75,8 +75,14 @@ func newPatternsSamplesCmd() *cobra.Command {
 	var ep extraParams
 	cmd := &cobra.Command{
 		Use:   "samples",
-		Short: "Fetch raw log samples for a pattern",
-		Example: `  edx patterns samples --query 'service.name:"api"' --param pattern='error connecting to *'`,
+		Short: "Fetch raw log samples scoped by --query and time",
+		Long: `Fetch raw log lines matching --query within the time window.
+
+Note: samples are filtered only by --query (CQL) and the time range - there is
+no pattern-signature filter. To read the lines behind a specific pattern from
+"patterns list", search logs for a distinctive literal token from the
+signature, e.g. edx logs search -q '"connection refused"'.`,
+		Example: `  edx patterns samples --query 'service.name:"api"' --lookback 1h`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := newClient()
 			if err != nil {
