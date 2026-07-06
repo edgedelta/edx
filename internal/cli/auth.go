@@ -2,12 +2,15 @@ package cli
 
 import (
 	"fmt"
+	"io"
 	"net/url"
 	"os"
 	"strings"
 
 	"github.com/spf13/cobra"
+	"golang.org/x/term"
 
+	"github.com/edgedelta/edx/internal/api"
 	"github.com/edgedelta/edx/internal/config"
 	"github.com/edgedelta/edx/internal/oauth"
 )
@@ -37,13 +40,14 @@ precedence over the config file:
 
 func newAuthLoginCmd() *cobra.Command {
 	var token, orgID, env string
-	var useOAuth, setDefault bool
+	var useOAuth, setDefault, useCookie bool
 	cmd := &cobra.Command{
 		Use:   "login",
-		Short: "Save credentials to a profile (OAuth by default, or an API token)",
+		Short: "Save credentials to a profile (OAuth by default, an API token, or a support cookie)",
 		Example: `  edx auth login                                          # OAuth in your browser (default)
   edx auth login --profile staging --env staging          # OAuth against staging
-  edx auth login --token 00000000-0000-0000-0000-000000000000 --org-id <org-id>`,
+  edx auth login --token 00000000-0000-0000-0000-000000000000 --org-id <org-id>
+  edx auth login --org-id <org-id> --cookie               # paste an ed-admin-session cookie (support-org access)`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			// --env on this command takes precedence over the persistent --env;
 			// fall back to the persistent flag so `--env staging login` works too.
@@ -64,6 +68,50 @@ func newAuthLoginCmd() *cobra.Command {
 
 			if token != "" && useOAuth {
 				return fmt.Errorf("--token and --oauth are mutually exclusive")
+			}
+			if useCookie && (token != "" || useOAuth) {
+				return fmt.Errorf("--cookie cannot be combined with --token or --oauth")
+			}
+
+			// Cookie auth: store a pasted ed-admin-session cookie. The cookie is
+			// opaque, so --org-id is required (it cannot be derived like OAuth).
+			if useCookie {
+				if orgID == "" {
+					return fmt.Errorf("--org-id is required with --cookie")
+				}
+				cookie, err := readCookie()
+				if err != nil {
+					return err
+				}
+				if cookie == "" {
+					return fmt.Errorf("no cookie provided; paste it at the prompt or pipe it via stdin")
+				}
+				// Verify before saving so a stale/wrong cookie is never stored.
+				apiURL := eps.API
+				if v := os.Getenv(config.EnvAPIURL); v != "" {
+					apiURL = v
+				}
+				c := api.New(apiURL, eps.Chat, eps.Agent, orgID, &api.Auth{SessionCookie: cookie}, flagTimeout)
+				q := url.Values{}
+				q.Set("scope", "log")
+				if _, err := c.Get(cmdContext(cmd), "/facet_keys", q); err != nil {
+					return fmt.Errorf("could not verify the cookie for org %s: %v\n"+
+						"check that it is current (cookies expire ~24h) and that the org has support access enabled", shortID(orgID), err)
+				}
+				cfg, err := config.Load()
+				if err != nil {
+					return err
+				}
+				cfg.Profiles[name] = &config.Profile{Env: env, OrgID: orgID, AuthMethod: config.AuthMethodCookie, SessionCookie: cookie}
+				if cfg.DefaultProfile == "" || setDefault {
+					cfg.DefaultProfile = name
+				}
+				if err := cfg.Save(); err != nil {
+					return err
+				}
+				fmt.Fprintf(os.Stderr, "%s Signed in with a support cookie — profile %q (env: %s, org %s)\n", okMark(), name, env, shortID(orgID))
+				fmt.Fprintln(os.Stderr, dim("  The cookie expires (~24h); re-run this command when it does."))
+				return nil
 			}
 
 			// OAuth is the default; a static API token is used only with --token.
@@ -123,10 +171,79 @@ func newAuthLoginCmd() *cobra.Command {
 	cmd.Flags().StringVar(&token, "token", "", "use static API token auth instead of OAuth (requires --org-id)")
 	cmd.Flags().BoolVar(&useOAuth, "oauth", false, "")
 	_ = cmd.Flags().MarkHidden("oauth") // OAuth is the default now; flag kept as a no-op for back-compat
-	cmd.Flags().StringVar(&orgID, "org-id", "", "Edge Delta organization ID (required with --token; derived from the token for OAuth)")
+	cmd.Flags().StringVar(&orgID, "org-id", "", "Edge Delta organization ID (required with --token/--cookie; derived from the token for OAuth)")
 	cmd.Flags().StringVar(&env, "env", "", "environment for this profile: prod, staging or local (default prod)")
 	cmd.Flags().BoolVar(&setDefault, "set-default", false, "make this profile the default")
+	cmd.Flags().BoolVar(&useCookie, "cookie", false, "authenticate with a pasted ed-admin-session cookie for support-org access (requires --org-id; prompts for the value)")
 	return cmd
+}
+
+// readCookie reads an ed-admin-session cookie value: from piped stdin, or by
+// prompting when stdin is an interactive terminal.
+//
+// The interactive read MUST use raw mode (term.MakeRaw, which clears ICANON) —
+// NOT a normal line read and NOT term.ReadPassword (which keeps canonical mode
+// on). Canonical mode caps a line at MAX_CANON (~1024 bytes), so a multi-KB
+// cookie paste overflows the line buffer and the trailing Enter is never
+// delivered, hanging the read. Raw mode has no such limit and keeps the secret
+// off the screen.
+func readCookie() (string, error) {
+	if !fileIsTTY(os.Stdin) {
+		data, err := io.ReadAll(os.Stdin)
+		if err != nil {
+			return "", err
+		}
+		return cleanCookie(string(data)), nil
+	}
+	fmt.Fprint(os.Stderr, "Paste your ed-admin-session cookie value (input hidden), then press Enter: ")
+	line, err := readLineRaw(os.Stdin)
+	fmt.Fprintln(os.Stderr) // nothing was echoed; move to a fresh line.
+	if err != nil {
+		return "", err
+	}
+	return cleanCookie(line), nil
+}
+
+// readLineRaw reads a single line from an interactive terminal in raw mode,
+// terminating at CR or LF. Ctrl-C cancels.
+func readLineRaw(f *os.File) (string, error) {
+	fd := int(f.Fd())
+	oldState, err := term.MakeRaw(fd)
+	if err != nil {
+		return "", err
+	}
+	defer func() { _ = term.Restore(fd, oldState) }()
+
+	var sb strings.Builder
+	buf := make([]byte, 1)
+	for {
+		n, rerr := f.Read(buf)
+		if n > 0 {
+			switch buf[0] {
+			case '\r', '\n':
+				return sb.String(), nil
+			case 3: // Ctrl-C
+				return "", fmt.Errorf("cancelled")
+			default:
+				sb.WriteByte(buf[0])
+			}
+		}
+		if rerr != nil {
+			if rerr == io.EOF {
+				return sb.String(), nil
+			}
+			return "", rerr
+		}
+	}
+}
+
+// cleanCookie trims surrounding whitespace and strips the bracketed-paste
+// escape markers (ESC[200~ … ESC[201~) a terminal may wrap a raw-mode paste in.
+func cleanCookie(s string) string {
+	s = strings.TrimSpace(s)
+	s = strings.TrimPrefix(s, "\x1b[200~")
+	s = strings.TrimSuffix(s, "\x1b[201~")
+	return strings.TrimSpace(s)
 }
 
 // setDefaultProfile marks name as the config default.
@@ -151,6 +268,9 @@ func newAuthStatusCmd() *cobra.Command {
 			cred := maskToken(r.APIToken)
 			if r.UsesOAuth() {
 				cred = maskToken(r.OAuthAccessToken) + " (auto-refreshed)"
+			}
+			if r.UsesCookie() {
+				cred = maskToken(r.SessionCookie) + " (ed-admin-session cookie)"
 			}
 			fmt.Fprintf(os.Stderr,
 				"Profile:   %s\nEnv:       %s\nAuth:      %s\nAPI URL:   %s\nChat URL:  %s\nAgent URL: %s\nOrg ID:    %s\nCredential:%s\n",

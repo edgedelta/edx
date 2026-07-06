@@ -35,6 +35,9 @@ const (
 	// AuthMethodOAuth sends a Bearer JWT obtained via the OAuth login flow,
 	// refreshing it when it expires.
 	AuthMethodOAuth = "oauth"
+	// AuthMethodCookie sends the ed-admin-session browser cookie. Used by
+	// `edx support login` to reach a support-enabled org via the main API.
+	AuthMethodCookie = "cookie"
 )
 
 const (
@@ -115,6 +118,11 @@ type Profile struct {
 	OAuthAccessToken  string `yaml:"oauth_access_token,omitempty"`
 	OAuthRefreshToken string `yaml:"oauth_refresh_token,omitempty"`
 	OAuthExpiry       string `yaml:"oauth_expiry,omitempty"` // RFC3339
+
+	// SessionCookie holds an ed-admin-session cookie value (AuthMethod ==
+	// "cookie"), set by `edx auth login --cookie` to reach a support-enabled
+	// org. Sensitive; the config file is written 0600.
+	SessionCookie string `yaml:"session_cookie,omitempty"`
 }
 
 // File is the on-disk configuration document.
@@ -190,11 +198,19 @@ type Resolved struct {
 	OAuthAccessToken  string
 	OAuthRefreshToken string
 	OAuthExpiry       string
+
+	SessionCookie string
 }
 
 // UsesOAuth reports whether the resolved profile authenticates via OAuth.
 func (r *Resolved) UsesOAuth() bool {
 	return r.AuthMethod == AuthMethodOAuth && r.OAuthAccessToken != ""
+}
+
+// UsesCookie reports whether the resolved profile is a support session that
+// authenticates with the ed-admin-session cookie.
+func (r *Resolved) UsesCookie() bool {
+	return r.AuthMethod == AuthMethodCookie && r.SessionCookie != ""
 }
 
 // Resolve picks the environment and credentials. The environment
@@ -255,6 +271,7 @@ func Resolve(profileFlag, envFlag, orgFlag, tokenFlag string) (*Resolved, error)
 		r.OAuthAccessToken = p.OAuthAccessToken
 		r.OAuthRefreshToken = p.OAuthRefreshToken
 		r.OAuthExpiry = p.OAuthExpiry
+		r.SessionCookie = p.SessionCookie
 	}
 	if r.AuthMethod == "" {
 		r.AuthMethod = AuthMethodToken

@@ -32,7 +32,24 @@ type Auth struct {
 	// The AI services require it as X-ED-API-Domain to validate a Bearer JWT's
 	// issuer/audience; the main API ignores it.
 	APIDomain string
+
+	// SessionCookie, when set, is an ed-admin-session cookie (see
+	// `edx auth login --cookie`). It takes precedence over the other schemes.
+	// The main API is called with the cookie directly; the AI Teammate hosts
+	// don't accept cookies, so for those a Bearer JWT is minted from the cookie
+	// via CookieJWT.
+	SessionCookie string
+
+	// CookieJWT mints a short-lived Bearer JWT from SessionCookie for the AI
+	// Teammate services (which reject cookie auth). Required when SessionCookie
+	// is set and a non-API service is used.
+	CookieJWT TokenSource
 }
+
+// sessionCookieName is the Edge Delta admin session cookie, mirroring
+// backend/core/auth_defaults.go. The backend authorizes a support-group user
+// against any support-enabled org from this cookie alone.
+const sessionCookieName = "ed-admin-session"
 
 // endpointRule matches a request by service and a substring of its path.
 type endpointRule struct {
@@ -66,6 +83,28 @@ func supportsOAuth(svc Service, path string) bool {
 
 // apply sets the appropriate auth header on req for a request to svc at path.
 func (a *Auth) apply(ctx context.Context, req *http.Request, svc Service, path string) error {
+	if a.SessionCookie != "" {
+		if svc == ServiceAPI {
+			req.Header.Set("Cookie", sessionCookieName+"="+a.SessionCookie)
+			return nil
+		}
+		// AI Teammate hosts reject cookie auth; exchange the cookie for a
+		// short-lived Bearer JWT (as the web app does) and send that instead.
+		// The cookie itself is deliberately NOT sent to these hosts.
+		if a.CookieJWT == nil {
+			return fmt.Errorf("no cookie-JWT source configured for the AI Teammate service")
+		}
+		tok, err := a.CookieJWT.Token(ctx)
+		if err != nil {
+			return fmt.Errorf("cookie->jwt exchange: %w", err)
+		}
+		req.Header.Set("Authorization", "Bearer "+tok)
+		if a.APIDomain != "" {
+			req.Header.Set("X-ED-API-Domain", a.APIDomain)
+		}
+		return nil
+	}
+
 	if a.OAuth != nil && supportsOAuth(svc, path) {
 		tok, err := a.OAuth.Token(ctx)
 		if err != nil {

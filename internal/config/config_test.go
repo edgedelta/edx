@@ -45,6 +45,45 @@ func TestOAuthPersistAndResolve(t *testing.T) {
 	}
 }
 
+func TestCookieSessionPersistAndResolve(t *testing.T) {
+	dir := t.TempDir()
+	cfgPath := filepath.Join(dir, "config.yaml")
+	t.Setenv("EDX_CONFIG", cfgPath)
+	for _, e := range []string{EnvAPIToken, EnvOrgID, EnvEnv, EnvProfile, EnvAPIURL, EnvChatURL, EnvAgentURL} {
+		t.Setenv(e, "")
+	}
+
+	f := &File{
+		DefaultProfile: "support",
+		Profiles: map[string]*Profile{
+			"support": {Env: EnvProd, OrgID: "support-org", AuthMethod: AuthMethodCookie, SessionCookie: "cookie-value-1"},
+		},
+	}
+	if err := f.Save(); err != nil {
+		t.Fatal(err)
+	}
+
+	r, err := Resolve("support", "", "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !r.UsesCookie() {
+		t.Fatalf("expected cookie session, got %+v", r)
+	}
+	if r.AuthMethod != AuthMethodCookie || r.SessionCookie != "cookie-value-1" {
+		t.Errorf("unexpected resolved cookie fields: %+v", r)
+	}
+	if r.Env != EnvProd || r.OrgID != "support-org" {
+		t.Errorf("env/org not persisted: %+v", r)
+	}
+
+	// A token profile is not a cookie session.
+	tr := &Resolved{AuthMethod: AuthMethodToken, APIToken: "x"}
+	if tr.UsesCookie() {
+		t.Error("token profile should not report UsesCookie")
+	}
+}
+
 func TestResolvePrecedence(t *testing.T) {
 	dir := t.TempDir()
 	cfgPath := filepath.Join(dir, "config.yaml")

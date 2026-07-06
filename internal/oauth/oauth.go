@@ -151,6 +151,65 @@ func OrgIDFromToken(token string) string {
 	return ""
 }
 
+// GetJWTFromCookie exchanges an ed-admin-session cookie for a short-lived
+// Bearer JWT via GET {apiBase}/v1/cookie_service/get_jwt_from_cookie. This is
+// how the web app lets a cookie session call the AI Teammate hosts, which
+// accept a Bearer JWT (not a cookie). The returned expiry is read from the
+// JWT's exp claim, defaulting to 50 minutes if absent (server lifetime is 60m).
+func GetJWTFromCookie(ctx context.Context, apiBase, cookie string, hc *http.Client) (string, time.Time, error) {
+	if hc == nil {
+		hc = &http.Client{Timeout: 30 * time.Second}
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, apiBase+"/v1/cookie_service/get_jwt_from_cookie", nil)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	req.Header.Set("Cookie", "ed-admin-session="+cookie)
+	resp, err := hc.Do(req)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return "", time.Time{}, fmt.Errorf("get_jwt_from_cookie returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+	var out struct {
+		BearerToken string `json:"bearer_token"`
+	}
+	if err := json.Unmarshal(body, &out); err != nil {
+		return "", time.Time{}, fmt.Errorf("decode get_jwt_from_cookie response: %w", err)
+	}
+	if out.BearerToken == "" {
+		return "", time.Time{}, fmt.Errorf("get_jwt_from_cookie response had no bearer_token")
+	}
+	expiry := time.Now().Add(50 * time.Minute)
+	if exp := expiryFromToken(out.BearerToken); !exp.IsZero() {
+		expiry = exp
+	}
+	return out.BearerToken, expiry, nil
+}
+
+// expiryFromToken reads the exp (seconds since epoch) claim from a JWT without
+// verifying its signature. Returns the zero time if absent/unparseable.
+func expiryFromToken(token string) time.Time {
+	parts := strings.Split(token, ".")
+	if len(parts) < 2 {
+		return time.Time{}
+	}
+	payload, err := base64.RawURLEncoding.DecodeString(parts[1])
+	if err != nil {
+		return time.Time{}
+	}
+	var claims struct {
+		Exp int64 `json:"exp"`
+	}
+	if err := json.Unmarshal(payload, &claims); err != nil || claims.Exp == 0 {
+		return time.Time{}
+	}
+	return time.Unix(claims.Exp, 0)
+}
+
 // Refresh exchanges a refresh token for a fresh access token.
 func Refresh(ctx context.Context, apiBase, clientID, refreshToken string, hc *http.Client) (Tokens, error) {
 	if hc == nil {
