@@ -128,6 +128,17 @@ func newClient() (*api.Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	if r.UsesCookie() {
+		if r.OrgID == "" {
+			return nil, fmt.Errorf("no organization ID for the support session: run `edx auth login --org-id <org> --cookie`")
+		}
+		auth := &api.Auth{
+			SessionCookie: r.SessionCookie,
+			APIDomain:     hostOf(r.APIURL),
+			CookieJWT:     newCookieJWTSource(r.APIURL, r.SessionCookie, flagTimeout),
+		}
+		return api.New(r.APIURL, r.ChatURL, r.AgentURL, r.OrgID, auth, flagTimeout), nil
+	}
 	if r.APIToken == "" && !r.UsesOAuth() {
 		return nil, fmt.Errorf("no credentials configured: run `edx auth login --token <token> --org-id <org>` (or `--oauth`), or set %s", config.EnvAPIToken)
 	}

@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"testing"
 	"time"
 )
@@ -111,4 +112,39 @@ func TestRefreshServerError(t *testing.T) {
 	if _, err := Refresh(context.Background(), srv.URL, "cid", "bad", srv.Client()); err == nil {
 		t.Error("expected error on 400 from token endpoint")
 	}
+}
+
+func TestGetJWTFromCookie(t *testing.T) {
+	// A JWT whose payload carries an exp claim one hour out.
+	exp := time.Now().Add(time.Hour).Unix()
+	payload := base64.RawURLEncoding.EncodeToString([]byte(
+		`{"exp":` + itoa(exp) + `}`))
+	jwt := base64.RawURLEncoding.EncodeToString([]byte(`{"alg":"RS256"}`)) + "." + payload + ".sig"
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/v1/cookie_service/get_jwt_from_cookie" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		if got := r.Header.Get("Cookie"); got != "ed-admin-session=sess-abc" {
+			t.Errorf("Cookie header = %q", got)
+		}
+		_, _ = w.Write([]byte(`{"bearer_token":"` + jwt + `"}`))
+	}))
+	defer srv.Close()
+
+	tok, expiry, err := GetJWTFromCookie(context.Background(), srv.URL, "sess-abc", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if tok != jwt {
+		t.Errorf("token = %q, want %q", tok, jwt)
+	}
+	if d := time.Until(expiry); d < 55*time.Minute || d > 65*time.Minute {
+		t.Errorf("expiry parsed wrong: %v away", d)
+	}
+}
+
+func itoa(n int64) string {
+	return strconv.FormatInt(n, 10)
 }
