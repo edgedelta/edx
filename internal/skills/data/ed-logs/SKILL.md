@@ -51,6 +51,7 @@ edx logs search -q 'error' --output table --columns timestamp,severity_text,serv
 | `service.name:("api" OR "web")` | Multiple values |
 | `-severity_text:"DEBUG"` | Negation |
 | `@response.code > 400` | Numeric attribute comparison |
+| `@Record.errorCode:"AccessDenied"` | Attribute (structured field) equals - note the leading `@` |
 | `a AND b`, `a OR b` | Boolean operators |
 
 **Not supported**: regular expressions (`/pattern/`), `=`/`!=` operators,
@@ -58,6 +59,21 @@ wildcards mid-string.
 
 Common fields: `service.name`, `severity_text`, `host.name`, `ed.tag`,
 `k8s.namespace.name`, `k8s.pod.name`, `body`.
+
+### Attributes vs the body
+
+Full-text search (bare words) only matches `body`. Structured logs often keep
+the interesting value in an **attribute**, not the body - e.g. a CloudTrail
+record has `body: "AssumeRole"` (just the event name) while the failure lives in
+the `Record.errorCode` attribute. Query attributes with a leading `@`
+(`@Record.errorCode:"AccessDenied"`); the same field without the `@` matches
+nothing. So if a full-text search returns zero, the value is probably in an
+attribute - inspect one raw record to find the real field names, then filter:
+
+```bash
+edx logs search -q 'service.name:"<svc>"' --limit 1 --output raw   # read the attributes map
+edx logs search -q 'service.name:"<svc>" AND @Record.errorCode:"AccessDenied"'
+```
 
 ## Log Volume Graphs
 
@@ -85,6 +101,8 @@ edx logs search -q 'error' --limit 100 --cursor "<next_cursor from previous resp
 2. Verify field values exist: `edx facets options --scope log --facet service.name`.
 3. Remove filters one at a time.
 4. Remember full-text needs bare words, field filters need exact quoted values.
+5. Full-text found nothing? The value may be in an attribute, not `body`.
+   Inspect a raw record (`--limit 1 --output raw`) and query it with `@field:"value"`.
 
 ## References
 

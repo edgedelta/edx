@@ -23,12 +23,16 @@ The `edx` CLI must be installed and authenticated. See the **ed-edx** skill.
   supported** and will error.
 - Common fields: `service.name`, `status.code`, `span.kind`, `trace_id`,
   `ed.tag`. Discover more: `edx facets keys --scope trace`.
+- `status.code` holds the HTTP status code (`200`, `404`, `500`, ...), not a
+  span-status word. Query server errors as `status.code:"500"` (or another
+  5xx); `status.code:"ERROR"` matches nothing. Enumerate live values with
+  `edx facets options --scope trace --facet status.code`.
 
 ## Search Spans
 
 ```bash
-# Failed spans, last hour
-edx traces search -q 'status.code:"ERROR"' --lookback 1h
+# Server-error (5xx) spans, last hour
+edx traces search -q 'status.code:"500"' --lookback 1h
 
 # Server-side spans of one service with full trace context
 edx traces search -q 'service.name:"checkout" AND span.kind:"server"' --include-children
@@ -54,7 +58,7 @@ upstream callers are affected, its downstream dependencies are suspects.
 
 ## Typical RCA Flow
 
-1. `edx traces search -q 'status.code:"ERROR"'` - find failing spans.
+1. `edx traces search -q 'status.code:"500"'` - find failing spans.
 2. Pick a `trace_id`, fetch the whole trace with `--include-children`.
 3. Identify the deepest failing span - that service is the likely root cause.
 4. Cross-check that service's logs:

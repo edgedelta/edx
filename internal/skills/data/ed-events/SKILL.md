@@ -26,7 +26,7 @@ The `edx` CLI must be installed and authenticated. See the **ed-edx** skill.
 | `event.type:"pattern_anomaly"` | Log anomaly detections |
 | `event.type:"metric_threshold"` | Metric alert triggers |
 | `event.type:"log_threshold"` | Log alert triggers |
-| `event.domain:"Monitor Alerts"` | All monitor-triggered events |
+| `event.domain:"Monitor"` | All monitor-triggered events |
 | `event.domain:"K8s"` | Kubernetes events (OOMKilled, BackOff, ...) |
 
 Discover the live set: `edx facets options --scope event --facet event.type`
@@ -42,7 +42,7 @@ edx events search -q 'event.type:"pattern_anomaly"' --lookback 6h
 edx events search -q 'service.name:"api" AND event.type:"pattern_anomaly"'
 
 # Everything monitors fired recently, as a table
-edx events search -q 'event.domain:"Monitor Alerts"' --output table
+edx events search -q 'event.domain:"Monitor"' --output table
 
 # Kubernetes trouble
 edx events search -q 'event.domain:"K8s" AND OOMKilled' --lookback 24h
