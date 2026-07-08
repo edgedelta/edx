@@ -34,6 +34,7 @@ forward or back to any version.`,
 		newPipelinesStatusCmd(),
 		newPipelinesValidateCmd(),
 		newPipelinesDeployCommandCmd(),
+		newPipelinesTestCmd(),
 	)
 	return cmd
 }
