@@ -18,24 +18,33 @@ metrics, traces, events, monitors) and AI Teammate (connectors, activity).
 ## Install
 
 ```bash
+brew install edgedelta/tap/edx       # macOS/Linux
+# or
 go install github.com/edgedelta/edx@latest
-# verify
-edx version
+edx version                          # verify
 ```
 
 ## Auth
 
+Two methods — pick one:
+
 ```bash
+# Token auth (good for CI/automation):
 edx auth login --token <api-token> --org-id <org-id>   # saved to ~/.config/edx/config.yaml
-edx auth status                                        # verifies the token against the API
+
+# OAuth (interactive browser login; org is read from the token, refreshed automatically):
+edx auth login --oauth
+
+edx auth status                                        # verifies credentials against the API
 ```
 
 Environment variables override the config file: `ED_API_TOKEN`, `ED_ORG_ID`,
-`ED_API_URL`. Multiple orgs: `edx auth login --profile <name> ...` then
-`edx --profile <name> ...`.
+`ED_ENV` (`prod` (default), `staging` or `local` — selects the API and AI
+service hosts together). Multiple orgs/envs: `edx auth login --profile <name> ...`
+then `edx --profile <name> ...`.
 
-If commands fail with 401, the token is invalid or does not match the org ID.
-Re-run `edx auth login` with a token from Admin > API Tokens in the web app.
+If commands fail with 401, the credentials are invalid or do not match the org.
+Re-run `edx auth login` (token from Admin > API Tokens, or `--oauth`).
 
 ## Command Map
 
@@ -67,6 +76,11 @@ Re-run `edx auth login` with a token from Admin > API Tokens in the web app.
 - **Confirmations**: destructive commands (`deploy`, `delete`) prompt; add
   `--yes` in non-interactive contexts.
 - **Limits**: default search limit is 20; raise with `--limit` (max 1000).
+- **Query fields use dot paths**: filter with `field.name:"value"` (e.g.
+  `event.domain:"Monitor"`, `service.name:"api"`) even though the JSON response
+  renders the same field with underscores (e.g. `event_domain`). Filter on the
+  dotted form; read the underscore form. Confirm valid values with
+  `edx facets options --scope <scope> --facet <field>`.
 
 ## Escape Hatch
 
@@ -86,4 +100,5 @@ edx api GET /rehydration --param limit=10
 | 401 Invalid authentication token | `edx auth login` with a valid token + matching org ID |
 | 404 on a path | Check the org ID; try `edx api` with the full /v1 path |
 | Empty search results | Widen `--lookback`; verify fields with `edx facets options` |
+| 500 / "Failed to query ..." | Server-side error, not your query. Retry the same command; if it persists, narrow the time range. Do NOT keep editing the query - widening `--lookback` will not fix a 5xx. |
 | Timeout on large queries | Narrow the time range or add `--timeout 120s` |

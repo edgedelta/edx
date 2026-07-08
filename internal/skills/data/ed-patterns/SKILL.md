@@ -47,16 +47,22 @@ signal: a new or surging error signature.
 
 ## Getting Raw Samples
 
-Once a suspicious pattern is found, fetch raw log lines behind it:
-
-```bash
-edx patterns samples -q 'service.name:"api"' --param pattern='<pattern text>'
-```
-
-Or search logs directly using distinctive tokens from the pattern:
+Once a suspicious pattern is found, fetch the raw log lines behind it. The most
+reliable way is to search logs for a distinctive token from the signature
+(patterns render variable parts as `*`, so pick the literal words):
 
 ```bash
 edx logs search -q '"connection refused"' --lookback 1h
+```
+
+`edx patterns samples` returns raw lines too, but it filters only by `-q` and
+time - the `--param pattern=` value is currently ignored by the backend (the
+same lines come back regardless), so it cannot isolate a single pattern. Use it
+to pull recent lines for a service, and use the `logs search` token approach
+above to read lines for one specific pattern:
+
+```bash
+edx patterns samples -q 'service.name:"api"' --lookback 1h
 ```
 
 ## Interpretation Guide
