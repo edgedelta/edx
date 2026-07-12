@@ -273,30 +273,34 @@ func formatProfileList(f *config.File) string {
 }
 
 func newAuthListCmd() *cobra.Command {
-	var asJSON bool
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:   "list",
 		Short: "List saved profiles (the default is marked with *)",
-		Args:  cobra.NoArgs,
+		Long: `List saved profiles.
+
+Without -o, prints a human table with the default profile marked "*" and org
+IDs shortened. With -o (json, yaml, table, csv, raw) the profiles are rendered
+in that format with org IDs in full — e.g. "edx auth list -o json | jq".`,
+		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			cfg, err := config.Load()
 			if err != nil {
 				return err
 			}
-			if asJSON {
-				data, err := json.MarshalIndent(profileListEntries(cfg), "", "  ")
-				if err != nil {
-					return err
-				}
-				fmt.Fprintln(os.Stdout, string(data))
+			// Default (no explicit -o) keeps the human table with the "*"
+			// default marker and shortened org IDs. An explicit -o routes the
+			// profiles through the shared renderer like every other command.
+			if !cmd.Flags().Changed("output") {
+				fmt.Fprint(os.Stdout, formatProfileList(cfg))
 				return nil
 			}
-			fmt.Fprint(os.Stdout, formatProfileList(cfg))
-			return nil
+			data, err := json.Marshal(profileListEntries(cfg))
+			if err != nil {
+				return err
+			}
+			return printResult(data)
 		},
 	}
-	cmd.Flags().BoolVar(&asJSON, "json", false, "output profiles as JSON (org IDs in full)")
-	return cmd
 }
 
 func newAuthUseCmd() *cobra.Command {
