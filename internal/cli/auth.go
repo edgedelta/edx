@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
@@ -205,28 +206,28 @@ func loginWouldClobber(cfg *config.File, name string, explicitName, force bool) 
 	return exists
 }
 
-// formatProfileList renders the saved profiles as an aligned table. The default
-// profile is prefixed with "* ". Org IDs are shortened; empty fields fall back
-// to their resolved defaults so a bare profile still reads sensibly.
-func formatProfileList(f *config.File) string {
-	if len(f.Profiles) == 0 {
-		return "No profiles yet. Run `edx auth login` to create one.\n"
-	}
+// profileListEntry is the JSON shape of one row from `auth list --json`.
+type profileListEntry struct {
+	Name    string `json:"name"`
+	Env     string `json:"env"`
+	OrgID   string `json:"org_id"`
+	Auth    string `json:"auth_method"`
+	Default bool   `json:"default"`
+}
+
+// profileListEntries returns the saved profiles sorted by name, with empty
+// fields resolved to their effective defaults. Org IDs are returned in full
+// (unlike the table, which shortens them) so machine consumers get the real id.
+func profileListEntries(f *config.File) []profileListEntry {
 	names := make([]string, 0, len(f.Profiles))
 	for name := range f.Profiles {
 		names = append(names, name)
 	}
 	sort.Strings(names)
 
-	var sb strings.Builder
-	tw := tabwriter.NewWriter(&sb, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "  NAME\tENV\tORG\tAUTH")
+	entries := make([]profileListEntry, 0, len(names))
 	for _, name := range names {
 		p := f.Profiles[name]
-		marker := "  "
-		if name == f.DefaultProfile {
-			marker = "* "
-		}
 		env := p.Env
 		if env == "" {
 			env = config.DefaultEnv
@@ -235,18 +236,45 @@ func formatProfileList(f *config.File) string {
 		if auth == "" {
 			auth = config.AuthMethodToken
 		}
-		org := "-"
-		if p.OrgID != "" {
-			org = shortID(p.OrgID)
+		entries = append(entries, profileListEntry{
+			Name:    name,
+			Env:     env,
+			OrgID:   p.OrgID,
+			Auth:    auth,
+			Default: name == f.DefaultProfile,
+		})
+	}
+	return entries
+}
+
+// formatProfileList renders the saved profiles as an aligned table. The default
+// profile is prefixed with "* " and org IDs are shortened for readability.
+func formatProfileList(f *config.File) string {
+	entries := profileListEntries(f)
+	if len(entries) == 0 {
+		return "No profiles yet. Run `edx auth login` to create one.\n"
+	}
+	var sb strings.Builder
+	tw := tabwriter.NewWriter(&sb, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(tw, "  NAME\tENV\tORG\tAUTH")
+	for _, e := range entries {
+		marker := "  "
+		if e.Default {
+			marker = "* "
 		}
-		fmt.Fprintf(tw, "%s%s\t%s\t%s\t%s\n", marker, name, env, org, auth)
+		org := "-"
+		if e.OrgID != "" {
+			org = shortID(e.OrgID)
+		}
+		fmt.Fprintf(tw, "%s%s\t%s\t%s\t%s\n", marker, e.Name, e.Env, org, e.Auth)
 	}
 	_ = tw.Flush()
 	return sb.String()
 }
 
 func newAuthListCmd() *cobra.Command {
-	return &cobra.Command{
+	var asJSON bool
+	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List saved profiles (the default is marked with *)",
 		Args:  cobra.NoArgs,
@@ -255,10 +283,20 @@ func newAuthListCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if asJSON {
+				data, err := json.MarshalIndent(profileListEntries(cfg), "", "  ")
+				if err != nil {
+					return err
+				}
+				fmt.Fprintln(os.Stdout, string(data))
+				return nil
+			}
 			fmt.Fprint(os.Stdout, formatProfileList(cfg))
 			return nil
 		},
 	}
+	cmd.Flags().BoolVar(&asJSON, "json", false, "output profiles as JSON (org IDs in full)")
+	return cmd
 }
 
 func newAuthUseCmd() *cobra.Command {

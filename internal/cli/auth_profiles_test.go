@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
@@ -46,6 +47,54 @@ func TestFormatProfileList_MarksDefaultAndColumns(t *testing.T) {
 	// Org is shortened, not printed in full.
 	if strings.Contains(out, "2d6be233-f7bb-4fe1-90a5-28a95c86ec9c") {
 		t.Errorf("org id should be shortened, got full id:\n%s", out)
+	}
+}
+
+func TestProfileListEntries_JSON(t *testing.T) {
+	f := &config.File{
+		DefaultProfile: "staging",
+		Profiles: map[string]*config.Profile{
+			"prod":    {OrgID: "2d6be233-f7bb-4fe1-90a5-28a95c86ec9c", AuthMethod: config.AuthMethodOAuth}, // Env empty → resolves to default
+			"staging": {Env: config.EnvStaging, OrgID: "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee", AuthMethod: config.AuthMethodToken},
+		},
+	}
+	entries := profileListEntries(f)
+
+	// Sorted by name: prod, then staging.
+	if len(entries) != 2 || entries[0].Name != "prod" || entries[1].Name != "staging" {
+		t.Fatalf("entries not sorted by name: %+v", entries)
+	}
+	// Empty env resolves to the effective default; org IDs are full (not shortened).
+	if entries[0].Env != config.DefaultEnv {
+		t.Errorf("empty env should resolve to default, got %q", entries[0].Env)
+	}
+	if entries[0].OrgID != "2d6be233-f7bb-4fe1-90a5-28a95c86ec9c" {
+		t.Errorf("JSON should carry the full org id, got %q", entries[0].OrgID)
+	}
+	// Only the default profile is flagged.
+	if entries[0].Default {
+		t.Error("prod is not the default")
+	}
+	if !entries[1].Default {
+		t.Error("staging is the default and should be flagged")
+	}
+
+	// Marshals to valid JSON with snake_case keys.
+	data, err := json.MarshalIndent(entries, "", "  ")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(data), `"auth_method": "oauth"`) || !strings.Contains(string(data), `"default": true`) {
+		t.Errorf("unexpected JSON:\n%s", data)
+	}
+
+	// Empty config marshals to an empty array, not null.
+	empty, err := json.Marshal(profileListEntries(&config.File{}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(empty) != "[]" {
+		t.Errorf("empty profiles should marshal to [], got %s", empty)
 	}
 }
 
