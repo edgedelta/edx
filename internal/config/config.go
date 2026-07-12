@@ -335,3 +335,18 @@ func SaveOAuthTokens(profileName, env, orgID, clientID, access, refresh string, 
 	}
 	return cfg.Save()
 }
+
+// UseProfile marks name as the default profile used when no --profile flag or
+// EDX_PROFILE is set. It fails if name is not an existing profile so a typo
+// cannot silently point the default at nothing.
+func UseProfile(name string) error {
+	cfg, err := Load()
+	if err != nil {
+		return err
+	}
+	if _, ok := cfg.Profiles[name]; !ok {
+		return fmt.Errorf("profile %q not found (run `edx auth list` to see profiles)", name)
+	}
+	cfg.DefaultProfile = name
+	return cfg.Save()
+}
