@@ -229,6 +229,49 @@ func TestResolveMissingProfileFails(t *testing.T) {
 	}
 }
 
+func TestUseProfile(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv("EDX_CONFIG", filepath.Join(dir, "config.yaml"))
+	for _, e := range []string{EnvAPIToken, EnvOrgID, EnvEnv, EnvProfile, EnvAPIURL, EnvChatURL, EnvAgentURL} {
+		t.Setenv(e, "")
+	}
+
+	f := &File{
+		DefaultProfile: "prod",
+		Profiles: map[string]*Profile{
+			"prod":    {Env: EnvProd, OrgID: "o1", APIToken: "t1"},
+			"staging": {Env: EnvStaging, OrgID: "o2", APIToken: "t2"},
+		},
+	}
+	if err := f.Save(); err != nil {
+		t.Fatal(err)
+	}
+
+	// Switching to an existing profile updates the default.
+	if err := UseProfile("staging"); err != nil {
+		t.Fatalf("UseProfile: %v", err)
+	}
+	loaded, err := Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.DefaultProfile != "staging" {
+		t.Errorf("default profile = %q, want staging", loaded.DefaultProfile)
+	}
+
+	// Switching to a missing profile is an error and leaves the default intact.
+	if err := UseProfile("nope"); err == nil {
+		t.Error("expected error switching to a missing profile")
+	}
+	loaded, err = Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if loaded.DefaultProfile != "staging" {
+		t.Errorf("failed switch must not change default, got %q", loaded.DefaultProfile)
+	}
+}
+
 func TestSaveAndLoadRoundtrip(t *testing.T) {
 	dir := t.TempDir()
 	cfgPath := filepath.Join(dir, "config.yaml")

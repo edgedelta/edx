@@ -1,11 +1,14 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/url"
 	"os"
+	"sort"
 	"strings"
+	"text/tabwriter"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -32,15 +35,19 @@ Credentials can also be supplied via environment variables, which take
 precedence over the config file:
   ED_API_TOKEN   API token (created under Admin > API Tokens)
   ED_ORG_ID      organization ID
-  ED_ENV         environment: prod, staging or local`,
+  ED_ENV         environment: prod, staging or local
+
+You can keep several logins at once. Name each with --profile at login time,
+list them with "edx auth list", and switch the default with "edx auth use
+<name>". Per-command, --profile or the EDX_PROFILE env var override the default.`,
 	}
-	cmd.AddCommand(newAuthLoginCmd(), newAuthStatusCmd(), newAuthLogoutCmd())
+	cmd.AddCommand(newAuthLoginCmd(), newAuthListCmd(), newAuthUseCmd(), newAuthStatusCmd(), newAuthLogoutCmd())
 	return cmd
 }
 
 func newAuthLoginCmd() *cobra.Command {
 	var token, orgID, env string
-	var useOAuth, setDefault, useCookie bool
+	var useOAuth, setDefault, useCookie, force bool
 	cmd := &cobra.Command{
 		Use:   "login",
 		Short: "Save credentials to a profile (OAuth by default, an API token, or a support cookie)",
@@ -64,6 +71,14 @@ func newAuthLoginCmd() *cobra.Command {
 			name := flagProfile
 			if name == "" {
 				name = "default"
+			}
+
+			cfg0, err := config.Load()
+			if err != nil {
+				return err
+			}
+			if loginWouldClobber(cfg0, name, cmd.Flags().Changed("profile"), force) {
+				return fmt.Errorf("profile %q already exists; pass --profile <name> to save under a different name, or --force to overwrite it", name)
 			}
 
 			if token != "" && useOAuth {
@@ -175,7 +190,133 @@ func newAuthLoginCmd() *cobra.Command {
 	cmd.Flags().StringVar(&env, "env", "", "environment for this profile: prod, staging or local (default prod)")
 	cmd.Flags().BoolVar(&setDefault, "set-default", false, "make this profile the default")
 	cmd.Flags().BoolVar(&useCookie, "cookie", false, "authenticate with a pasted ed-admin-session cookie for support-org access (requires --org-id; prompts for the value)")
+	cmd.Flags().BoolVar(&force, "force", false, "overwrite the target profile if it already exists")
 	return cmd
+}
+
+// loginWouldClobber reports whether saving credentials to profile `name` would
+// silently overwrite an existing profile the user did not explicitly name — the
+// footgun a forgotten --profile causes (a bare `auth login` targets "default").
+// An explicit --profile or --force is the user opting in, so neither clobbers.
+func loginWouldClobber(cfg *config.File, name string, explicitName, force bool) bool {
+	if explicitName || force {
+		return false
+	}
+	_, exists := cfg.Profiles[name]
+	return exists
+}
+
+// profileListEntry is the JSON shape of one row from `auth list --json`.
+type profileListEntry struct {
+	Name    string `json:"name"`
+	Env     string `json:"env"`
+	OrgID   string `json:"org_id"`
+	Auth    string `json:"auth_method"`
+	Default bool   `json:"default"`
+}
+
+// profileListEntries returns the saved profiles sorted by name, with empty
+// fields resolved to their effective defaults. Org IDs are returned in full
+// (unlike the table, which shortens them) so machine consumers get the real id.
+func profileListEntries(f *config.File) []profileListEntry {
+	names := make([]string, 0, len(f.Profiles))
+	for name := range f.Profiles {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
+	entries := make([]profileListEntry, 0, len(names))
+	for _, name := range names {
+		p := f.Profiles[name]
+		env := p.Env
+		if env == "" {
+			env = config.DefaultEnv
+		}
+		auth := p.AuthMethod
+		if auth == "" {
+			auth = config.AuthMethodToken
+		}
+		entries = append(entries, profileListEntry{
+			Name:    name,
+			Env:     env,
+			OrgID:   p.OrgID,
+			Auth:    auth,
+			Default: name == f.DefaultProfile,
+		})
+	}
+	return entries
+}
+
+// formatProfileList renders the saved profiles as an aligned table. The default
+// profile is prefixed with "* " and org IDs are shortened for readability.
+func formatProfileList(f *config.File) string {
+	entries := profileListEntries(f)
+	if len(entries) == 0 {
+		return "No profiles yet. Run `edx auth login` to create one.\n"
+	}
+	var sb strings.Builder
+	tw := tabwriter.NewWriter(&sb, 0, 0, 2, ' ', 0)
+	fmt.Fprintln(tw, "  NAME\tENV\tORG\tAUTH")
+	for _, e := range entries {
+		marker := "  "
+		if e.Default {
+			marker = "* "
+		}
+		org := "-"
+		if e.OrgID != "" {
+			org = shortID(e.OrgID)
+		}
+		fmt.Fprintf(tw, "%s%s\t%s\t%s\t%s\n", marker, e.Name, e.Env, org, e.Auth)
+	}
+	_ = tw.Flush()
+	return sb.String()
+}
+
+func newAuthListCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "list",
+		Short: "List saved profiles (the default is marked with *)",
+		Long: `List saved profiles.
+
+Without -o, prints a human table with the default profile marked "*" and org
+IDs shortened. With -o (json, yaml, table, csv, raw) the profiles are rendered
+in that format with org IDs in full — e.g. "edx auth list -o json | jq".`,
+		Args: cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			cfg, err := config.Load()
+			if err != nil {
+				return err
+			}
+			// Default (no explicit -o) keeps the human table with the "*"
+			// default marker and shortened org IDs. An explicit -o routes the
+			// profiles through the shared renderer like every other command.
+			if !cmd.Flags().Changed("output") {
+				fmt.Fprint(os.Stdout, formatProfileList(cfg))
+				return nil
+			}
+			data, err := json.Marshal(profileListEntries(cfg))
+			if err != nil {
+				return err
+			}
+			return printResult(data)
+		},
+	}
+}
+
+func newAuthUseCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "use <profile>",
+		Short: "Set the default profile used when --profile/EDX_PROFILE is not given",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			name := args[0]
+			if err := config.UseProfile(name); err != nil {
+				return err
+			}
+			fmt.Fprintf(os.Stderr, "%s Now using profile %q\n", okMark(), name)
+			return nil
+		},
+	}
 }
 
 // readCookie reads an ed-admin-session cookie value: from piped stdin, or by
