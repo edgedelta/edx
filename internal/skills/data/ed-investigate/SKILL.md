@@ -72,7 +72,7 @@ cause; everything upstream is blast radius.
 Root causes are usually changes. Check what changed right before onset:
 
 ```bash
-edx pipelines history <conf-id> --output table --columns timestamp,author,status,description
+edx pipelines history <pipeline-id> --output table --columns timestamp,author,status,description
 edx fleet deployments
 ```
 
@@ -83,10 +83,10 @@ changes). Name the top offending change (top two if unsure) and say why.
 ## 6. Verify / Mitigate
 
 - Pipeline config suspected: roll back -
-  `edx pipelines deploy <conf-id> <last-good-version> --yes`, then re-run the
+  `edx pipelines deploy <pipeline-id> <last-good-version> --yes`, then re-run the
   step 3 graph to confirm recovery.
 - Processor behavior suspected: live-capture it -
-  `edx capture start <conf-id> --nodes <node> --duration 2m`.
+  `edx capture start <pipeline-id> --nodes <node> --duration 2m`.
 
 ## Reporting
 

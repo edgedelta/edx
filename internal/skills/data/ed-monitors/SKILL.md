@@ -50,6 +50,38 @@ edx logs graph -q 'severity_text:"ERROR" AND service.name:"api"' --lookback 1h
 
 If the graph returns sensible numbers, the monitor query will too.
 
+## Metric Threshold Monitors
+
+A `metric_threshold` monitor carries its query in `formula_query` (scope
+`metric`) plus a window and thresholds:
+
+```json
+{
+  "name": "API Errors",
+  "type": "metric_threshold",
+  "evaluation_type": "sliding_window",
+  "evaluation_function": "sum",
+  "evaluation_window": 900,
+  "threshold_type": "above",
+  "warning_threshold": 3,
+  "alert_threshold": 10,
+  "no_data_behavior": "show_no_data",
+  "formula_query": {
+    "formula": "A",
+    "queries": {"A": {"scope": "metric",
+                      "query": "sum:api.error.count{service.name:\"api\"}.rollup(60)"}}
+  }
+}
+```
+
+**Evaluation is not real-time.** A freshly created monitor showing "No Data" is
+normal until its next scheduled evaluation. To confirm the query resolves and
+would (or wouldn't) fire right now, dry-run it (requires `edx` >= 0.10.0):
+
+```bash
+edx monitors evaluate <monitor-id>   # prints value vs thresholds + ALERT/WARNING/OK
+```
+
 ## Delete
 
 ```bash
