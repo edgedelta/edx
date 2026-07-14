@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/url"
 
@@ -21,6 +22,7 @@ func newMonitorsCmd() *cobra.Command {
 		newMonitorsUpdateCmd(),
 		newMonitorsDeleteCmd(),
 		newMonitorsStatesCmd(),
+		newMonitorsEvaluateCmd(),
 	)
 	return cmd
 }
@@ -181,4 +183,138 @@ func newMonitorsStatesCmd() *cobra.Command {
 	cmd.Flags().StringVarP(&query, "query", "q", "", "CQL filter expression")
 	pg.register(cmd, 100)
 	return cmd
+}
+
+func newMonitorsEvaluateCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:   "evaluate <monitor-id>",
+		Short: "Run a metric monitor's query now and show value vs thresholds (dry-run)",
+		Long: `Evaluate a metric_threshold monitor against current data without changing its
+state. Useful to confirm the monitor's query returns data and would (or would
+not) fire — handy when a freshly created monitor still shows "No Data" because
+its scheduled evaluation hasn't run yet.`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			c, err := newClient()
+			if err != nil {
+				return err
+			}
+			ctx := cmdContext(cmd)
+			raw, err := c.Get(ctx, "/monitors/"+url.PathEscape(args[0]), nil)
+			if err != nil {
+				return err
+			}
+			var mon struct {
+				Name               string  `json:"name"`
+				Type               string  `json:"type"`
+				EvaluationWindow   int     `json:"evaluation_window"`
+				EvaluationFunction string  `json:"evaluation_function"`
+				AlertThreshold     float64 `json:"alert_threshold"`
+				WarningThreshold   float64 `json:"warning_threshold"`
+				ThresholdType      string  `json:"threshold_type"`
+				FormulaQuery       struct {
+					Formula string                     `json:"formula"`
+					Queries map[string]json.RawMessage `json:"queries"`
+				} `json:"formula_query"`
+			}
+			if err := json.Unmarshal(raw, &mon); err != nil {
+				return fmt.Errorf("could not parse monitor: %w", err)
+			}
+			if mon.Type != "metric_threshold" {
+				return fmt.Errorf("evaluate supports metric_threshold monitors; %q is %q", args[0], mon.Type)
+			}
+			if len(mon.FormulaQuery.Queries) == 0 {
+				return fmt.Errorf("monitor has no formula_query.queries to evaluate")
+			}
+			window := mon.EvaluationWindow
+			if window <= 0 {
+				window = 3600
+			}
+			formula := mon.FormulaQuery.Formula
+			if formula == "" {
+				formula = "A"
+			}
+			payload := map[string]any{
+				"queries":  mon.FormulaQuery.Queries,
+				"formulas": map[string]any{"A": map[string]any{"formula": formula}},
+			}
+			body, err := json.Marshal(payload)
+			if err != nil {
+				return err
+			}
+			q := url.Values{}
+			q.Set("lookback", fmt.Sprintf("%ds", window))
+			q.Set("graph_type", "table")
+			gdata, err := c.Post(ctx, "/graph", q, body)
+			if err != nil {
+				return err
+			}
+			value, records := sumGraphValue(gdata)
+			verdict := classifyThreshold(value, mon.AlertThreshold, mon.WarningThreshold, mon.ThresholdType)
+			result := map[string]any{
+				"monitor":                   mon.Name,
+				"type":                      mon.Type,
+				"evaluation_window_seconds": window,
+				"evaluation_function":       mon.EvaluationFunction,
+				"value":                     value,
+				"records":                   records,
+				"warning_threshold":         mon.WarningThreshold,
+				"alert_threshold":           mon.AlertThreshold,
+				"threshold_type":            mon.ThresholdType,
+				"verdict":                   verdict,
+			}
+			out, err := json.Marshal(result)
+			if err != nil {
+				return err
+			}
+			return printResult(out)
+		},
+	}
+}
+
+// sumGraphValue sums the aggregate values across all records of a /graph
+// response and returns the total and the number of records (groups) seen.
+func sumGraphValue(data []byte) (float64, int) {
+	var g map[string]struct {
+		Records []struct {
+			Aggregate struct {
+				Value float64 `json:"value"`
+			} `json:"aggregate"`
+		} `json:"records"`
+	}
+	if err := json.Unmarshal(data, &g); err != nil {
+		return 0, 0
+	}
+	var total float64
+	var n int
+	for _, series := range g {
+		for _, r := range series.Records {
+			total += r.Aggregate.Value
+			n++
+		}
+	}
+	return total, n
+}
+
+// classifyThreshold reports ALERT / WARNING / OK for a value against a monitor's
+// thresholds. threshold_type "below" inverts the comparison.
+func classifyThreshold(value, alert, warn float64, thresholdType string) string {
+	if thresholdType == "below" {
+		switch {
+		case value < alert:
+			return "ALERT"
+		case value < warn:
+			return "WARNING"
+		default:
+			return "OK"
+		}
+	}
+	switch {
+	case value > alert:
+		return "ALERT"
+	case value > warn:
+		return "WARNING"
+	default:
+		return "OK"
+	}
 }

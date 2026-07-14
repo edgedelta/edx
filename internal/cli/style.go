@@ -23,9 +23,22 @@ func ansi(code, s string) string {
 	return "\x1b[" + code + "m" + s + "\x1b[0m"
 }
 
-func dim(s string) string   { return ansi("2", s) }
-func green(s string) string { return ansi("32", s) }
-func okMark() string        { return green("✓") }
+func dim(s string) string    { return ansi("2", s) }
+func green(s string) string  { return ansi("32", s) }
+func yellow(s string) string { return ansi("33", s) }
+func okMark() string         { return green("✓") }
+func warnMark() string       { return yellow("!") }
+
+// warnf prints a yellow warning line to stderr, keeping stdout clean for
+// machine-readable output.
+func warnf(format string, args ...any) {
+	fmt.Fprintf(os.Stderr, "%s %s\n", warnMark(), yellow(fmt.Sprintf(format, args...)))
+}
+
+// notef prints a dimmed informational line to stderr.
+func notef(format string, args ...any) {
+	fmt.Fprintln(os.Stderr, dim(fmt.Sprintf(format, args...)))
+}
 
 // shortID abbreviates a UUID/ULID for display, e.g. "0481a213…".
 func shortID(id string) string {

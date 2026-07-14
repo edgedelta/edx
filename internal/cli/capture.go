@@ -45,6 +45,18 @@ func newCaptureStartCmd() *cobra.Command {
   edx capture start <conf-id> --duration 5m --nodes mask_pii,route_errors --max-items 50`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if maxItems < 1 || maxItems > 100 {
+				return fmt.Errorf("--max-items must be between 1 and 100 (got %d)", maxItems)
+			}
+			if interval != "" {
+				d, err := time.ParseDuration(interval)
+				if err != nil {
+					return fmt.Errorf("invalid --interval %q: %v", interval, err)
+				}
+				if d < time.Second {
+					return fmt.Errorf("--interval must be at least 1s (got %s)", interval)
+				}
+			}
 			c, err := newClient()
 			if err != nil {
 				return err
@@ -125,7 +137,11 @@ func newCaptureResultsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "results <conf-id>",
 		Short: "Fetch captured samples (before/after each node)",
-		Args:  cobra.ExactArgs(1),
+		Long: `Fetch captured samples. Each captured node reports "before" and "after"
+arrays; the items are JSON-encoded strings, so decode them with jq's fromjson:
+
+  edx capture results <conf-id> | jq '[.[].nodes[].after[]] | map(fromjson)'`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := newClient()
 			if err != nil {

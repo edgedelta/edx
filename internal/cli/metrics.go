@@ -1,12 +1,15 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/url"
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/edgedelta/edx/internal/api"
 )
 
 func newMetricsCmd() *cobra.Command {
@@ -90,7 +93,14 @@ func newMetricsQueryCmd() *cobra.Command {
   <agg>:<name>{<filter>} by {<group-by>}.rollup(<seconds>)
 
 The filter uses CQL field syntax (service.name:"api"); full-text search is not
-supported for metrics. Use "*" for no filter.`,
+supported for metrics. Use "*" for no filter.
+
+Only indexed metric dimensions can be grouped on (discover them with
+"edx facets keys --scope metric"). Grouping by an OTLP datapoint attribute or a
+custom log_to_metric field dimension that is not indexed returns a single empty
+group rather than an error — edx warns when a --group-by key is not indexed.
+
+The response is keyed by query id, e.g. {"A": {"records": [...]}}.`,
 		Example: `  edx metrics query --name http.request.duration --agg avg --group-by service.name
   edx metrics query --name system.cpu.usage --agg max --filter 'host.name:"web-1"' --lookback 24h
   edx metrics query --name http.requests --agg sum --rollup 300 --graph-type table`,
@@ -101,6 +111,7 @@ supported for metrics. Use "*" for no filter.`,
 			}
 			cql := fmt.Sprintf("%s:%s{%s}", agg, name, filter)
 			if len(groupBy) > 0 {
+				warnUnindexedGroupBy(cmdContext(cmd), c, groupBy)
 				cql += fmt.Sprintf(" by {%s}", strings.Join(groupBy, ","))
 			}
 			if rollup > 0 {
@@ -137,4 +148,40 @@ supported for metrics. Use "*" for no filter.`,
 	tf.register(cmd, "1h")
 	pg.register(cmd, 0)
 	return cmd
+}
+
+// warnUnindexedGroupBy warns (best-effort) when a --group-by key is not an
+// indexed metric dimension, since such a group-by silently returns one empty
+// group instead of failing.
+func warnUnindexedGroupBy(ctx context.Context, c *api.Client, groupBy []string) {
+	q := url.Values{}
+	q.Set("scope", "metric")
+	data, err := c.Get(ctx, "/facet_keys", q)
+	if err != nil {
+		return // don't block the query on a discovery failure
+	}
+	var keys []struct {
+		Key  string `json:"key"`
+		Name string `json:"name"`
+	}
+	if err := json.Unmarshal(data, &keys); err != nil {
+		return
+	}
+	indexed := make(map[string]bool, len(keys))
+	for _, k := range keys {
+		if k.Key != "" {
+			indexed[k.Key] = true
+		}
+		if k.Name != "" {
+			indexed[k.Name] = true
+		}
+	}
+	if len(indexed) == 0 {
+		return
+	}
+	for _, g := range groupBy {
+		if !indexed[strings.TrimSpace(g)] {
+			warnf("group-by key %q is not an indexed metric dimension; results will be ungrouped (one empty group). See `edx facets keys --scope metric`.", g)
+		}
+	}
 }
