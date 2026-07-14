@@ -51,7 +51,17 @@ Aggregations: `sum`, `avg`, `min`, `max`, `count`, `median`.
 Filter: CQL field syntax, `"*"` for none.
 
 Under the hood this builds the CQL `agg:name{filter} by {keys}.rollup(secs)`
-and returns records keyed by formula (`A`).
+and returns records keyed by formula, e.g. `{"A": {"records": [...]}}`.
+
+## Groupable Dimensions (Important)
+
+Metric dimensions are a **fixed indexed allowlist** (`service.name`, `host.ip`,
+`ed.*`, `k8s.*`, ...) - discover it with `edx facets keys --scope metric`.
+Grouping by anything else (an OTLP datapoint attribute like `model`/`type`, or a
+custom `log_to_metric` field dimension) **silently returns one empty group**
+rather than an error; `edx metrics query` warns when a `--group-by` key is not
+indexed. For attribute-level breakdowns, query the underlying **logs** (which
+carry every attribute) or emit a dedicated `log_to_metric` per breakdown.
 
 ## Common Investigations
 
