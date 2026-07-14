@@ -120,8 +120,15 @@ nodes:
       set(resource["telemetry.source"], "my_app")
 ```
 
-Name it `<source>_multiprocessor` and link it 1:1 off the source. The
-`processors` list lives on the `sequence` node (not the source node).
+**Name it exactly `<source-node-name>_multiprocessor`** and link it 1:1 off the
+source. The name must be the source's full node name plus the `_multiprocessor`
+suffix - that exact match is what makes the Visual Builder render it *attached*
+to the source (a compact box) rather than a standalone node in the Processors
+lane. For example, a source named `claude_code_otlp` needs
+`claude_code_otlp_multiprocessor`; `claude_code_multiprocessor` still works
+functionally (the agent attaches a source's first downstream node by topology)
+but the UI won't draw it attached. The `processors` list lives on the `sequence`
+node, not the source node.
 
 ## Redacting PII (OTTL recipes)
 
