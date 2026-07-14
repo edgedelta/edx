@@ -533,15 +533,30 @@ func waitForRollout(ctx context.Context, c *api.Client, confID string, timeout t
 }
 
 // reportHealthProblems best-effort surfaces any currently-failing components.
+// The endpoint can include already-resolved ("ok") entries, so count only the
+// components whose status is not healthy.
 func reportHealthProblems(ctx context.Context, c *api.Client) {
 	data, err := c.Get(ctx, "/health/problems", nil)
 	if err != nil {
 		return
 	}
 	var resp struct {
-		TotalCount int `json:"total_count"`
+		Items []struct {
+			Status string `json:"status"`
+		} `json:"items"`
 	}
-	if err := json.Unmarshal(data, &resp); err == nil && resp.TotalCount > 0 {
-		warnf("%d component problem(s) currently reported — see `edx health problems`", resp.TotalCount)
+	if err := json.Unmarshal(data, &resp); err != nil {
+		return
+	}
+	unhealthy := 0
+	for _, it := range resp.Items {
+		switch strings.ToLower(it.Status) {
+		case "", "ok", "healthy", "green":
+		default:
+			unhealthy++
+		}
+	}
+	if unhealthy > 0 {
+		warnf("%d component problem(s) currently reported — see `edx health problems`", unhealthy)
 	}
 }
