@@ -143,6 +143,17 @@ func Path() (string, error) {
 	return filepath.Join(home, ".config", "edx", "config.yaml"), nil
 }
 
+// StateDir returns the directory used for edx's cached state (for example the
+// update-check cache), which lives alongside the config file. It does not
+// create the directory.
+func StateDir() (string, error) {
+	p, err := Path()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Dir(p), nil
+}
+
 // Load reads the config file. A missing file yields an empty config, not an error.
 func Load() (*File, error) {
 	path, err := Path()
