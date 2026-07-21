@@ -1,9 +1,13 @@
 package cli
 
 import (
+	"bytes"
+	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -526,8 +530,210 @@ func newAIAgentsCmd() *cobra.Command {
 				return printResult(data)
 			},
 		},
+		newAIAgentsUpdateCmd(),
 	)
 	return cmd
+}
+
+func newAIAgentsUpdateCmd() *cobra.Command {
+	var file, masterPrompt, userPrompt, toolingPrompt string
+	cmd := &cobra.Command{
+		Use:   "update <agent-id> [--file agent.json | --master-prompt ...]",
+		Short: "Update an AI Teammate (agent)",
+		Long: `Update an AI Teammate. Two modes:
+
+Prompt mode (the common case) — change just the prompts, leaving the model,
+temperature, tools and everything else untouched:
+
+    edx ai agents update <id> --master-prompt @master.md --user-prompt @user.md
+
+Each --*-prompt flag takes an inline string, or "@file" ("@-" for stdin). The
+agent service requires both masterPrompt and userPrompt on every update, so
+this mode reads the current teammate and backfills whichever prompt you did not
+pass. Because model and temperature are never sent, you never have to think
+about them.
+
+File mode (clone-and-edit, like "edx monitors update") — send a full JSON body:
+
+    edx ai agents get <id> > agent.json    # edit any fields
+    edx ai agents update <id> --file agent.json
+
+The body is the agent object (the fields under "data" in the "get" response); a
+full "get" envelope is accepted and unwrapped automatically. Only the fields you
+include are changed; a field set to null is cleared. Pass "-" to read from
+stdin. Note: because the whole object is re-sent, model-tuning fields (model,
+modelTemperature) are re-validated even if you did not touch them.`,
+		Example: `  edx ai agents update <id> --master-prompt @master.md
+  edx ai agents update <id> --user-prompt "You are a concise SRE assistant."
+  edx ai agents get <id> > agent.json && edx ai agents update <id> --file agent.json
+  edx ai agents get <id> | jq '.data | {masterPrompt,userPrompt,toolingPrompt}' | edx ai agents update <id> --file -`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			promptMode := cmd.Flags().Changed("master-prompt") ||
+				cmd.Flags().Changed("user-prompt") ||
+				cmd.Flags().Changed("tooling-prompt")
+			switch {
+			case promptMode && file != "":
+				return fmt.Errorf("--file cannot be combined with --master-prompt/--user-prompt/--tooling-prompt")
+			case !promptMode && file == "":
+				return fmt.Errorf("provide --file, or one or more of --master-prompt/--user-prompt/--tooling-prompt")
+			}
+			if !confirm(fmt.Sprintf("Update AI Teammate %s?", args[0])) {
+				return errAborted
+			}
+			c, err := newClient()
+			if err != nil {
+				return err
+			}
+			agentID := args[0]
+
+			var body []byte
+			if promptMode {
+				body, err = buildAgentPromptUpdate(cmdContext(cmd), c, agentID,
+					promptFlag{masterPrompt, cmd.Flags().Changed("master-prompt")},
+					promptFlag{userPrompt, cmd.Flags().Changed("user-prompt")},
+					promptFlag{toolingPrompt, cmd.Flags().Changed("tooling-prompt")})
+			} else {
+				var raw []byte
+				raw, err = readFileOrStdin(file)
+				if err == nil {
+					body = unwrapDataEnvelope(raw)
+				}
+			}
+			if err != nil {
+				return err
+			}
+
+			data, err := c.PutFrom(cmdContext(cmd), api.ServiceAgent, "/agents/"+url.PathEscape(agentID), nil, body)
+			if err != nil {
+				return err
+			}
+			return printResult(data)
+		},
+	}
+	cmd.Flags().StringVarP(&file, "file", "f", "", `full agent request JSON ("-" for stdin)`)
+	cmd.Flags().StringVar(&masterPrompt, "master-prompt", "", `set masterPrompt (inline string, or "@file" / "@-" for stdin)`)
+	cmd.Flags().StringVar(&userPrompt, "user-prompt", "", `set userPrompt (inline string, or "@file" / "@-" for stdin)`)
+	cmd.Flags().StringVar(&toolingPrompt, "tooling-prompt", "", `set toolingPrompt (inline string, or "@file" / "@-" for stdin)`)
+	return cmd
+}
+
+// promptFlag pairs a --*-prompt flag's value with whether it was set. An unset
+// flag is backfilled from the current teammate rather than sent as empty.
+type promptFlag struct {
+	value string
+	set   bool
+}
+
+// resolvePromptValue returns a prompt flag's literal value, or the contents of
+// the file it names when the value begins with "@" ("@-" reads stdin) — the
+// same "@file" convention as "edx api --data".
+func resolvePromptValue(v string) (string, error) {
+	if strings.HasPrefix(v, "@") {
+		b, err := readFileOrStdin(strings.TrimPrefix(v, "@"))
+		if err != nil {
+			return "", err
+		}
+		return string(b), nil
+	}
+	return v, nil
+}
+
+// buildAgentPromptUpdate assembles a prompts-only PUT body for prompt mode. The
+// agent service requires both masterPrompt and userPrompt on every update, so
+// it fetches the current teammate and backfills whichever prompt the user did
+// not pass. toolingPrompt is included only when set, so an unchanged one is left
+// untouched by the service's partial merge. No model/temperature fields are
+// sent, so those are neither changed nor re-validated.
+func buildAgentPromptUpdate(ctx context.Context, c *api.Client, agentID string, master, user, tooling promptFlag) ([]byte, error) {
+	cur, err := c.GetFrom(ctx, api.ServiceAgent, "/agents/"+url.PathEscape(agentID), nil)
+	if err != nil {
+		return nil, err
+	}
+	var env struct {
+		Data map[string]json.RawMessage `json:"data"`
+	}
+	if err := json.Unmarshal(cur, &env); err != nil || env.Data == nil {
+		return nil, fmt.Errorf("could not read current teammate %s to backfill prompts: %w", agentID, err)
+	}
+
+	body := map[string]json.RawMessage{}
+	// setField resolves a flag value (or backfills from the current teammate)
+	// and stores it as a JSON value in the body.
+	setField := func(key string, f promptFlag) error {
+		if f.set {
+			v, err := resolvePromptValue(f.value)
+			if err != nil {
+				return err
+			}
+			enc, err := json.Marshal(v)
+			if err != nil {
+				return err
+			}
+			body[key] = enc
+			return nil
+		}
+		if raw, ok := env.Data[key]; ok {
+			body[key] = raw
+		}
+		return nil
+	}
+
+	if err := setField("masterPrompt", master); err != nil {
+		return nil, err
+	}
+	if err := setField("userPrompt", user); err != nil {
+		return nil, err
+	}
+	if tooling.set {
+		if err := setField("toolingPrompt", tooling); err != nil {
+			return nil, err
+		}
+	}
+
+	// Both prompts are mandatory; a missing one means neither the flag nor the
+	// current teammate supplied it. Fail clearly instead of letting the service
+	// return an opaque error.
+	for _, key := range []string{"masterPrompt", "userPrompt"} {
+		if v, ok := body[key]; !ok || len(bytes.Trim(v, `"`)) == 0 {
+			return nil, fmt.Errorf("%s is required but the current teammate has none; pass --%s", key, promptFlagName(key))
+		}
+	}
+	return json.Marshal(body)
+}
+
+// promptFlagName maps an agent field to its CLI flag name.
+func promptFlagName(field string) string {
+	switch field {
+	case "masterPrompt":
+		return "master-prompt"
+	case "userPrompt":
+		return "user-prompt"
+	default:
+		return "tooling-prompt"
+	}
+}
+
+// unwrapDataEnvelope returns the agent request body to send. The agent service
+// wraps GET responses in a {status, data, success} envelope, so a file produced
+// by "edx ai agents get <id> > agent.json" carries the agent object under
+// "data". When the input is such an envelope, return the inner object so the
+// documented get-edit-update round-trip works. Otherwise (a hand-written bare
+// body) return the input unchanged. The agent schema has no top-level "data"
+// field, so unwrapping never discards real agent data.
+func unwrapDataEnvelope(raw []byte) []byte {
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &top); err != nil {
+		return raw // not a JSON object; let the server reject it with a clear error
+	}
+	data, ok := top["data"]
+	if !ok {
+		return raw
+	}
+	if trimmed := bytes.TrimSpace(data); len(trimmed) > 0 && trimmed[0] == '{' {
+		return data
+	}
+	return raw
 }
 
 // --- Connectors & activity (main API) ---
