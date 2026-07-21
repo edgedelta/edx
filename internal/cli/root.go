@@ -76,6 +76,12 @@ EXAMPLES
   edx api GET /v1/orgs/{org}/dashboards`,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		// Runs before every subcommand: prints an unobtrusive "update available"
+		// hint on an interactive terminal. It never prompts and returns silently
+		// for non-TTY (AI/CI/piped) callers, so it can never block automation.
+		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+			maybeNotifyUpdate(cmd)
+		},
 	}
 
 	pf := root.PersistentFlags()
@@ -109,6 +115,7 @@ EXAMPLES
 		newAPICmd(),
 		newSkillsCmd(),
 		newVersionCmd(),
+		newUpdateCmd(),
 	)
 
 	// Show the Edge Delta wordmark above the root help (and bare `edx`).
