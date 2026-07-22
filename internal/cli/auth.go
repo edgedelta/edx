@@ -47,12 +47,13 @@ list them with "edx auth list", and switch the default with "edx auth use
 
 func newAuthLoginCmd() *cobra.Command {
 	var token, orgID, env string
-	var useOAuth, setDefault, useCookie, force bool
+	var useOAuth, setDefault, useCookie, useDevice, force bool
 	cmd := &cobra.Command{
 		Use:   "login",
 		Short: "Save credentials to a profile (OAuth by default, an API token, or a support cookie)",
 		Example: `  edx auth login                                          # OAuth in your browser (default)
   edx auth login --profile staging --env staging          # OAuth against staging
+  edx auth login --device                                 # no local browser (SSH/CI): enter a code in a browser
   edx auth login --token 00000000-0000-0000-0000-000000000000 --org-id <org-id>
   edx auth login --org-id <org-id> --cookie               # paste an ed-admin-session cookie (support-org access)`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -86,6 +87,46 @@ func newAuthLoginCmd() *cobra.Command {
 			}
 			if useCookie && (token != "" || useOAuth) {
 				return fmt.Errorf("--cookie cannot be combined with --token or --oauth")
+			}
+			if useDevice && (token != "" || useCookie) {
+				return fmt.Errorf("--device cannot be combined with --token or --cookie")
+			}
+
+			// Device authorization flow: for machines without a usable browser
+			// (SSH, CI, headless). Prints a code to confirm in a browser anywhere,
+			// then polls for approval. Yields the same OAuth token pair as the
+			// default browser flow, so auto-refresh works the same way.
+			if useDevice {
+				fmt.Fprintf(os.Stderr, "Signing in to %s via device authorization…\n", hostOnly(eps.API))
+				toks, err := oauth.DeviceLogin(cmd.Context(), eps.API, oauth.DeviceLoginOptions{
+					OpenBrowser: true,
+					Prompt: func(userCode, verificationURI, verificationURIComplete string, opened bool) {
+						fmt.Fprintf(os.Stderr, "\n  To finish signing in, open:\n    %s\n  and enter the code:\n    %s\n\n", verificationURI, userCode)
+						if opened {
+							fmt.Fprintln(os.Stderr, dim("  We opened your browser to the verification page."))
+						}
+						fmt.Fprintln(os.Stderr, dim("  Waiting for you to approve…"))
+					},
+				})
+				if err != nil {
+					return fmt.Errorf("device login failed: %w", err)
+				}
+				if orgID == "" {
+					orgID = oauth.OrgIDFromToken(toks.AccessToken)
+				}
+				if orgID == "" {
+					return fmt.Errorf("could not determine organization from the token; pass --org-id")
+				}
+				if err := config.SaveOAuthTokens(name, env, orgID, toks.ClientID, toks.AccessToken, toks.RefreshToken, toks.Expiry); err != nil {
+					return err
+				}
+				if setDefault {
+					if err := setDefaultProfile(name); err != nil {
+						return err
+					}
+				}
+				fmt.Fprintf(os.Stderr, "%s Signed in — profile %q (env: %s, org %s)\n", okMark(), name, env, shortID(orgID))
+				return nil
 			}
 
 			// Cookie auth: store a pasted ed-admin-session cookie. The cookie is
@@ -190,6 +231,7 @@ func newAuthLoginCmd() *cobra.Command {
 	cmd.Flags().StringVar(&env, "env", "", "environment for this profile: prod, staging or local (default prod)")
 	cmd.Flags().BoolVar(&setDefault, "set-default", false, "make this profile the default")
 	cmd.Flags().BoolVar(&useCookie, "cookie", false, "authenticate with a pasted ed-admin-session cookie for support-org access (requires --org-id; prompts for the value)")
+	cmd.Flags().BoolVar(&useDevice, "device", false, "log in without a local browser using the device authorization grant (prints a code to enter in a browser on any device)")
 	cmd.Flags().BoolVar(&force, "force", false, "overwrite the target profile if it already exists")
 	return cmd
 }
