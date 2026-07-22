@@ -150,6 +150,18 @@ func itoa(n int64) string {
 	return strconv.FormatInt(n, 10)
 }
 
+// TestBrowserAvailableSSH guards the headless-fallback signal: a remote shell
+// must report no browser (so `auth login` falls back to the device flow),
+// regardless of OS or a set DISPLAY, since the loopback redirect can't reach the
+// remote machine.
+func TestBrowserAvailableSSH(t *testing.T) {
+	t.Setenv("SSH_CONNECTION", "1.2.3.4 51000 6.7.8.9 22")
+	t.Setenv("DISPLAY", ":0")
+	if BrowserAvailable() {
+		t.Error("BrowserAvailable() = true under SSH_CONNECTION, want false")
+	}
+}
+
 // TestDeviceLogin drives the full device flow against a fake authorization
 // server: client registration, the device authorization request, and a token
 // poll that returns authorization_pending once before approving. It checks the

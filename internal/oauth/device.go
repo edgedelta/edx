@@ -17,9 +17,30 @@ import (
 	"io"
 	"net/http"
 	"net/url"
+	"os"
+	"runtime"
 	"strings"
 	"time"
 )
+
+// BrowserAvailable reports whether a local browser can likely be opened for the
+// loopback login flow. It returns false for remote shells (SSH) and headless
+// Linux/BSD (no display server) — where the loopback redirect can't reach this
+// machine and the CLI should use the device flow instead. macOS and Windows are
+// assumed to have a usable local browser.
+func BrowserAvailable() bool {
+	// A remote shell: even if an opener exists, the browser it launches (and the
+	// loopback redirect) would be on the wrong machine.
+	if os.Getenv("SSH_CONNECTION") != "" || os.Getenv("SSH_TTY") != "" {
+		return false
+	}
+	switch runtime.GOOS {
+	case "darwin", "windows":
+		return true
+	default:
+		return os.Getenv("DISPLAY") != "" || os.Getenv("WAYLAND_DISPLAY") != ""
+	}
+}
 
 // deviceCodeGrantType is the RFC 8628 grant_type for polling the token endpoint.
 const deviceCodeGrantType = "urn:ietf:params:oauth:grant-type:device_code"

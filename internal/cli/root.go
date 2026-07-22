@@ -96,6 +96,7 @@ EXAMPLES
 
 	root.AddCommand(
 		newAuthCmd(),
+		newSignupCmd(),
 		newConfigCmd(),
 		newLogsCmd(),
 		newPatternsCmd(),
