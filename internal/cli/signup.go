@@ -26,11 +26,11 @@ func newSignupCmd() *cobra.Command {
 		Short: "Create an Edge Delta account and log in",
 		Long: `Create a new Edge Delta account and log in.
 
-signup finds your Git email as a starting point, then continues in the browser
-(or prints a device code on headless machines) where you finish creating your
-account with Google, GitHub, or SSO. The login is saved as a profile, exactly
-like "edx auth login" — existing accounts are simply logged in.`,
-		Example: `  edx signup                                  # set up a new account (browser or device code)
+signup finds your Git email as a starting point, confirms it, then emails you a
+one-click sign-in link. Open the link, confirm the code shown in your terminal,
+and you're signed in. The login is saved as a profile, exactly like
+"edx auth login" — existing accounts are simply logged in.`,
+		Example: `  edx signup                                  # email a sign-in link, then confirm the code
   edx signup --profile staging --env staging  # sign up against staging under a named profile`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -61,14 +61,14 @@ like "edx auth login" — existing accounts are simply logged in.`,
 			if err != nil {
 				return err
 			}
-			if email != "" {
-				fmt.Fprintf(os.Stderr, "Setting up Edge Delta for %s.\n", email)
+			if email == "" {
+				return fmt.Errorf("an email address is required to sign up")
 			}
-			fmt.Fprintln(os.Stderr, dim("Finish in the browser with Google, GitHub, or SSO to create your account."))
+			fmt.Fprintf(os.Stderr, "Setting up Edge Delta for %s.\n", email)
 
-			// Account creation and login both happen through the OAuth transport;
-			// signup stores only the API token the login issues.
-			return loginWithOAuth(cmd, eps, env, name, "", setDefault, false)
+			// The server emails a magic link; clicking it creates the account (if
+			// new) and, after the code confirmation, issues the token signup stores.
+			return loginWithOAuth(cmd, eps, env, name, "", setDefault, false, email)
 		},
 	}
 	cmd.Flags().StringVar(&env, "env", "", "environment for this profile: prod, staging or local (default prod)")

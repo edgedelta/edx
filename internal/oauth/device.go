@@ -49,6 +49,11 @@ const deviceCodeGrantType = "urn:ietf:params:oauth:grant-type:device_code"
 type DeviceLoginOptions struct {
 	// OpenBrowser opens the verification URI automatically (default true).
 	OpenBrowser bool
+	// Email, when set, asks the server to send a passwordless magic-link to this
+	// address (CLI signup): the user authenticates by clicking the emailed link,
+	// then confirms the user_code. Leave empty for the plain device flow, where
+	// the user opens the verification URI and signs in there.
+	Email string
 	// Prompt receives the details to show the user: the user_code to enter, the
 	// verification URI, the pre-filled verification URI, and whether a browser
 	// was opened automatically.
@@ -89,7 +94,7 @@ func DeviceLogin(ctx context.Context, apiBase string, opts DeviceLoginOptions) (
 		return Tokens{}, err
 	}
 
-	dar, err := requestDeviceAuthorization(ctx, hc, apiBase, clientID, challenge)
+	dar, err := requestDeviceAuthorization(ctx, hc, apiBase, clientID, challenge, opts.Email)
 	if err != nil {
 		return Tokens{}, err
 	}
@@ -191,12 +196,16 @@ func registerDeviceClient(ctx context.Context, hc *http.Client, apiBase string) 
 	return out.ClientID, nil
 }
 
-func requestDeviceAuthorization(ctx context.Context, hc *http.Client, apiBase, clientID, challenge string) (*deviceAuthResponse, error) {
+func requestDeviceAuthorization(ctx context.Context, hc *http.Client, apiBase, clientID, challenge, email string) (*deviceAuthResponse, error) {
 	form := url.Values{
 		"client_id":             {clientID},
 		"scope":                 {scope},
 		"code_challenge":        {challenge},
 		"code_challenge_method": {"S256"},
+	}
+	// A signup passes the email so the server sends a passwordless magic link.
+	if email != "" {
+		form.Set("email", email)
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, apiBase+"/oauth/device", strings.NewReader(form.Encode()))
 	if err != nil {

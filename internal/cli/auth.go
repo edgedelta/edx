@@ -96,7 +96,7 @@ func newAuthLoginCmd() *cobra.Command {
 			// browser (SSH, CI, headless). Yields the same OAuth token pair as the
 			// default browser flow, so auto-refresh works the same way.
 			if useDevice {
-				return loginWithOAuth(cmd, eps, env, name, orgID, setDefault, true)
+				return loginWithOAuth(cmd, eps, env, name, orgID, setDefault, true, "")
 			}
 
 			// Cookie auth: store a pasted ed-admin-session cookie. The cookie is
@@ -144,7 +144,7 @@ func newAuthLoginCmd() *cobra.Command {
 			// With no local browser (SSH/headless), this auto-falls back to the
 			// device flow.
 			if token == "" {
-				return loginWithOAuth(cmd, eps, env, name, orgID, setDefault, false)
+				return loginWithOAuth(cmd, eps, env, name, orgID, setDefault, false, "")
 			}
 
 			if orgID == "" {
@@ -374,10 +374,11 @@ func cleanCookie(s string) string {
 // loginWithOAuth runs the interactive OAuth login and saves the resulting tokens
 // to the named profile. It uses the loopback browser flow by default and the
 // device authorization flow when forceDevice is set or no local browser is
-// available (SSH/headless) — both yield the same refreshable token pair. Shared
-// by "auth login" and "signup".
-func loginWithOAuth(cmd *cobra.Command, eps config.Endpoints, env, name, orgID string, setDefault, forceDevice bool) error {
-	useDevice := forceDevice
+// available (SSH/headless) — both yield the same refreshable token pair. When
+// email is non-empty (signup), it always uses the device flow and asks the
+// server to email a passwordless magic link. Shared by "auth login" and "signup".
+func loginWithOAuth(cmd *cobra.Command, eps config.Endpoints, env, name, orgID string, setDefault, forceDevice bool, email string) error {
+	useDevice := forceDevice || email != ""
 	if !useDevice && !oauth.BrowserAvailable() {
 		useDevice = true
 		fmt.Fprintln(os.Stderr, dim("No local browser detected; using device authorization."))
@@ -385,7 +386,19 @@ func loginWithOAuth(cmd *cobra.Command, eps config.Endpoints, env, name, orgID s
 
 	var toks oauth.Tokens
 	var err error
-	if useDevice {
+	switch {
+	case email != "":
+		// Signup: the server emails a magic link; the user clicks it, then
+		// confirms the code. No local browser is opened.
+		toks, err = oauth.DeviceLogin(cmd.Context(), eps.API, oauth.DeviceLoginOptions{
+			Email: email,
+			Prompt: func(userCode, verificationURI, _ string, _ bool) {
+				fmt.Fprintf(os.Stderr, "\n  We emailed a sign-in link to %s.\n  Open it, then confirm this code:\n\n    %s\n\n", email, userCode)
+				fmt.Fprintf(os.Stderr, dim("  No email? Visit %s and enter the code.\n"), verificationURI)
+				fmt.Fprintln(os.Stderr, dim("  Waiting for you to confirm…"))
+			},
+		})
+	case useDevice:
 		fmt.Fprintf(os.Stderr, "Signing in to %s via device authorization…\n", hostOnly(eps.API))
 		toks, err = oauth.DeviceLogin(cmd.Context(), eps.API, oauth.DeviceLoginOptions{
 			OpenBrowser: true,
@@ -397,7 +410,7 @@ func loginWithOAuth(cmd *cobra.Command, eps config.Endpoints, env, name, orgID s
 				fmt.Fprintln(os.Stderr, dim("  Waiting for you to approve…"))
 			},
 		})
-	} else {
+	default:
 		fmt.Fprintf(os.Stderr, "Signing in to %s via your browser…\n", hostOnly(eps.API))
 		toks, err = oauth.Login(cmd.Context(), eps.API, oauth.LoginOptions{
 			OpenBrowser: true,
