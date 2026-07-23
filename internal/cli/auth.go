@@ -47,12 +47,13 @@ list them with "edx auth list", and switch the default with "edx auth use
 
 func newAuthLoginCmd() *cobra.Command {
 	var token, orgID, env string
-	var useOAuth, setDefault, useCookie, force bool
+	var useOAuth, setDefault, useCookie, useDevice, force bool
 	cmd := &cobra.Command{
 		Use:   "login",
 		Short: "Save credentials to a profile (OAuth by default, an API token, or a support cookie)",
 		Example: `  edx auth login                                          # OAuth in your browser (default)
   edx auth login --profile staging --env staging          # OAuth against staging
+  edx auth login --device                                 # no local browser (SSH/CI): enter a code in a browser
   edx auth login --token 00000000-0000-0000-0000-000000000000 --org-id <org-id>
   edx auth login --org-id <org-id> --cookie               # paste an ed-admin-session cookie (support-org access)`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -86,6 +87,16 @@ func newAuthLoginCmd() *cobra.Command {
 			}
 			if useCookie && (token != "" || useOAuth) {
 				return fmt.Errorf("--cookie cannot be combined with --token or --oauth")
+			}
+			if useDevice && (token != "" || useCookie) {
+				return fmt.Errorf("--device cannot be combined with --token or --cookie")
+			}
+
+			// Device authorization flow (--device): for machines without a usable
+			// browser (SSH, CI, headless). Yields the same OAuth token pair as the
+			// default browser flow, so auto-refresh works the same way.
+			if useDevice {
+				return loginWithOAuth(cmd, eps, env, name, orgID, setDefault, true, "")
 			}
 
 			// Cookie auth: store a pasted ed-admin-session cookie. The cookie is
@@ -130,38 +141,10 @@ func newAuthLoginCmd() *cobra.Command {
 			}
 
 			// OAuth is the default; a static API token is used only with --token.
+			// With no local browser (SSH/headless), this auto-falls back to the
+			// device flow.
 			if token == "" {
-				fmt.Fprintf(os.Stderr, "Signing in to %s via your browser…\n", hostOnly(eps.API))
-				toks, err := oauth.Login(cmd.Context(), eps.API, oauth.LoginOptions{
-					OpenBrowser: true,
-					Prompt: func(u string, opened bool) {
-						if !opened {
-							fmt.Fprintf(os.Stderr, "  Couldn't open a browser automatically — open this URL to continue:\n  %s\n", u)
-						}
-						fmt.Fprintln(os.Stderr, dim("  Waiting for you to authorize in the browser…"))
-					},
-				})
-				if err != nil {
-					return fmt.Errorf("oauth login failed: %w", err)
-				}
-				// The org is carried in the access token; derive it so the user
-				// need not pass --org-id. An explicit --org-id still overrides.
-				if orgID == "" {
-					orgID = oauth.OrgIDFromToken(toks.AccessToken)
-				}
-				if orgID == "" {
-					return fmt.Errorf("could not determine organization from the token; pass --org-id")
-				}
-				if err := config.SaveOAuthTokens(name, env, orgID, toks.ClientID, toks.AccessToken, toks.RefreshToken, toks.Expiry); err != nil {
-					return err
-				}
-				if setDefault {
-					if err := setDefaultProfile(name); err != nil {
-						return err
-					}
-				}
-				fmt.Fprintf(os.Stderr, "%s Signed in — profile %q (env: %s, org %s)\n", okMark(), name, env, shortID(orgID))
-				return nil
+				return loginWithOAuth(cmd, eps, env, name, orgID, setDefault, false, "")
 			}
 
 			if orgID == "" {
@@ -190,6 +173,7 @@ func newAuthLoginCmd() *cobra.Command {
 	cmd.Flags().StringVar(&env, "env", "", "environment for this profile: prod, staging or local (default prod)")
 	cmd.Flags().BoolVar(&setDefault, "set-default", false, "make this profile the default")
 	cmd.Flags().BoolVar(&useCookie, "cookie", false, "authenticate with a pasted ed-admin-session cookie for support-org access (requires --org-id; prompts for the value)")
+	cmd.Flags().BoolVar(&useDevice, "device", false, "log in without a local browser using the device authorization grant (prints a code to enter in a browser on any device)")
 	cmd.Flags().BoolVar(&force, "force", false, "overwrite the target profile if it already exists")
 	return cmd
 }
@@ -385,6 +369,81 @@ func cleanCookie(s string) string {
 	s = strings.TrimPrefix(s, "\x1b[200~")
 	s = strings.TrimSuffix(s, "\x1b[201~")
 	return strings.TrimSpace(s)
+}
+
+// loginWithOAuth runs the interactive OAuth login and saves the resulting tokens
+// to the named profile. It uses the loopback browser flow by default and the
+// device authorization flow when forceDevice is set or no local browser is
+// available (SSH/headless) — both yield the same refreshable token pair. When
+// email is non-empty (signup), it always uses the device flow and asks the
+// server to email a passwordless magic link. Shared by "auth login" and "signup".
+func loginWithOAuth(cmd *cobra.Command, eps config.Endpoints, env, name, orgID string, setDefault, forceDevice bool, email string) error {
+	useDevice := forceDevice || email != ""
+	if !useDevice && !oauth.BrowserAvailable() {
+		useDevice = true
+		fmt.Fprintln(os.Stderr, dim("No local browser detected; using device authorization."))
+	}
+
+	var toks oauth.Tokens
+	var err error
+	switch {
+	case email != "":
+		// Signup: the server emails a magic link; the user clicks it, then
+		// confirms the code. No local browser is opened.
+		toks, err = oauth.DeviceLogin(cmd.Context(), eps.API, oauth.DeviceLoginOptions{
+			Email: email,
+			Prompt: func(userCode, verificationURI, _ string, _ bool) {
+				fmt.Fprintf(os.Stderr, "\n  We emailed a sign-in link to %s.\n  Open it, then confirm this code:\n\n    %s\n\n", email, userCode)
+				fmt.Fprintf(os.Stderr, dim("  No email? Visit %s and enter the code.\n"), verificationURI)
+				fmt.Fprintln(os.Stderr, dim("  Waiting for you to confirm…"))
+			},
+		})
+	case useDevice:
+		fmt.Fprintf(os.Stderr, "Signing in to %s via device authorization…\n", hostOnly(eps.API))
+		toks, err = oauth.DeviceLogin(cmd.Context(), eps.API, oauth.DeviceLoginOptions{
+			OpenBrowser: true,
+			Prompt: func(userCode, verificationURI, _ string, opened bool) {
+				fmt.Fprintf(os.Stderr, "\n  To finish signing in, open:\n    %s\n  and enter the code:\n    %s\n\n", verificationURI, userCode)
+				if opened {
+					fmt.Fprintln(os.Stderr, dim("  We opened your browser to the verification page."))
+				}
+				fmt.Fprintln(os.Stderr, dim("  Waiting for you to approve…"))
+			},
+		})
+	default:
+		fmt.Fprintf(os.Stderr, "Signing in to %s via your browser…\n", hostOnly(eps.API))
+		toks, err = oauth.Login(cmd.Context(), eps.API, oauth.LoginOptions{
+			OpenBrowser: true,
+			Prompt: func(u string, opened bool) {
+				if !opened {
+					fmt.Fprintf(os.Stderr, "  Couldn't open a browser automatically — open this URL to continue:\n  %s\n", u)
+				}
+				fmt.Fprintln(os.Stderr, dim("  Waiting for you to authorize in the browser…"))
+			},
+		})
+	}
+	if err != nil {
+		return fmt.Errorf("login failed: %w", err)
+	}
+
+	// The org is carried in the access token; derive it so the user need not
+	// pass --org-id. An explicit --org-id still overrides.
+	if orgID == "" {
+		orgID = oauth.OrgIDFromToken(toks.AccessToken)
+	}
+	if orgID == "" {
+		return fmt.Errorf("could not determine organization from the token; pass --org-id")
+	}
+	if err := config.SaveOAuthTokens(name, env, orgID, toks.ClientID, toks.AccessToken, toks.RefreshToken, toks.Expiry); err != nil {
+		return err
+	}
+	if setDefault {
+		if err := setDefaultProfile(name); err != nil {
+			return err
+		}
+	}
+	fmt.Fprintf(os.Stderr, "%s Signed in — profile %q (env: %s, org %s)\n", okMark(), name, env, shortID(orgID))
+	return nil
 }
 
 // setDefaultProfile marks name as the config default.
