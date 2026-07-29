@@ -32,6 +32,9 @@ const (
 	maxFollowFailures = 5
 	// maxFollowSeen bounds the emitted-record memory of a long-running --follow.
 	maxFollowSeen = 100000
+	// followHeartbeat is how long --follow stays completely silent before noting
+	// on stderr that it is still polling and seeing nothing.
+	followHeartbeat = time.Minute
 )
 
 func newCaptureCmd() *cobra.Command {
@@ -184,6 +187,10 @@ starts are printed. Either way you can narrow the stream with
 --param nodes=<a,b> or --param limit_per_source=1.
 
 Only --output json (the default) and raw are supported while following.
+
+A capture can be armed and still produce nothing - a node with no traffic
+reports empty samples - so after a minute without a new item, --follow notes the
+silence on stderr rather than leaving you guessing.
 
 --follow tails the capture results; it does not keep the capture running. An
 "edx capture start" task must be active or the stream stays silent, so re-arm
@@ -369,24 +376,39 @@ type captureTail struct {
 	// skipBacklog stays true until the first poll that actually reaches the API,
 	// so a 404 or a retried failure at startup does not consume the skip.
 	skipBacklog bool
+
+	// A capture can be armed and still produce nothing - a node with no traffic
+	// reports empty before/after arrays - and an unbroken silence is
+	// indistinguishable from a broken tail. Every quiet stretch therefore gets a
+	// periodic note; a stream that is producing items needs none, since the items
+	// are their own evidence.
+	now        func() time.Time
+	heartbeat  time.Duration
+	quietSince time.Time
+	quietPolls int
 }
 
 func newCaptureTail(out, notes io.Writer, rawItems, sinceNow bool) *captureTail {
 	enc := json.NewEncoder(out)
 	enc.SetEscapeHTML(false)
-	return &captureTail{
+	t := &captureTail{
 		seen:        newSeenSet(maxFollowSeen),
 		enc:         enc,
 		out:         out,
 		notes:       notes,
 		rawItems:    rawItems,
 		skipBacklog: sinceNow,
+		now:         time.Now,
+		heartbeat:   followHeartbeat,
 	}
+	t.quietSince = t.now()
+	return t
 }
 
-// emit writes the records of one poll that have not been written before. The
-// first call under --since-now records the backlog as seen without writing it.
-func (t *captureTail) emit(recs []captureRecord) error {
+// emit writes the records of one poll that have not been written before, and
+// reports how many it wrote. The first call under --since-now records the
+// backlog as seen without writing it.
+func (t *captureTail) emit(recs []captureRecord) (int, error) {
 	if t.skipBacklog {
 		for _, r := range recs {
 			t.seen.add(r.key)
@@ -397,23 +419,42 @@ func (t *captureTail) emit(recs []captureRecord) error {
 		// Consumed even on an empty response: anything arriving from the next
 		// poll on is genuinely new, not backlog.
 		t.skipBacklog = false
-		return nil
+		return 0, nil
 	}
+	var wrote int
 	for _, r := range recs {
 		if !t.seen.add(r.key) {
 			continue
 		}
 		if t.rawItems {
 			if _, err := fmt.Fprintln(t.out, r.raw); err != nil {
-				return err
+				return wrote, err
 			}
-			continue
+		} else if err := t.enc.Encode(r); err != nil {
+			return wrote, err
 		}
-		if err := t.enc.Encode(r); err != nil {
-			return err
-		}
+		wrote++
 	}
-	return nil
+	return wrote, nil
+}
+
+// tick records the outcome of one completed poll and notes a continuing silence
+// on stderr. Call it for every poll that reached the API, including one that
+// found no capture data at all.
+func (t *captureTail) tick(wrote int) {
+	now := t.now()
+	if wrote > 0 {
+		t.quietSince = now
+		t.quietPolls = 0
+		return
+	}
+	t.quietPolls++
+	if quiet := now.Sub(t.quietSince); quiet >= t.heartbeat {
+		fmt.Fprintf(t.notes, "no new items in the last %s (%d polls) - is a capture task still armed?\n",
+			quiet.Round(time.Second), t.quietPolls)
+		t.quietSince = now
+		t.quietPolls = 0
+	}
 }
 
 // followCapture polls the capture results and prints each newly captured item
@@ -441,6 +482,7 @@ func followCapture(cmd *cobra.Command, confID string, q url.Values, interval tim
 			// No capture data for this pipeline yet - a normal state while
 			// waiting for the first agent upload, not a failure.
 			failures = 0
+			tail.tick(0)
 		case err != nil:
 			failures++
 			fmt.Fprintf(os.Stderr, "capture poll failed (%d/%d): %v\n", failures, maxFollowFailures, err)
@@ -453,9 +495,11 @@ func followCapture(cmd *cobra.Command, confID string, q url.Values, interval tim
 			if err != nil {
 				return err
 			}
-			if err := tail.emit(recs); err != nil {
+			wrote, err := tail.emit(recs)
+			if err != nil {
 				return err
 			}
+			tail.tick(wrote)
 		}
 
 		select {
@@ -469,32 +513,28 @@ func followCapture(cmd *cobra.Command, confID string, q url.Values, interval tim
 // warnIfNoCaptureTask notes on stderr when nothing is arming the capture, so a
 // silent --follow is not mistaken for an idle pipeline. Best effort: a failed
 // check is not worth ending the tail over.
+//
+// A lapsed task needs no separate case: the API stops serving it once it
+// expires (the endpoint returns null), so an expired capture is indistinguishable
+// from never having armed one, and gets the same message.
 func warnIfNoCaptureTask(ctx context.Context, c *api.Client, confID string) {
 	data, err := c.Get(ctx, "/pipelines/"+url.PathEscape(confID)+"/capture/task", nil)
 	if err != nil {
 		if isNotFound(err) {
-			fmt.Fprintf(os.Stderr, "warning: no active capture task for %s; run `edx capture start %s --duration 10m`\n", confID, confID)
+			warnNoCaptureTask(confID)
 		}
 		return
 	}
 	var task struct {
-		ID        string `json:"id"`
-		ExpiresAt string `json:"expires_at"`
+		ID string `json:"id"`
 	}
 	if err := json.Unmarshal(data, &task); err != nil || task.ID == "" {
-		fmt.Fprintf(os.Stderr, "warning: no active capture task for %s; run `edx capture start %s --duration 10m`\n", confID, confID)
-		return
-	}
-	if expiry, err := parseCaptureTime(task.ExpiresAt); err == nil && time.Now().After(expiry) {
-		fmt.Fprintf(os.Stderr, "warning: capture task %s expired at %s; re-arm with `edx capture start %s --duration 10m`\n", task.ID, task.ExpiresAt, confID)
+		warnNoCaptureTask(confID)
 	}
 }
 
-func parseCaptureTime(s string) (time.Time, error) {
-	if t, err := time.Parse(urlTimeFormat, s); err == nil {
-		return t, nil
-	}
-	return time.Parse(time.RFC3339, s)
+func warnNoCaptureTask(confID string) {
+	fmt.Fprintf(os.Stderr, "warning: no active capture task for %s; run `edx capture start %s --duration 10m`\n", confID, confID)
 }
 
 func isNotFound(err error) bool {

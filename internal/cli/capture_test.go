@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+	"time"
 )
 
 const captureResponse = `[
@@ -152,11 +153,11 @@ func TestCaptureTailEmitsNewItemsOnce(t *testing.T) {
 	var out, notes bytes.Buffer
 	tail := newCaptureTail(&out, &notes, false, false)
 
-	if err := tail.emit(recsOf(t, 100, "a", "b")); err != nil {
+	if _, err := tail.emit(recsOf(t, 100, "a", "b")); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
 	// A re-fetched batch that grew: only the appended item is new.
-	if err := tail.emit(recsOf(t, 100, "a", "b", "c")); err != nil {
+	if _, err := tail.emit(recsOf(t, 100, "a", "b", "c")); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
 	lines := nonEmptyLines(out.String())
@@ -177,7 +178,7 @@ func TestCaptureTailSinceNowSkipsBacklog(t *testing.T) {
 	var out, notes bytes.Buffer
 	tail := newCaptureTail(&out, &notes, false, true)
 
-	if err := tail.emit(recsOf(t, 100, "old1", "old2")); err != nil {
+	if _, err := tail.emit(recsOf(t, 100, "old1", "old2")); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
 	if out.Len() != 0 {
@@ -187,10 +188,10 @@ func TestCaptureTailSinceNowSkipsBacklog(t *testing.T) {
 		t.Errorf("note = %q, want it to report 2 skipped", notes.String())
 	}
 	// The backlog is still suppressed on re-fetch, and new items print.
-	if err := tail.emit(recsOf(t, 100, "old1", "old2")); err != nil {
+	if _, err := tail.emit(recsOf(t, 100, "old1", "old2")); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
-	if err := tail.emit(recsOf(t, 300, "fresh")); err != nil {
+	if _, err := tail.emit(recsOf(t, 300, "fresh")); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
 	lines := nonEmptyLines(out.String())
@@ -205,13 +206,13 @@ func TestCaptureTailSinceNowEmptyFirstPoll(t *testing.T) {
 	var out, notes bytes.Buffer
 	tail := newCaptureTail(&out, &notes, false, true)
 
-	if err := tail.emit(nil); err != nil {
+	if _, err := tail.emit(nil); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
 	if notes.Len() != 0 {
 		t.Errorf("note printed for an empty backlog: %s", notes.String())
 	}
-	if err := tail.emit(recsOf(t, 100, "fresh")); err != nil {
+	if _, err := tail.emit(recsOf(t, 100, "fresh")); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
 	if lines := nonEmptyLines(out.String()); len(lines) != 1 {
@@ -219,10 +220,87 @@ func TestCaptureTailSinceNowEmptyFirstPoll(t *testing.T) {
 	}
 }
 
+// emit's count drives the heartbeat, so it has to match what was written.
+func TestCaptureTailEmitReportsWrittenCount(t *testing.T) {
+	var out, notes bytes.Buffer
+	tail := newCaptureTail(&out, &notes, false, false)
+
+	if n, err := tail.emit(recsOf(t, 100, "a", "b")); err != nil || n != 2 {
+		t.Errorf("first emit = (%d, %v), want (2, nil)", n, err)
+	}
+	// Same batch plus one: only the appended item counts.
+	if n, err := tail.emit(recsOf(t, 100, "a", "b", "c")); err != nil || n != 1 {
+		t.Errorf("second emit = (%d, %v), want (1, nil)", n, err)
+	}
+	if n, err := tail.emit(recsOf(t, 100, "a", "b", "c")); err != nil || n != 0 {
+		t.Errorf("re-fetch emit = (%d, %v), want (0, nil)", n, err)
+	}
+	// A skipped backlog writes nothing, so it must report nothing.
+	skipping := newCaptureTail(&out, &notes, false, true)
+	if n, err := skipping.emit(recsOf(t, 100, "old")); err != nil || n != 0 {
+		t.Errorf("backlog emit = (%d, %v), want (0, nil)", n, err)
+	}
+}
+
+func TestCaptureTailHeartbeat(t *testing.T) {
+	var out, notes bytes.Buffer
+	tail := newCaptureTail(&out, &notes, false, false)
+	clock := tail.quietSince
+	tail.now = func() time.Time { return clock }
+	tail.heartbeat = time.Minute
+
+	// Quiet, but not yet long enough to be worth mentioning.
+	for i := 0; i < 5; i++ {
+		clock = clock.Add(10 * time.Second)
+		tail.tick(0)
+	}
+	if notes.Len() != 0 {
+		t.Fatalf("note before the interval elapsed: %s", notes.String())
+	}
+	// Crossing the interval reports the silence and how much polling it covered.
+	clock = clock.Add(10 * time.Second)
+	tail.tick(0)
+	got := notes.String()
+	if !strings.Contains(got, "no new items in the last 1m0s") || !strings.Contains(got, "(6 polls)") {
+		t.Errorf("note = %q, want it to report 1m0s and 6 polls", got)
+	}
+	// The window restarts, so the next note is another full interval away.
+	notes.Reset()
+	clock = clock.Add(59 * time.Second)
+	tail.tick(0)
+	if notes.Len() != 0 {
+		t.Errorf("note repeated before a fresh interval elapsed: %s", notes.String())
+	}
+}
+
+// Items flowing are their own evidence - a tail that is producing output should
+// never also narrate.
+func TestCaptureTailHeartbeatSilentWhileItemsFlow(t *testing.T) {
+	var out, notes bytes.Buffer
+	tail := newCaptureTail(&out, &notes, false, false)
+	clock := tail.quietSince
+	tail.now = func() time.Time { return clock }
+	tail.heartbeat = time.Minute
+
+	for i := 0; i < 10; i++ {
+		clock = clock.Add(30 * time.Second)
+		tail.tick(1)
+	}
+	if notes.Len() != 0 {
+		t.Errorf("heartbeat fired while items were being written: %s", notes.String())
+	}
+	// One quiet poll right after a productive one is not yet a silence either.
+	clock = clock.Add(30 * time.Second)
+	tail.tick(0)
+	if notes.Len() != 0 {
+		t.Errorf("heartbeat fired only 30s after the last item: %s", notes.String())
+	}
+}
+
 func TestCaptureTailRawOutput(t *testing.T) {
 	var out, notes bytes.Buffer
 	tail := newCaptureTail(&out, &notes, true, false)
-	if err := tail.emit(recsOf(t, 100, "a")); err != nil {
+	if _, err := tail.emit(recsOf(t, 100, "a")); err != nil {
 		t.Fatalf("emit: %v", err)
 	}
 	got := strings.TrimSpace(out.String())

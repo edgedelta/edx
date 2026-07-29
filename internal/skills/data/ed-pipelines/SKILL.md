@@ -208,7 +208,13 @@ Notes:
 
 - It tails results only; it does not keep the capture alive. Once the
   `capture start` task expires the stream goes quiet, so re-arm it. edx warns on
-  stderr at startup when no task is active or the task has already expired.
+  stderr at startup when no task is active (an expired task reads the same way -
+  the API stops serving it).
+- A capture can be armed and still produce nothing: a node with no traffic
+  reports empty `before`/`after` arrays. After a minute with no new item, edx
+  notes the silence on stderr (`no new items in the last 1m0s (12 polls)`), so a
+  quiet tail is never mistaken for a broken one. A tail that is producing items
+  stays quiet - the items are their own evidence.
 - The first poll prints everything currently held (can be hundreds of lines).
   `--since-now` gives `tail -f` semantics instead: the backlog is swallowed and
   only items captured after the tail starts are printed. Either way,
