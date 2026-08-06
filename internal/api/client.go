@@ -7,6 +7,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net"
 	"net/http"
 	"net/url"
@@ -128,6 +129,37 @@ func (c *Client) Do(ctx context.Context, method, path string, query url.Values, 
 // DoOn performs an HTTP request against the named service and returns the
 // response body. path must be absolute (e.g. /v1/orgs/<id>/issues).
 func (c *Client) DoOn(ctx context.Context, svc Service, method, path string, query url.Values, body []byte) ([]byte, error) {
+	return c.doOn(ctx, svc, method, path, query, body, "application/json")
+}
+
+// DoMultipart performs a multipart/form-data request against the main API,
+// sending file as the form file field "data" under filename plus any extra
+// plain form fields (empty values are omitted). path must be absolute.
+func (c *Client) DoMultipart(ctx context.Context, method, path string, query url.Values, filename string, file []byte, fields map[string]string) ([]byte, error) {
+	var buf bytes.Buffer
+	w := multipart.NewWriter(&buf)
+	for k, v := range fields {
+		if v == "" {
+			continue
+		}
+		if err := w.WriteField(k, v); err != nil {
+			return nil, err
+		}
+	}
+	fw, err := w.CreateFormFile("data", filename)
+	if err != nil {
+		return nil, err
+	}
+	if _, err := fw.Write(file); err != nil {
+		return nil, err
+	}
+	if err := w.Close(); err != nil {
+		return nil, err
+	}
+	return c.doOn(ctx, ServiceAPI, method, path, query, buf.Bytes(), w.FormDataContentType())
+}
+
+func (c *Client) doOn(ctx context.Context, svc Service, method, path string, query url.Values, body []byte, contentType string) ([]byte, error) {
 	u := c.baseFor(svc) + path
 	if len(query) > 0 {
 		u += "?" + query.Encode()
@@ -152,7 +184,7 @@ func (c *Client) DoOn(ctx context.Context, svc Service, method, path string, que
 		if err != nil {
 			return nil, err
 		}
-		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Content-Type", contentType)
 		req.Header.Set("User-Agent", c.UserAgent)
 		if err := c.Auth.apply(ctx, req, svc, path); err != nil {
 			return nil, err
