@@ -62,6 +62,7 @@ Re-run `edx auth login` (token from Admin > API Tokens, or `--oauth`).
 | Health | `edx health components`, `edx health problems` |
 | Dashboards | `edx dashboards list/get` |
 | Schema | `edx facets keys/options/list` |
+| Lookup tables | `edx lookup list/get/download/create/update/delete` |
 | AI Teammate | `edx ai connectors ...`, `edx ai activity` |
 | Ingestion | `edx ingest endpoints`, `edx ingest token` |
 | Raw API | `edx api <METHOD> <path>` |
