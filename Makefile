@@ -15,7 +15,14 @@ SCHEMA_SRC := $(MONOREPO_SRC)/web/src/modules/dashboards/versions/v4/schema/dash
 SCHEMA_DST := internal/dashboards/dashboard-v4.schema.json
 FIXTURES_DST := internal/dashboards/testdata/definitions
 
-.PHONY: build install test vet lint clean sync-skills sync-dashboard-schema
+# The ANTLR query parsers, vendored from the same monorepo. These are generated Go files
+# that depend only on the ANTLR runtime, so they compile here unmodified — the directory
+# layout below matches the monorepo's so the sync stays a plain copy with no rewriting.
+PARSERS_SRC := $(MONOREPO_SRC)/pkg/antlrcql
+PARSERS_DST := internal/cql
+PARSER_DIRS := logparser metric/parser formula/parser
+
+.PHONY: build install test vet lint clean sync-skills sync-dashboard-schema sync-cql-parsers
 
 build:
 	go build -ldflags '$(LDFLAGS)' -o bin/edx .
@@ -52,3 +59,17 @@ sync-dashboard-schema:
 	cp $(SCHEMA_SRC) $(SCHEMA_DST)
 	@echo "synced $(SCHEMA_DST)"
 	@echo "reminder: refresh $(FIXTURES_DST) too if the shipped default dashboards changed"
+
+# Refresh the vendored query parsers after the .g4 grammars change. Regenerate the Go
+# files in the monorepo first (see pkg/antlrcql/README.md), then run this and commit.
+# Only the .go files are copied; the .interp and .tokens files next to them are ANTLR
+# tooling artifacts that nothing here compiles against.
+sync-cql-parsers:
+	@test -d "$(PARSERS_SRC)" || { echo "parsers not found at $(PARSERS_SRC); set MONOREPO_SRC=/path/to/edgedelta"; exit 1; }
+	@for dir in $(PARSER_DIRS); do \
+		rm -rf $(PARSERS_DST)/$$dir; \
+		mkdir -p $(PARSERS_DST)/$$dir; \
+		cp $(PARSERS_SRC)/$$dir/*.go $(PARSERS_DST)/$$dir/ || exit 1; \
+		echo "synced $(PARSERS_DST)/$$dir"; \
+	done
+	@go build ./... && echo "parsers compile unmodified"

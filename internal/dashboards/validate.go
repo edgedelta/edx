@@ -1,10 +1,14 @@
-// Package dashboards validates dashboard definitions against the frontend's own
-// Dashboard type, deterministically and offline.
+// Package dashboards validates dashboard definitions deterministically and offline,
+// against the frontend's own Dashboard type and the backend's own query grammars.
 //
 // dashboard-v4.schema.json is generated directly from the DashboardsV4 types in
 // web/src/modules/dashboards/versions/v4/definition.ts in the edgedelta monorepo — the
 // same types the UI renders from, so there is no second definition to drift from.
 // Refresh the vendored copy with `make sync-dashboard-schema`.
+//
+// The schema types every query field as a plain string, so the queries inside a
+// definition are checked separately, by the vendored grammars in internal/cql. See
+// queries.go for how a query's grammar is chosen and what the check does not cover.
 package dashboards
 
 import (
@@ -74,10 +78,20 @@ func (i Issue) String() string {
 var ErrUnsupportedVersion = errors.New("unsupported definition version")
 
 // ValidateDefinition checks a bare dashboard *definition* object (the value of the
-// "definition" key) against the v4 schema. A nil error means the definition
-// satisfies the frontend's Dashboard type.
+// "definition" key) against the v4 schema, and syntax-checks the queries inside it. No
+// issues means the definition satisfies the frontend's Dashboard type and every query
+// parses.
+//
+// Both checks always run: a query typo and a schema violation are independent mistakes,
+// and reporting only the first would hide the other. See queries.go for what the query
+// check covers.
 func ValidateDefinition(definition any) ([]Issue, error) {
 	sch, err := schema()
+	if err != nil {
+		return nil, err
+	}
+
+	queryIssues, err := validateQueries(definition)
 	if err != nil {
 		return nil, err
 	}
@@ -94,13 +108,25 @@ func ValidateDefinition(definition any) ([]Issue, error) {
 
 	err = sch.Validate(definition)
 	if err == nil {
-		return nil, nil
+		return queryIssues, nil
 	}
 	var ve *jsonschema.ValidationError
 	if !errors.As(err, &ve) {
 		return nil, err
 	}
-	return issues(ve), nil
+	return merge(issues(ve), queryIssues), nil
+}
+
+// merge combines two already-sorted issue lists into one ordered by path.
+func merge(schemaIssues, queryIssues []Issue) []Issue {
+	out := append(schemaIssues, queryIssues...)
+	sort.SliceStable(out, func(i, j int) bool {
+		if out[i].Path != out[j].Path {
+			return out[i].Path < out[j].Path
+		}
+		return out[i].Message < out[j].Message
+	})
+	return out
 }
 
 // issues flattens a validation error tree into the deepest causes, which carry the

@@ -40,7 +40,13 @@ func newDashboardsValidateCmd() *cobra.Command {
 		Use:   "validate --file dashboard.json",
 		Short: "Validate a dashboard definition without saving it",
 		Long: `Validate a dashboard JSON body, or a bare definition object, against the
-frontend's Dashboard schema. Exits non-zero when the definition would not render.
+frontend's Dashboard schema, and check the syntax of the queries inside it. Exits
+non-zero when the definition would not render.
+
+Queries are parsed with the same ANTLR grammars the backend uses, choosing the
+grammar from each data source's type — metric, log and formula queries have
+different syntax. This is a syntax check only: telling whether a facet or metric
+name exists needs a live backend.
 
 Accepts either a full dashboard body ({"dashboard_name": ..., "definition": {...}})
 or just the definition object ({"version": 4, "widgets": [...]}).`,
