@@ -1,8 +1,8 @@
 ---
 name: ed-dashboards
-description: Dashboards - create, update, inspect and validate metric dashboards from the CLI.
+description: Dashboards - create, update, inspect, validate and screenshot metric dashboards from the CLI.
 metadata:
-  version: "1.2.0"
+  version: "1.3.0"
   author: edgedelta
   repository: https://github.com/edgedelta/agent-skills
   tags: edgedelta,dashboards,metrics,visualization
@@ -11,7 +11,7 @@ metadata:
 
 # Edge Delta Dashboards
 
-List, inspect, create, update and delete dashboards.
+List, inspect, create, update, render and delete dashboards.
 
 ## Prerequisites
 
@@ -40,9 +40,18 @@ edx cql validate --type metric 'sum:service.tokens{*} by {model}.rollup(60)'
 # 2. Draft the definition, then validate after every edit. Repeat until clean.
 edx dashboards validate --file dashboard.json
 
-# 3. Only once it validates, create it.
-edx dashboards create --file dashboard.json
+# 3. Only once it validates, create it - tagged, so it is identifiable.
+edx dashboards create --file dashboard.json --tag generated --tag preview
+
+# 4. Render it and look at the image. Slow, so run it in the background.
+edx dashboards screenshot <id> --out shot.png
+
+# 5. Once it looks right, drop the preview tag.
+edx dashboards tag <id> --remove preview
 ```
+
+Steps 1-3 are offline and fast. Steps 4-5 need a live backend and take a minute,
+so treat them as a separate phase: see **Look At It** below.
 
 Iterate on step 2 until it prints `definition is valid`. Errors are JSON
 Pointers into your file, so fix exactly what is named and re-run:
@@ -78,10 +87,11 @@ round-trips.
 | Definition structure, against the schema generated from the UI's own types | Whether a facet or metric name **exists** (needs the backend) |
 | Unknown/misspelled keys, wrong enum values, wrong types | Whether a query returns any **data** |
 | Query **syntax**, per data type, with the backend's own grammars | Whether a group-by dimension is **indexed** (see Gotchas) |
+| | Whether the dashboard actually **looks** like anything (see **Look At It**) |
 
 So a definition that validates is well-formed, not necessarily populated. After
 creating it, confirm the queries actually return data with `edx metrics query`
-or `edx logs search`.
+or `edx logs search`, and render it to see the result.
 
 One finding is reported as a **warning** and does **not** fail the command, so
 read the output rather than only the exit code: `unsupported definition version`
@@ -263,14 +273,57 @@ so you can validate a template as-is.
 ## Create / Update / Delete
 
 ```bash
-edx dashboards create --file dashboard.json
-edx dashboards update <dashboard-id> --file dashboard.json
+edx dashboards create --file dashboard.json --tag generated --tag preview
+edx dashboards update <dashboard-id> --file dashboard.json --tag generated
 edx dashboards delete <dashboard-id> --yes
 ```
 
 Fastest authoring path: `edx dashboards get <id>` of a working dashboard, swap
 the widget queries and name, bump `version` to 4 if it is older, then validate
 and `create`.
+
+**Put the link in your reply** — an ID is not clickable. `create` returns
+`dashboard_id`; the page is `https://app.edgedelta.com/dashboards/view/<id>`.
+
+## Tag What You Generate
+
+Tag with `generated`, plus `preview` until you have looked at the render. Leave
+`preview` on anything you could not verify.
+
+```bash
+edx dashboards create --file dashboard.json --tag generated --tag preview
+edx dashboards tag <id> --remove preview     # once it looks right
+```
+
+`update --file` clears any tags the body omits, so pass `--tag` again or use
+`edx dashboards tag`, which touches nothing else. Delete the scratch dashboards
+you made while iterating.
+
+## Look At It (Post-Validation)
+
+A definition that validates can still be an empty grid or a wall of "no data".
+Rendering is the only way to find out — then **read the image**:
+
+```bash
+edx dashboards screenshot <id> --out shot.png        # whole dashboard, however tall
+edx dashboards screenshot <id> --from ... --to ...   # pin the range to compare renders
+edx dashboards screenshot <id> --facet env=prod      # set variables by key
+```
+
+**Run it in the background**: a render takes 30-60s, so start it, do other work
+and collect the image. It waits up to `--wait` (default 3m), then exits **3**
+with `"timed_out": true` — still rendering, not broken, so re-run later. Exit 1
+is a real failure; 0 means the file is written.
+
+| What you see | What it means |
+| --- | --- |
+| A widget says "no data" | Valid query, no match. Check the query and the time range. |
+| One series where you expected a breakdown | The `by {...}` dimension is not indexed. See **Gotchas**. |
+| Everything empty, though the queries return data elsewhere | Authorization: re-run `edx dashboards update` to regenerate `resource_accesses`, then render again. |
+| A widget shows an error tile | Still captured, with `reported_error` set — that tile is the failing widget. |
+
+`edx dashboards pdf <id>` covers the same ground for a **person** to open. It
+needs a PDF renderer, so do not use it to check your own work.
 
 ## Gotchas
 

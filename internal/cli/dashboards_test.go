@@ -2,6 +2,7 @@ package cli
 
 import (
 	"encoding/json"
+	"strings"
 	"testing"
 )
 
@@ -135,5 +136,154 @@ func TestFillResourceAccessesPassesThroughABareDefinition(t *testing.T) {
 func TestFillResourceAccessesRejectsInvalidJSON(t *testing.T) {
 	if _, err := fillResourceAccesses([]byte(`{"definition":`)); err == nil {
 		t.Error("expected an error for malformed JSON")
+	}
+}
+
+// A tag is the only thing --tag may change: the definition and everything else in the body
+// has to arrive at the API the way the author wrote it.
+func TestApplyTagsAddsWithoutDisturbingTheBody(t *testing.T) {
+	body := []byte(`{"dashboard_name":"X","tags":["team-infra"],"definition":{"version":4,"widgets":[{"id":1000000}]}}`)
+
+	tagged, err := applyTags(body, []string{"generated", "preview"}, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var got struct {
+		DashboardName string   `json:"dashboard_name"`
+		Tags          []string `json:"tags"`
+	}
+	if err := json.Unmarshal(tagged, &got); err != nil {
+		t.Fatal(err)
+	}
+	if got.DashboardName != "X" {
+		t.Errorf("dashboard_name = %q, want it preserved", got.DashboardName)
+	}
+	want := []string{"team-infra", "generated", "preview"}
+	if len(got.Tags) != len(want) {
+		t.Fatalf("tags = %v, want %v", got.Tags, want)
+	}
+	for i := range want {
+		if got.Tags[i] != want[i] {
+			t.Errorf("tags = %v, want %v (existing tags first, in order)", got.Tags, want)
+			break
+		}
+	}
+	// A widget ID that round-tripped through float64 would come back as 1e+06 and the
+	// dashboard would no longer match its own definition.
+	if !strings.Contains(string(tagged), `"id":1000000`) {
+		t.Errorf("numeric literals were rewritten: %s", tagged)
+	}
+}
+
+func TestApplyTagsRemoves(t *testing.T) {
+	body := []byte(`{"tags":["generated","preview","team-infra"]}`)
+
+	tagged, err := applyTags(body, nil, []string{"preview"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	var got struct {
+		Tags []string `json:"tags"`
+	}
+	if err := json.Unmarshal(tagged, &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Tags) != 2 || got.Tags[0] != "generated" || got.Tags[1] != "team-infra" {
+		t.Errorf("tags = %v, want [generated team-infra]", got.Tags)
+	}
+}
+
+// Removing the last tag has to drop the key, not leave an empty array behind that reads as
+// "deliberately untagged".
+func TestApplyTagsDropsTheKeyWhenNothingIsLeft(t *testing.T) {
+	tagged, err := applyTags([]byte(`{"tags":["preview"]}`), nil, []string{"preview"})
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(tagged, &raw); err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := raw["tags"]; ok {
+		t.Errorf("tags survived as %s, want the key gone", raw["tags"])
+	}
+}
+
+// Re-running a create with the same flags must not accumulate duplicates.
+func TestApplyTagsIsIdempotent(t *testing.T) {
+	body := []byte(`{"tags":["generated"]}`)
+	once, err := applyTags(body, []string{"generated"}, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	twice, err := applyTags(once, []string{"generated"}, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if string(once) != string(twice) {
+		t.Errorf("not idempotent: %s then %s", once, twice)
+	}
+	var got struct {
+		Tags []string `json:"tags"`
+	}
+	if err := json.Unmarshal(twice, &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Tags) != 1 {
+		t.Errorf("tags = %v, want one entry", got.Tags)
+	}
+}
+
+// Without --tag the body must be handed on byte for byte, so nothing is reformatted on a
+// path that was not asked to change anything.
+func TestApplyTagsWithNoChangesReturnsTheBodyUntouched(t *testing.T) {
+	body := []byte(`{"dashboard_name":  "X"}`)
+	same, err := applyTags(body, nil, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if string(same) != string(body) {
+		t.Errorf("body = %s, want it untouched", same)
+	}
+}
+
+func TestApplyTagsTrimsAndIgnoresBlanks(t *testing.T) {
+	tagged, err := applyTags([]byte(`{}`), []string{" generated ", "", "   "}, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var got struct {
+		Tags []string `json:"tags"`
+	}
+	if err := json.Unmarshal(tagged, &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Tags) != 1 || got.Tags[0] != "generated" {
+		t.Errorf("tags = %v, want [generated]", got.Tags)
+	}
+}
+
+func TestApplyTagsRejectsInvalidJSON(t *testing.T) {
+	if _, err := applyTags([]byte(`{"tags":`), []string{"generated"}, nil); err == nil {
+		t.Error("expected an error for malformed JSON")
+	}
+}
+
+// A tags array with junk in it must not crash the merge or leak the junk back.
+func TestApplyTagsIgnoresNonStringTags(t *testing.T) {
+	tagged, err := applyTags([]byte(`{"tags":["keep",7,null,{"a":1}]}`), []string{"generated"}, nil)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	var got struct {
+		Tags []string `json:"tags"`
+	}
+	if err := json.Unmarshal(tagged, &got); err != nil {
+		t.Fatal(err)
+	}
+	if len(got.Tags) != 2 || got.Tags[0] != "keep" || got.Tags[1] != "generated" {
+		t.Errorf("tags = %v, want [keep generated]", got.Tags)
 	}
 }

@@ -1,6 +1,7 @@
 {
   "dashboard_name": "Formula Example",
   "description": "Two queries plus a formula visual that divides one by the other.",
+  "tags": ["generated", "preview"],
   "definition": {
     "version": 4,
     "timeFilters": {

@@ -1,6 +1,7 @@
 {
   "dashboard_name": "Logs And Markdown Example",
   "description": "Mixes data types: a log count, a log breakdown table, and a text panel.",
+  "tags": ["generated", "preview"],
   "definition": {
     "version": 4,
     "timeFilters": {

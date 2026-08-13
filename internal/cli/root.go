@@ -4,6 +4,7 @@ package cli
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"net/url"
@@ -29,13 +30,33 @@ var (
 	flagYes     bool
 )
 
+// Exit codes. Anything that simply failed uses 1; a code above that marks an outcome a
+// caller may want to act on differently, which matters for commands run unattended.
+const (
+	// exitRenderPending: a dashboard render had not finished when --wait ran out. The
+	// dashboard is not known to be bad, so the right response is to check again later.
+	exitRenderPending = 3
+)
+
 // Execute runs the root command and exits with an appropriate status code.
 func Execute() {
 	root := NewRootCmd()
 	if err := root.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, "Error:", err)
-		os.Exit(1)
+		os.Exit(exitCodeFor(err))
 	}
+}
+
+// exitCodeFor lets an error ask for a specific exit code, so a caller can tell outcomes
+// apart without matching on the message text.
+func exitCodeFor(err error) int {
+	var coder interface{ ExitCode() int }
+	if errors.As(err, &coder) {
+		if code := coder.ExitCode(); code != 0 {
+			return code
+		}
+	}
+	return 1
 }
 
 // NewRootCmd builds the full edx command tree.

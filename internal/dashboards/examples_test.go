@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -35,6 +36,7 @@ func TestSkillExamplesValidate(t *testing.T) {
 			// `edx dashboards create`, so reach through to the definition.
 			var body struct {
 				DashboardName    string         `json:"dashboard_name"`
+				Tags             []string       `json:"tags"`
 				Definition       map[string]any `json:"definition"`
 				ResourceAccesses []struct {
 					Domain string `json:"domain"`
@@ -46,6 +48,16 @@ func TestSkillExamplesValidate(t *testing.T) {
 			}
 			if body.DashboardName == "" {
 				t.Error("example has no dashboard_name, so it cannot be created as-is")
+			}
+			// The examples are copied verbatim as starting points, so they are where the
+			// tag convention is actually taught: an example that ships untagged teaches
+			// authors to leave generated dashboards anonymous.
+			if !slices.Contains(body.Tags, "generated") {
+				t.Errorf(`example tags = %v, want "generated" among them`, body.Tags)
+			}
+			if !slices.Contains(body.Tags, "preview") {
+				t.Errorf(`example tags = %v, want "preview" among them: an example is `+
+					"copied before anyone has looked at the result", body.Tags)
 			}
 			if body.Definition == nil {
 				t.Fatal(`example has no "definition" object`)

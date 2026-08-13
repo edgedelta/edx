@@ -1,6 +1,7 @@
 {
   "dashboard_name": "Minimal Example",
   "description": "The smallest dashboard that renders: one grid, one number.",
+  "tags": ["generated", "preview"],
   "definition": {
     "version": 4,
     "timeFilters": {

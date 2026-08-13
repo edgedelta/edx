@@ -1,6 +1,7 @@
 {
   "dashboard_name": "Timeseries With Variables Example",
   "description": "A trend chart filtered by a dropdown variable the viewer picks.",
+  "tags": ["generated", "preview"],
   "definition": {
     "version": 4,
     "timeFilters": {
