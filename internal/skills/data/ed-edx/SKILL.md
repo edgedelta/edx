@@ -13,7 +13,8 @@ metadata:
 
 `edx` is the canonical way for agents to interact with Edge Delta: Pipeline
 (fleet management, configs, live capture), Observability (logs, patterns,
-metrics, traces, events, monitors) and AI Teammate (connectors, activity).
+metrics, traces, events, monitors) and AI Teammate (connectors, activity,
+knowledge graph).
 
 ## Install
 
@@ -62,8 +63,8 @@ Re-run `edx auth login` (token from Admin > API Tokens, or `--oauth`).
 | Health | `edx health components`, `edx health problems` |
 | Dashboards | `edx dashboards list/get` |
 | Schema | `edx facets keys/options/list` |
-| Lookup tables | `edx lookup list/get/download/create/update/delete` |
 | AI Teammate | `edx ai connectors ...`, `edx ai activity` |
+| Knowledge graph | `edx ai knowledge stats/topology/search/get/subgraph/blast-radius/criticality` |
 | Ingestion | `edx ingest endpoints`, `edx ingest token` |
 | Raw API | `edx api <METHOD> <path>` |
 
