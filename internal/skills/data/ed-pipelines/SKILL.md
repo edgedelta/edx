@@ -191,38 +191,6 @@ edx capture results <pipeline-id> | jq '[.[].nodes[].after[]] | map(fromjson)'
 
 `--max-items` is capped at 100 per node.
 
-### Tailing a capture
-
-`--follow` polls and prints one line of compact JSON per newly captured item,
-already decoded - use it instead of re-running `results` and diffing by hand:
-
-```bash
-edx capture start <pipeline-id> --duration 10m --nodes mask_pii
-edx capture results <pipeline-id> --follow --param nodes=mask_pii
-# {"timestamp":...,"source":"<agent>","node":"mask_pii","phase":"before","item":{...}}
-edx capture results <pipeline-id> --follow --output raw | jq -r .body   # items only
-edx capture results <pipeline-id> --follow --since-now  # skip the backlog
-```
-
-Notes:
-
-- It tails results only; it does not keep the capture alive. Once the
-  `capture start` task expires the stream goes quiet, so re-arm it. edx warns on
-  stderr at startup when no task is active (an expired task reads the same way -
-  the API stops serving it).
-- A capture can be armed and still produce nothing: a node with no traffic
-  reports empty `before`/`after` arrays. After a minute with no new item, edx
-  notes the silence on stderr (`no new items in the last 1m0s (12 polls)`), so a
-  quiet tail is never mistaken for a broken one. A tail that is producing items
-  stays quiet - the items are their own evidence.
-- The first poll prints everything currently held (can be hundreds of lines).
-  `--since-now` gives `tail -f` semantics instead: the backlog is swallowed and
-  only items captured after the tail starts are printed. Either way,
-  `--param nodes=<a,b>` and `--param limit_per_source=1` narrow the stream.
-- Transient poll failures are logged to stderr and retried; five consecutive
-  failures exit non-zero, so a broken tail never looks like an idle pipeline.
-- Only `--output json` (default) and `raw` work while following.
-
 ## Troubleshooting
 
 | Problem | Fix |
