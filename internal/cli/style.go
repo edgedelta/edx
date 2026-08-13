@@ -26,8 +26,10 @@ func ansi(code, s string) string {
 func dim(s string) string    { return ansi("2", s) }
 func green(s string) string  { return ansi("32", s) }
 func yellow(s string) string { return ansi("33", s) }
+func red(s string) string    { return ansi("31", s) }
 func okMark() string         { return green("✓") }
 func warnMark() string       { return yellow("!") }
+func failMark() string       { return red("✗") }
 
 // warnf prints a yellow warning line to stderr, keeping stdout clean for
 // machine-readable output.

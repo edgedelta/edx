@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -8,7 +9,9 @@ import (
 	"os"
 	"sort"
 	"strings"
+	"sync"
 	"text/tabwriter"
+	"time"
 
 	"github.com/spf13/cobra"
 	"golang.org/x/term"
@@ -17,6 +20,10 @@ import (
 	"github.com/edgedelta/edx/internal/config"
 	"github.com/edgedelta/edx/internal/oauth"
 )
+
+// cookieLifetime is how long an ed-admin-session cookie stays valid. The
+// cookie is opaque, so this drives the estimated expiry stored at login time.
+const cookieLifetime = 24 * time.Hour
 
 func newAuthCmd() *cobra.Command {
 	cmd := &cobra.Command{
@@ -128,7 +135,7 @@ func newAuthLoginCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				cfg.Profiles[name] = &config.Profile{Env: env, OrgID: orgID, AuthMethod: config.AuthMethodCookie, SessionCookie: cookie}
+				cfg.Profiles[name] = newCookieProfile(env, orgID, cookie, time.Now())
 				if cfg.DefaultProfile == "" || setDefault {
 					cfg.DefaultProfile = name
 				}
@@ -197,6 +204,83 @@ type profileListEntry struct {
 	OrgID   string `json:"org_id"`
 	Auth    string `json:"auth_method"`
 	Default bool   `json:"default"`
+
+	// Status is the offline health estimate ("ok (auto-refresh)",
+	// "expires in 5h", "expired 3h ago", "unknown …", or "-" when the
+	// method has no locally knowable expiry).
+	Status string `json:"status"`
+	// ExpiresAt is the RFC3339 credential expiry when one is known.
+	ExpiresAt string `json:"expires_at,omitempty"`
+	// Check is the live verification result ("ok" or "failed: …"),
+	// populated only by `auth list --check`.
+	Check string `json:"check,omitempty"`
+}
+
+// newCookieProfile builds a cookie-auth profile, stamping the estimated
+// expiry so `auth list` can warn before the cookie dies.
+func newCookieProfile(env, orgID, cookie string, now time.Time) *config.Profile {
+	return &config.Profile{
+		Env:           env,
+		OrgID:         orgID,
+		AuthMethod:    config.AuthMethodCookie,
+		SessionCookie: cookie,
+		CookieExpiry:  now.Add(cookieLifetime).UTC().Format(time.RFC3339),
+	}
+}
+
+// profileStatus estimates a profile's credential health without touching the
+// network. It returns the human status and, when known, the RFC3339 expiry.
+func profileStatus(p *config.Profile, now time.Time) (status, expiresAt string) {
+	switch p.AuthMethod {
+	case config.AuthMethodOAuth:
+		if p.OAuthRefreshToken != "" {
+			// A stale access token refreshes transparently, so the pair
+			// is healthy as long as the refresh token is accepted.
+			return "ok (auto-refresh)", p.OAuthExpiry
+		}
+		return expiryStatus(p.OAuthExpiry, now, "unknown")
+	case config.AuthMethodCookie:
+		return expiryStatus(p.CookieExpiry, now, "unknown (re-login to track)")
+	default: // static API tokens carry no local expiry
+		return "-", ""
+	}
+}
+
+// expiryStatus phrases an RFC3339 expiry relative to now, falling back to
+// unknown when the timestamp is missing or malformed.
+func expiryStatus(expiry string, now time.Time, unknown string) (string, string) {
+	if expiry == "" {
+		return unknown, ""
+	}
+	t, err := time.Parse(time.RFC3339, expiry)
+	if err != nil {
+		return unknown, ""
+	}
+	if t.Before(now) {
+		return "expired " + humanDur(now.Sub(t)) + " ago", expiry
+	}
+	return "expires in " + humanDur(t.Sub(now)), expiry
+}
+
+// humanDur renders a duration at the coarsest useful grain: "<1m", "42m",
+// "1h30m", "5h", "3d".
+func humanDur(d time.Duration) string {
+	if d < time.Minute {
+		return "<1m"
+	}
+	d = d.Round(time.Minute)
+	switch {
+	case d < time.Hour:
+		return fmt.Sprintf("%dm", int(d.Minutes()))
+	case d < 48*time.Hour:
+		h, m := int(d.Hours()), int(d.Minutes())%60
+		if m == 0 {
+			return fmt.Sprintf("%dh", h)
+		}
+		return fmt.Sprintf("%dh%dm", h, m)
+	default:
+		return fmt.Sprintf("%dd", int(d.Hours()/24))
+	}
 }
 
 // profileListEntries returns the saved profiles sorted by name, with empty
@@ -209,6 +293,7 @@ func profileListEntries(f *config.File) []profileListEntry {
 	}
 	sort.Strings(names)
 
+	now := time.Now()
 	entries := make([]profileListEntry, 0, len(names))
 	for _, name := range names {
 		p := f.Profiles[name]
@@ -220,12 +305,15 @@ func profileListEntries(f *config.File) []profileListEntry {
 		if auth == "" {
 			auth = config.AuthMethodToken
 		}
+		status, expiresAt := profileStatus(p, now)
 		entries = append(entries, profileListEntry{
-			Name:    name,
-			Env:     env,
-			OrgID:   p.OrgID,
-			Auth:    auth,
-			Default: name == f.DefaultProfile,
+			Name:      name,
+			Env:       env,
+			OrgID:     p.OrgID,
+			Auth:      auth,
+			Default:   name == f.DefaultProfile,
+			Status:    status,
+			ExpiresAt: expiresAt,
 		})
 	}
 	return entries
@@ -234,13 +322,20 @@ func profileListEntries(f *config.File) []profileListEntry {
 // formatProfileList renders the saved profiles as an aligned table. The default
 // profile is prefixed with "* " and org IDs are shortened for readability.
 func formatProfileList(f *config.File) string {
-	entries := profileListEntries(f)
+	return formatProfileEntries(profileListEntries(f))
+}
+
+// formatProfileEntries renders pre-computed rows (see formatProfileList).
+// STATUS shows the live --check result when present, the offline estimate
+// otherwise. Styling goes only on the last column so ANSI codes cannot skew
+// tabwriter's alignment of the columns before it.
+func formatProfileEntries(entries []profileListEntry) string {
 	if len(entries) == 0 {
 		return "No profiles yet. Run `edx auth login` to create one.\n"
 	}
 	var sb strings.Builder
 	tw := tabwriter.NewWriter(&sb, 0, 0, 2, ' ', 0)
-	fmt.Fprintln(tw, "  NAME\tENV\tORG\tAUTH")
+	fmt.Fprintln(tw, "  NAME\tENV\tORG\tAUTH\tSTATUS")
 	for _, e := range entries {
 		marker := "  "
 		if e.Default {
@@ -250,17 +345,81 @@ func formatProfileList(f *config.File) string {
 		if e.OrgID != "" {
 			org = shortID(e.OrgID)
 		}
-		fmt.Fprintf(tw, "%s%s\t%s\t%s\t%s\n", marker, e.Name, e.Env, org, e.Auth)
+		fmt.Fprintf(tw, "%s%s\t%s\t%s\t%s\t%s\n", marker, e.Name, e.Env, org, e.Auth, statusCell(e))
 	}
 	_ = tw.Flush()
 	return sb.String()
 }
 
+// statusCell picks and styles the STATUS column value for one row.
+func statusCell(e profileListEntry) string {
+	if e.Check != "" {
+		if e.Check == "ok" {
+			return okMark() + " ok"
+		}
+		return failMark() + " " + red(strings.TrimPrefix(e.Check, "failed: "))
+	}
+	switch {
+	case strings.HasPrefix(e.Status, "expired"):
+		return red(e.Status)
+	case strings.HasPrefix(e.Status, "unknown"):
+		return dim(e.Status)
+	case strings.HasPrefix(e.Status, "expires in"):
+		if t, err := time.Parse(time.RFC3339, e.ExpiresAt); err == nil && time.Until(t) < 2*time.Hour {
+			return yellow(e.Status)
+		}
+	}
+	return e.Status
+}
+
+// verifyAuth makes the cheapest authenticated API call that exercises the
+// stored credentials. Shared by `auth status` and `auth list --check`.
+func verifyAuth(ctx context.Context, c *api.Client) error {
+	q := url.Values{}
+	q.Set("scope", "log")
+	_, err := c.Get(ctx, "/facet_keys", q)
+	return err
+}
+
+// plainCheck is the machine-readable form of a live check result. Auth
+// rejections are compacted (the request URL adds nothing in a status column);
+// other errors keep their first line, truncated.
+func plainCheck(err error) string {
+	if err == nil {
+		return "ok"
+	}
+	msg := strings.TrimSpace(err.Error())
+	switch {
+	case strings.Contains(msg, "API error 401"):
+		return "failed: rejected (401 unauthorized — credentials expired or revoked)"
+	case strings.Contains(msg, "API error 403"):
+		return "failed: rejected (403 forbidden)"
+	}
+	if i := strings.IndexByte(msg, '\n'); i >= 0 {
+		msg = msg[:i]
+	}
+	const maxMsg = 80
+	if len(msg) > maxMsg {
+		msg = msg[:maxMsg] + "…"
+	}
+	return "failed: " + msg
+}
+
+// checkLabel is the styled table form of a live check result.
+func checkLabel(err error) string {
+	return statusCell(profileListEntry{Check: plainCheck(err)})
+}
+
 func newAuthListCmd() *cobra.Command {
 	return &cobra.Command{
 		Use:   "list",
-		Short: "List saved profiles (the default is marked with *)",
-		Long: `List saved profiles.
+		Short: "List saved profiles with estimated credential status (the default is marked with *)",
+		Long: `List saved profiles. Always instant and offline.
+
+STATUS is estimated from stored expiry data: OAuth profiles refresh
+themselves, cookie profiles expire ~24h after login, and static API tokens
+have no locally knowable expiry. Use "edx auth status" to verify every
+profile live against its API.
 
 Without -o, prints a human table with the default profile marked "*" and org
 IDs shortened. With -o (json, yaml, table, csv, raw) the profiles are rendered
@@ -285,6 +444,36 @@ in that format with org IDs in full — e.g. "edx auth list -o json | jq".`,
 			return printResult(data)
 		},
 	}
+}
+
+// runProfileChecks verifies every entry concurrently via check and records
+// the results. Checks are independent per profile; concurrent token refreshes
+// are safe because config.SaveOAuthTokens serializes its writes.
+func runProfileChecks(ctx context.Context, entries []profileListEntry, check func(ctx context.Context, name string) error) {
+	var wg sync.WaitGroup
+	for i := range entries {
+		wg.Add(1)
+		go func(e *profileListEntry) {
+			defer wg.Done()
+			e.Check = plainCheck(check(ctx, e.Name))
+		}(&entries[i])
+	}
+	wg.Wait()
+}
+
+// checkProfileAuth verifies one saved profile's credentials against its API.
+// It resolves the profile by name only — the global --env/--org/--token
+// overrides are ignored so each row reflects what is actually stored.
+func checkProfileAuth(ctx context.Context, name string) error {
+	r, err := config.Resolve(name, "", "", "")
+	if err != nil {
+		return err
+	}
+	c, err := clientFromResolved(r)
+	if err != nil {
+		return err
+	}
+	return verifyAuth(ctx, c)
 }
 
 func newAuthUseCmd() *cobra.Command {
@@ -458,38 +647,110 @@ func setDefaultProfile(name string) error {
 
 func newAuthStatusCmd() *cobra.Command {
 	return &cobra.Command{
-		Use:   "status",
-		Short: "Show the active profile and verify the token against the API",
-		RunE: func(cmd *cobra.Command, args []string) error {
-			r, err := config.Resolve(flagProfile, flagEnv, flagOrg, flagToken)
-			if err != nil {
-				return err
-			}
-			cred := maskToken(r.APIToken)
-			if r.UsesOAuth() {
-				cred = maskToken(r.OAuthAccessToken) + " (auto-refreshed)"
-			}
-			if r.UsesCookie() {
-				cred = maskToken(r.SessionCookie) + " (ed-admin-session cookie)"
-			}
-			fmt.Fprintf(os.Stderr,
-				"Profile:   %s\nEnv:       %s\nAuth:      %s\nAPI URL:   %s\nChat URL:  %s\nAgent URL: %s\nOrg ID:    %s\nCredential:%s\n",
-				r.Profile, r.Env, r.AuthMethod, r.APIURL, r.ChatURL, r.AgentURL, r.OrgID, cred)
+		Use:   "status [profile]",
+		Short: "Live-check every saved profile against its API (or one profile in detail)",
+		Long: `Verify saved credentials against their APIs.
 
-			c, err := newClient()
-			if err != nil {
-				return err
+Without arguments, every profile is checked concurrently (one cheap
+authenticated call each) and the results are shown as a table, followed by
+the active profile's endpoints. Exits non-zero if any profile fails, so it
+can gate scripts.
+
+With a profile name (or --profile), shows that profile's resolved endpoints
+and credential in detail and verifies just that one.`,
+		Example: `  edx auth status            # check all profiles
+  edx auth status staging    # inspect and check one profile`,
+		Args: cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			profile := flagProfile
+			if len(args) == 1 {
+				profile = args[0]
 			}
-			// Cheap authenticated call to verify token + org pairing.
-			q := url.Values{}
-			q.Set("scope", "log")
-			if _, err := c.Get(cmdContext(cmd), "/facet_keys", q); err != nil {
-				return fmt.Errorf("token verification failed: %w", err)
+			if profile != "" {
+				return authStatusOne(cmd, profile)
 			}
-			fmt.Fprintln(os.Stderr, "Status:  OK (token accepted)")
-			return nil
+			return authStatusAll(cmd)
 		},
 	}
+}
+
+// credentialSummary renders a masked one-line description of the credential
+// a resolved profile would send.
+func credentialSummary(r *config.Resolved) string {
+	switch {
+	case r.UsesOAuth():
+		return maskToken(r.OAuthAccessToken) + " (auto-refreshed)"
+	case r.UsesCookie():
+		return maskToken(r.SessionCookie) + " (ed-admin-session cookie)"
+	default:
+		return maskToken(r.APIToken)
+	}
+}
+
+// authStatusAll live-checks every saved profile concurrently and prints the
+// roster, then the active profile's endpoints. Non-zero exit if any failed.
+func authStatusAll(cmd *cobra.Command) error {
+	cfg, err := config.Load()
+	if err != nil {
+		return err
+	}
+	entries := profileListEntries(cfg)
+	if len(entries) == 0 {
+		fmt.Fprint(os.Stdout, formatProfileEntries(entries))
+		return nil
+	}
+	notef("Verifying %d profile(s)…", len(entries))
+	runProfileChecks(cmdContext(cmd), entries, checkProfileAuth)
+
+	if cmd.Flags().Changed("output") {
+		data, err := json.Marshal(entries)
+		if err != nil {
+			return err
+		}
+		if err := printResult(data); err != nil {
+			return err
+		}
+	} else {
+		fmt.Fprint(os.Stdout, formatProfileEntries(entries))
+		if r, err := config.Resolve("", flagEnv, flagOrg, flagToken); err == nil {
+			fmt.Fprintf(os.Stderr, "\nActive profile: %s (%s, org %s)\n  API URL:    %s\n  Credential: %s\n",
+				r.Profile, r.Env, shortID(r.OrgID), r.APIURL, credentialSummary(r))
+		}
+	}
+
+	failed := 0
+	for _, e := range entries {
+		if e.Check != "ok" {
+			failed++
+		}
+	}
+	if failed > 0 {
+		return fmt.Errorf("%d of %d profile(s) failed verification", failed, len(entries))
+	}
+	return nil
+}
+
+// authStatusOne prints one profile's resolved endpoints and credential in
+// detail and verifies it against the API.
+func authStatusOne(cmd *cobra.Command, profile string) error {
+	r, err := config.Resolve(profile, flagEnv, flagOrg, flagToken)
+	if err != nil {
+		return err
+	}
+	fmt.Fprintf(os.Stderr,
+		"Profile:   %s\nEnv:       %s\nAuth:      %s\nAPI URL:   %s\nChat URL:  %s\nAgent URL: %s\nOrg ID:    %s\nCredential:%s\n",
+		r.Profile, r.Env, r.AuthMethod, r.APIURL, r.ChatURL, r.AgentURL, r.OrgID, credentialSummary(r))
+
+	c, err := clientFromResolved(r)
+	if err != nil {
+		return err
+	}
+	// Cheap authenticated call to verify credential + org pairing.
+	if err := verifyAuth(cmdContext(cmd), c); err != nil {
+		return fmt.Errorf("token verification failed: %w", err)
+	}
+	fmt.Fprintf(os.Stderr, "Status:    %s ok (credential accepted)\n", okMark())
+	return nil
 }
 
 func newAuthLogoutCmd() *cobra.Command {
