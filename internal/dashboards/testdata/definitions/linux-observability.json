@@ -1,0 +1,387 @@
+{
+  "timeFilters": {
+    "lookback": "24h"
+  },
+  "variables": [
+    {
+      "id": 1,
+      "key": "hostname",
+      "label": "Hostname(s)",
+      "params": {
+        "allowEmpty": true,
+        "allowMultiple": true,
+        "facet": "host.name",
+        "scope": "metric"
+      },
+      "type": "facet-option",
+      "value": ""
+    }
+  ],
+  "version": 4,
+  "widgets": [
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "grid": "72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px / 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr",
+      "id": "root",
+      "type": "grid"
+    },
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "id": 8,
+      "position": {
+        "area": {
+          "column": 2,
+          "columnSpan": 11,
+          "row": 1,
+          "rowSpan": 1
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "variable-control",
+      "variableId": 1
+    },
+    {
+      "displayOptions": {
+        "title": "CPU User Percent"
+      },
+      "id": 1,
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 6,
+          "row": 2,
+          "rowSpan": 3
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "type": "viz",
+      "visualizer": {
+        "limit": {
+          "mode": "top",
+          "count": 3
+        },
+        "coloring": {
+          "max": 100,
+          "mode": "continuous",
+          "palette": [
+            "var(--extended-azure-400)",
+            "var(--extended-azure-200)",
+            "var(--extended-azure-600)",
+            "var(--extended-azure-800)",
+            "var(--extended-azure-700)",
+            "var(--extended-azure-500)",
+            "var(--extended-azure-300)"
+          ]
+        },
+        "type": "gauge"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "avg:ed.host.cpu.user.percent{host.name:$hostname} by {host.name}.rollup(1800)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "title": "CPU System Percent"
+      },
+      "id": 2,
+      "position": {
+        "area": {
+          "column": 7,
+          "columnSpan": 6,
+          "row": 2,
+          "rowSpan": 3
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "type": "viz",
+      "visualizer": {
+        "limit": {
+          "mode": "top",
+          "count": 3
+        },
+        "coloring": {
+          "max": 100,
+          "mode": "continuous",
+          "palette": [
+            "var(--extended-azure-400)",
+            "var(--extended-azure-200)",
+            "var(--extended-azure-600)",
+            "var(--extended-azure-800)",
+            "var(--extended-azure-700)",
+            "var(--extended-azure-500)",
+            "var(--extended-azure-300)"
+          ]
+        },
+        "type": "gauge"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "avg:ed.host.cpu.system.percent{host.name:$hostname} by {host.name}.rollup(1800)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "title": "Memory Used Percent"
+      },
+      "id": 3,
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 12,
+          "row": 5,
+          "rowSpan": 4
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "type": "viz",
+      "visualizer": {
+        "coloring": {
+          "mode": "palette",
+          "palette": [
+            "var(--extended-azure-400)",
+            "var(--extended-azure-200)",
+            "var(--extended-azure-600)",
+            "var(--extended-azure-800)",
+            "var(--extended-azure-700)",
+            "var(--extended-azure-500)",
+            "var(--extended-azure-300)"
+          ]
+        },
+        "type": "line"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "avg:ed.host.memory.used.percentage{host.name:$hostname} by {host.name}.rollup(60)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "title": "Disk Write Bytes"
+      },
+      "id": 4,
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 6,
+          "row": 9,
+          "rowSpan": 4
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "type": "viz",
+      "visualizer": {
+        "coloring": {
+          "mode": "palette",
+          "palette": [
+            "var(--extended-orange-400)",
+            "var(--extended-orange-200)",
+            "var(--extended-orange-600)",
+            "var(--extended-orange-800)",
+            "var(--extended-orange-700)",
+            "var(--extended-orange-500)",
+            "var(--extended-orange-300)"
+          ]
+        },
+        "type": "bar"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "sum:ed.host.disk.write_bytes{host.name:$hostname} by {host.name}.rollup(60)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "title": "Disk Read Bytes"
+      },
+      "id": 5,
+      "position": {
+        "area": {
+          "column": 7,
+          "columnSpan": 6,
+          "row": 9,
+          "rowSpan": 4
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "type": "viz",
+      "visualizer": {
+        "coloring": {
+          "mode": "palette",
+          "palette": [
+            "var(--extended-green-400)",
+            "var(--extended-green-200)",
+            "var(--extended-green-600)",
+            "var(--extended-green-800)",
+            "var(--extended-green-700)",
+            "var(--extended-green-500)",
+            "var(--extended-green-300)"
+          ]
+        },
+        "type": "bar"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "sum:ed.host.disk.read_bytes{host.name:$hostname} by {host.name}.rollup(60)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "title": "Net Write Bytes"
+      },
+      "id": 6,
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 6,
+          "row": 13,
+          "rowSpan": 4
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "type": "viz",
+      "visualizer": {
+        "coloring": {
+          "mode": "palette",
+          "palette": [
+            "var(--extended-orange-400)",
+            "var(--extended-orange-200)",
+            "var(--extended-orange-600)",
+            "var(--extended-orange-800)",
+            "var(--extended-orange-700)",
+            "var(--extended-orange-500)",
+            "var(--extended-orange-300)"
+          ]
+        },
+        "type": "area"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "sum:ed.host.net.write_bytes{host.name:$hostname} by {host.name}.rollup(60)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "title": "Net Read Bytes"
+      },
+      "id": 7,
+      "position": {
+        "area": {
+          "column": 7,
+          "columnSpan": 6,
+          "row": 13,
+          "rowSpan": 4
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "type": "viz",
+      "visualizer": {
+        "coloring": {
+          "mode": "palette",
+          "palette": [
+            "var(--extended-green-400)",
+            "var(--extended-green-200)",
+            "var(--extended-green-600)",
+            "var(--extended-green-800)",
+            "var(--extended-green-700)",
+            "var(--extended-green-500)",
+            "var(--extended-green-300)"
+          ]
+        },
+        "type": "area"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "sum:ed.host.net.read_bytes{host.name:$hostname} by {host.name}.rollup(60)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "hideBackground": false
+      },
+      "id": 10,
+      "params": {
+        "content": "<div style=\"text-align: center;\">\n  <img src=\"https://media.edgedelta.com/tux.png\" width=\"50\" />\n</div>\n"
+      },
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 1,
+          "row": 1,
+          "rowSpan": 1
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "markdown"
+    }
+  ]
+}

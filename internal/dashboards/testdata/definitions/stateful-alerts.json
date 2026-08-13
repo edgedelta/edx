@@ -1,0 +1,580 @@
+{
+  "timeFilters": {
+    "lookback": "1h"
+  },
+  "variables": [
+    {
+      "id": 1,
+      "key": "fleet",
+      "label": "Fleet",
+      "params": {
+        "allowMultiple": false,
+        "facet": "ed.tag",
+        "scope": "log",
+        "allowEmpty": true,
+        "autoSelect": false
+      },
+      "type": "facet-option",
+      "value": null
+    },
+    {
+      "id": 2,
+      "key": "host",
+      "label": "Host",
+      "params": {
+        "allowMultiple": false,
+        "facet": "host.name",
+        "scope": "log",
+        "allowEmpty": true,
+        "autoSelect": false
+      },
+      "type": "facet-option",
+      "value": null
+    },
+    {
+      "id": 3,
+      "key": "severity",
+      "label": "Severity",
+      "params": {
+        "allowMultiple": false,
+        "facet": "@alert.severity",
+        "scope": "log",
+        "allowEmpty": true,
+        "autoSelect": false
+      },
+      "type": "facet-option",
+      "value": null
+    }
+  ],
+  "version": 4,
+  "widgets": [
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "grid": "72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px / 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr",
+      "id": "root",
+      "type": "grid"
+    },
+    {
+      "displayOptions": {
+        "hideBackground": false
+      },
+      "id": 1,
+      "params": {
+        "content": "<div style=\"display: flex; justify-content: center; align-items: center; width: 100%; height: 100%;\">\n  <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"40\" height=\"40\" viewBox=\"0 0 256 256\" fill=\"none\">\n    <path d=\"M224,71.1a8,8,0,0,1-10.78-3.42,94.13,94.13,0,0,0-33.46-36.91,8,8,0,1,1,8.54-13.54,111.46,111.46,0,0,1,39.12,43.09A8,8,0,0,1,224,71.1ZM35.71,72a8,8,0,0,0,7.1-4.32,94.13,94.13,0,0,1,33.46-36.91,8,8,0,1,0-8.54-13.54A111.46,111.46,0,0,0,28.61,60.32,8,8,0,0,0,35.71,72Zm186.1,103.94A16,16,0,0,1,208,200H167.2a40,40,0,0,1-78.4,0H48a16,16,0,0,1-13.79-24.06C43.22,160.39,48,138.28,48,112a80,80,0,0,1,160,0C208,138.27,212.78,160.38,221.81,175.94ZM150.62,200H105.38a24,24,0,0,0,45.24,0ZM192,112a64,64,0,0,0-128,0c0,35.27-8.42,62.06-20.88,81.94-.12.19.05.06.12.06H192.76c.07,0,.24.13.12-.06C180.42,174.06,192,147.27,192,112Z\" fill=\"url(#paint0_bell)\"/>\n    <defs>\n      <linearGradient id=\"paint0_bell\" x1=\"0\" y1=\"0\" x2=\"256\" y2=\"256\" gradientUnits=\"userSpaceOnUse\">\n        <stop stop-color=\"#00FF00\"/>\n        <stop offset=\"0.4\" stop-color=\"#0099FF\"/>\n        <stop offset=\"1\" stop-color=\"#9933FF\"/>\n      </linearGradient>\n    </defs>\n  </svg>\n</div>"
+      },
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 1,
+          "row": 1,
+          "rowSpan": 1
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "markdown"
+    },
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "id": 10,
+      "position": {
+        "area": {
+          "column": 2,
+          "columnSpan": 4,
+          "row": 1,
+          "rowSpan": 1
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "variable-control",
+      "variableId": 1
+    },
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "id": 11,
+      "position": {
+        "area": {
+          "column": 6,
+          "columnSpan": 4,
+          "row": 1,
+          "rowSpan": 1
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "variable-control",
+      "variableId": 2
+    },
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "id": 12,
+      "position": {
+        "area": {
+          "column": 10,
+          "columnSpan": 3,
+          "row": 1,
+          "rowSpan": 1
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "variable-control",
+      "variableId": 3
+    },
+    {
+      "type": "viz",
+      "id": 100,
+      "displayOptions": {
+        "title": "Alert Triggers",
+        "description": "Alerts that crossed threshold and triggered",
+        "tooltip": "Count of logs where @alert.status equals \"alert\". These are events that met the threshold criteria and transitioned to an active alert state."
+      },
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 3,
+          "row": 2,
+          "rowSpan": 3
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "bignumber",
+        "coloring": {
+          "mode": "palette",
+          "palette": [
+            "var(--extended-red-600)"
+          ]
+        }
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "dataSource": {
+            "type": "log",
+            "params": {
+              "query": "{@alert.status:alert ed.tag:$fleet host.name:$host @alert.severity:$severity}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 101,
+      "displayOptions": {
+        "title": "Accumulating",
+        "description": "Events building toward alert threshold",
+        "tooltip": "Count of logs where @alert.status equals \"alert_accumulating\". These are events that matched an alert pattern but haven't yet reached the threshold count (N events in T seconds) to trigger."
+      },
+      "position": {
+        "area": {
+          "column": 4,
+          "columnSpan": 3,
+          "row": 2,
+          "rowSpan": 3
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "bignumber",
+        "coloring": {
+          "mode": "palette",
+          "palette": [
+            "var(--extended-orange-500)"
+          ]
+        }
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "dataSource": {
+            "type": "log",
+            "params": {
+              "query": "{@alert.status:alert_accumulating ed.tag:$fleet host.name:$host @alert.severity:$severity}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 102,
+      "displayOptions": {
+        "title": "Recoveries",
+        "description": "Alerts that recovered in selected timeframe",
+        "tooltip": "Count of logs where @alert.status equals \"recovery\". These are events where a previously active alert matched the recovery pattern and transitioned to recovered state."
+      },
+      "position": {
+        "area": {
+          "column": 7,
+          "columnSpan": 3,
+          "row": 2,
+          "rowSpan": 3
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "bignumber",
+        "coloring": {
+          "mode": "palette",
+          "palette": [
+            "var(--extended-green-600)"
+          ]
+        }
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "dataSource": {
+            "type": "log",
+            "params": {
+              "query": "{@alert.status:recovery ed.tag:$fleet host.name:$host @alert.severity:$severity}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 103,
+      "displayOptions": {
+        "title": "Duplicates Suppressed",
+        "description": "Duplicate alerts that were suppressed",
+        "tooltip": "Count of logs where @alert.status equals \"alert_duplicate\" or \"recovery_duplicate\". These are events that matched an already-active alert or an already-recovered state, so were suppressed to prevent noise."
+      },
+      "position": {
+        "area": {
+          "column": 10,
+          "columnSpan": 3,
+          "row": 2,
+          "rowSpan": 3
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "bignumber",
+        "coloring": {
+          "mode": "palette",
+          "palette": [
+            "var(--extended-gray-500)"
+          ]
+        }
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "dataSource": {
+            "type": "log",
+            "params": {
+              "query": "{(@alert.status:alert_duplicate OR @alert.status:recovery_duplicate) ed.tag:$fleet host.name:$host}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 200,
+      "displayOptions": {
+        "title": "Alert Transitions Over Time",
+        "description": "Timeline of alert status changes",
+        "tooltip": "Stacked bar chart showing alert status transitions over time, grouped by @alert.status. Each bar segment represents a different transition type."
+      },
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 6,
+          "row": 5,
+          "rowSpan": 5
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "visualizer": {
+        "type": "bar",
+        "coloringOverrides": [
+          {
+            "name": "alert",
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--extended-scarlet-400)"
+              ]
+            }
+          },
+          {
+            "name": "recovery",
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--extended-green-300)"
+              ]
+            }
+          },
+          {
+            "name": "alert_accumulating",
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--extended-gold-200)"
+              ]
+            }
+          },
+          {
+            "name": "alert_duplicate",
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--extended-gray-300)"
+              ]
+            }
+          },
+          {
+            "name": "recovery_duplicate",
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--extended-gray-200)"
+              ]
+            }
+          },
+          {
+            "name": "heartbeat_scan",
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--extended-azure-300)"
+              ]
+            }
+          }
+        ]
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "dataSource": {
+            "type": "log",
+            "params": {
+              "query": "{(@alert.status:alert OR @alert.status:recovery OR @alert.status:alert_accumulating OR @alert.status:alert_duplicate OR @alert.status:recovery_duplicate OR @alert.status:heartbeat_scan) ed.tag:$fleet host.name:$host @alert.severity:$severity} by {@alert.status}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 201,
+      "displayOptions": {
+        "title": "Alerts by Severity",
+        "description": "Distribution of alerts across severity levels",
+        "tooltip": "Pie chart showing triggered alerts (@alert.status:alert) grouped by @alert.severity. Severity is defined in the lookup table for each alert pattern."
+      },
+      "position": {
+        "area": {
+          "column": 7,
+          "columnSpan": 6,
+          "row": 5,
+          "rowSpan": 5
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "pie",
+        "coloringOverrides": [
+          {
+            "name": "critical",
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--extended-scarlet-400)"
+              ]
+            }
+          },
+          {
+            "name": "warning",
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--extended-gold-300)"
+              ]
+            }
+          },
+          {
+            "name": "high",
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--extended-scarlet-300)"
+              ]
+            }
+          },
+          {
+            "name": "medium",
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--extended-gold-200)"
+              ]
+            }
+          },
+          {
+            "name": "low",
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--extended-green-300)"
+              ]
+            }
+          },
+          {
+            "name": "info",
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--extended-azure-300)"
+              ]
+            }
+          }
+        ]
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "dataSource": {
+            "type": "log",
+            "params": {
+              "query": "{@alert.status:alert ed.tag:$fleet host.name:$host} by {@alert.severity}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 300,
+      "displayOptions": {
+        "title": "Alerts by Message",
+        "description": "Alert counts grouped by normalized message",
+        "tooltip": "Table showing triggered alert counts grouped by @alert.normalized_message. The normalized message is the canonical description from the lookup table used to correlate related alerts."
+      },
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 6,
+          "row": 10,
+          "rowSpan": 5
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "table"
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "dataSource": {
+            "type": "log",
+            "params": {
+              "query": "{@alert.status:alert ed.tag:$fleet host.name:$host @alert.severity:$severity} by {@alert.normalized_message}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 301,
+      "displayOptions": {
+        "title": "Alerts by Host",
+        "description": "Alert distribution across hosts",
+        "tooltip": "Table showing triggered alert counts grouped by host.name. Helps identify which hosts are generating the most alerts."
+      },
+      "position": {
+        "area": {
+          "column": 7,
+          "columnSpan": 6,
+          "row": 10,
+          "rowSpan": 5
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "table"
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "dataSource": {
+            "type": "log",
+            "params": {
+              "query": "{@alert.status:alert ed.tag:$fleet @alert.severity:$severity} by {host.name}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 400,
+      "displayOptions": {
+        "title": "Recent Notifications",
+        "description": "Alerts and recoveries sent downstream",
+        "tooltip": "Raw log table showing events that triggered notifications (new alerts and recoveries). Duplicates, accumulating events, and heartbeat scans are excluded."
+      },
+      "filterOptions": {
+        "customTimeFilters": true,
+        "overrideTimeFilters": true
+      },
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 12,
+          "row": 15,
+          "rowSpan": 9
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "raw",
+      "visualizer": {
+        "type": "raw-table"
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "dataSource": {
+            "type": "log",
+            "params": {
+              "query": "{(@alert.status:alert OR @alert.status:recovery) ed.tag:$fleet host.name:$host @alert.severity:$severity}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
