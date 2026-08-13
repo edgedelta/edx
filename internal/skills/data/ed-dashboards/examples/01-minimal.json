@@ -1,6 +1,6 @@
 {
   "dashboard_name": "Minimal Example",
-  "description": "The smallest dashboard that renders: one grid, one number. No resource_accesses, which is optional.",
+  "description": "The smallest dashboard that renders: one grid, one number.",
   "definition": {
     "version": 4,
     "timeFilters": {

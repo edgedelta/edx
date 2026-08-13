@@ -22,7 +22,11 @@ PARSERS_SRC := $(MONOREPO_SRC)/pkg/antlrcql
 PARSERS_DST := internal/cql
 PARSER_DIRS := logparser metric/parser formula/parser
 
-.PHONY: build install test vet lint clean sync-skills sync-dashboard-schema sync-cql-parsers
+# resource_accesses is derived from a definition by both the UI and edx, so edx's Go
+# implementation is diffed against the frontend's actual output. This is that output.
+ORACLE_DST := internal/dashboards/testdata/resource-accesses.json
+
+.PHONY: build install test vet lint clean sync-skills sync-dashboard-schema sync-cql-parsers sync-resource-accesses-oracle
 
 build:
 	go build -ldflags '$(LDFLAGS)' -o bin/edx .
@@ -73,3 +77,13 @@ sync-cql-parsers:
 		echo "synced $(PARSERS_DST)/$$dir"; \
 	done
 	@go build ./... && echo "parsers compile unmodified"
+
+# Refresh the resource_accesses oracle from the frontend's own implementation, then run the
+# differential test. Do this after any change to a widget's or variable's resolveResources
+# in the monorepo: a failure here means edx and the UI would grant different access to a
+# shared dashboard.
+sync-resource-accesses-oracle:
+	@test -d "$(MONOREPO_SRC)/web" || { echo "monorepo web/ not found at $(MONOREPO_SRC)/web; set MONOREPO_SRC=/path/to/edgedelta"; exit 1; }
+	cd $(MONOREPO_SRC)/web && bun gen:resource-accesses > $(CURDIR)/$(ORACLE_DST)
+	@echo "synced $(ORACLE_DST)"
+	go test ./internal/dashboards -run TestResourceAccessesMatchesTheFrontend

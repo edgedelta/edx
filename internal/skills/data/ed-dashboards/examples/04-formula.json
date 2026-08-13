@@ -3,32 +3,47 @@
   "description": "Two queries plus a formula visual that divides one by the other.",
   "definition": {
     "version": 4,
-    "timeFilters": { "lookback": "6h" },
+    "timeFilters": {
+      "lookback": "6h"
+    },
     "widgets": [
       {
         "id": "root",
         "type": "grid",
-        "displayOptions": { "hideBackground": true },
+        "displayOptions": {
+          "hideBackground": true
+        },
         "grid": "72px 72px 72px 72px / 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr"
       },
       {
         "id": 1,
         "type": "viz",
-        "displayOptions": { "title": "Output bytes per input byte" },
+        "displayOptions": {
+          "title": "Output bytes per input byte"
+        },
         "position": {
           "type": "grid",
           "targetId": "root",
-          "area": { "column": 1, "columnSpan": 12, "row": 1, "rowSpan": 4 }
+          "area": {
+            "column": 1,
+            "columnSpan": 12,
+            "row": 1,
+            "rowSpan": 4
+          }
         },
         "resultType": "timeseries",
-        "visualizer": { "type": "line" },
+        "visualizer": {
+          "type": "line"
+        },
         "visuals": [
           {
             "id": "A",
             "hidden": true,
             "dataSource": {
               "type": "metric",
-              "params": { "query": "sum:ed.pipeline.node.write_bytes{*}.rollup(60)" }
+              "params": {
+                "query": "sum:ed.pipeline.node.write_bytes{*}.rollup(60)"
+              }
             }
           },
           {
@@ -36,7 +51,9 @@
             "hidden": true,
             "dataSource": {
               "type": "metric",
-              "params": { "query": "sum:ed.pipeline.node.read_bytes{*}.rollup(60)" }
+              "params": {
+                "query": "sum:ed.pipeline.node.read_bytes{*}.rollup(60)"
+              }
             }
           },
           {
@@ -44,15 +61,13 @@
             "label": "Compression ratio",
             "dataSource": {
               "type": "formula",
-              "params": { "formula": "A / B" }
+              "params": {
+                "formula": "A / B"
+              }
             }
           }
         ]
       }
     ]
-  },
-  "resource_accesses": [
-    { "domain": "metric", "query": "sum:ed.pipeline.node.write_bytes{*}.rollup(60)" },
-    { "domain": "metric", "query": "sum:ed.pipeline.node.read_bytes{*}.rollup(60)" }
-  ]
+  }
 }

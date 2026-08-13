@@ -143,6 +143,14 @@ func newDashboardsCreateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create --file dashboard.json",
 		Short: "Create a dashboard from a JSON definition",
+		Long: `Create a dashboard from a JSON body, after running the same checks as
+"validate".
+
+resource_accesses is derived from the definition and added for you, replacing
+anything in the file, exactly as the UI does when a dashboard is saved. It is the
+allowlist public share links and screenshots are authorized against, and it is
+fully determined by the widgets and variables, so there is no reason to write it
+by hand.`,
 		Example: `  edx dashboards create --file dashboard.json
   edx dashboards get <id> | jq '.dashboard_name="copy"' | edx dashboards create --file -`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -155,6 +163,10 @@ func newDashboardsCreateCmd() *cobra.Command {
 				return err
 			}
 			if err := checkDashboard(body, skipValidation); err != nil {
+				return err
+			}
+			body, err = fillResourceAccesses(body)
+			if err != nil {
 				return err
 			}
 			data, err := c.Post(cmdContext(cmd), "/dashboards", nil, body)
@@ -176,7 +188,12 @@ func newDashboardsUpdateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update <dashboard-id> --file dashboard.json",
 		Short: "Update a dashboard from a JSON definition",
-		Args:  cobra.ExactArgs(1),
+		Long: `Update a dashboard from a JSON body, after running the same checks as
+"validate".
+
+resource_accesses is regenerated from the definition, so a body round-tripped
+through "get" carries a fresh allowlist rather than the one it was fetched with.`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := newClient()
 			if err != nil {
@@ -187,6 +204,10 @@ func newDashboardsUpdateCmd() *cobra.Command {
 				return err
 			}
 			if err := checkDashboard(body, skipValidation); err != nil {
+				return err
+			}
+			body, err = fillResourceAccesses(body)
+			if err != nil {
 				return err
 			}
 			data, err := c.Put(cmdContext(cmd), "/dashboards/"+url.PathEscape(args[0]), nil, body)
@@ -226,6 +247,42 @@ func newDashboardsDeleteCmd() *cobra.Command {
 
 // checkDashboard runs client-side validation, printing warnings to stderr and
 // returning an error for hard failures unless skip is set.
+// fillResourceAccesses derives resource_accesses from the definition and writes it into
+// the request body, the same way the UI does when a dashboard is saved.
+//
+// It is the allowlist that public share links and screenshots are authorized against, and
+// it is fully determined by the definition, so nobody authoring a dashboard should have to
+// write it. Any value already in the body is replaced — again matching the UI, which
+// regenerates the whole array on every save.
+//
+// A body without a "definition" object is passed through untouched: `validate` accepts a
+// bare definition, but create and update always send a full body, and inventing a
+// top-level key for something else's payload would be wrong.
+func fillResourceAccesses(body []byte) ([]byte, error) {
+	var envelope map[string]any
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return nil, fmt.Errorf("invalid JSON: %w", err)
+	}
+	definition, ok := envelope["definition"]
+	if !ok {
+		return body, nil
+	}
+
+	accesses := dashboards.ResourceAccesses(definition)
+	if accesses == nil {
+		// Encode as [] rather than null: the field is a list, and a null would read as a
+		// different thing from "nothing to allow".
+		accesses = []dashboards.ResourceAccess{}
+	}
+	envelope["resource_accesses"] = accesses
+
+	filled, err := json.Marshal(envelope)
+	if err != nil {
+		return nil, fmt.Errorf("re-encode dashboard body: %w", err)
+	}
+	return filled, nil
+}
+
 func checkDashboard(body []byte, skip bool) error {
 	if skip {
 		return nil
@@ -272,23 +329,6 @@ func validateDashboard(body []byte) (errs, warns []string) {
 	widgets, _ := definition["widgets"].([]any)
 	if len(widgets) == 0 {
 		warns = append(warns, "definition.widgets is empty — the dashboard will render blank")
-	}
-	vizCount := 0
-	for _, w := range widgets {
-		m, ok := w.(map[string]any)
-		if !ok {
-			continue
-		}
-		if t, _ := m["type"].(string); t == "viz" {
-			vizCount++
-		}
-	}
-	// resource_accesses is the allowlist of what an anonymous viewer may query. The
-	// backend only consults it for dashboard-token auth — public share links and
-	// screenshot generation — so a dashboard without it renders normally for signed-in
-	// users. The UI refills it from the widgets whenever someone saves in the builder.
-	if vizCount > 0 && len(d.ResourceAccesses) == 0 && d.Definition != nil {
-		warns = append(warns, `resource_accesses is empty; the dashboard renders normally for signed-in users, but public share links and screenshots will be denied. Add one {"domain":...,"query":...} entry per widget query if you need those.`)
 	}
 
 	issues, err := dashboards.ValidateDefinition(definition)

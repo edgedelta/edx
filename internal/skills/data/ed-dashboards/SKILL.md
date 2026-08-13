@@ -2,7 +2,7 @@
 name: ed-dashboards
 description: Dashboards - create, update, inspect and validate metric dashboards from the CLI.
 metadata:
-  version: "1.1.0"
+  version: "1.2.0"
   author: edgedelta
   repository: https://github.com/edgedelta/agent-skills
   tags: edgedelta,dashboards,metrics,visualization
@@ -86,13 +86,9 @@ So a definition that validates is well-formed, not necessarily populated. After
 creating it, confirm the queries actually return data with `edx metrics query`
 or `edx logs search`.
 
-Two things are reported as **warnings** and do **not** fail the command, so read
-the output rather than only the exit code:
-
-- `resource_accesses is empty` - see below, it only affects public sharing and
-  screenshots, not normal rendering.
-- `unsupported definition version` - see below, this means you got **no**
-  schema validation at all.
+One finding is reported as a **warning** and does **not** fail the command, so
+read the output rather than only the exit code: `unsupported definition version`
+means you got **no** schema validation at all. See below.
 
 ## Use `version: 4`
 
@@ -112,27 +108,6 @@ it, bump the definition to version 4.
 When you use `edx dashboards get <id>` as a template, check its `version` — an
 older dashboard hands you an older schema.
 
-## `resource_accesses` Is Optional
-
-It does **not** affect normal rendering. A dashboard with no `resource_accesses`
-renders fine for signed-in users — three of the dashboards Edge Delta ships have
-none at all.
-
-It is an allowlist of what an **anonymous** viewer may query, and the backend
-only consults it for dashboard-token auth, which means two things:
-
-- **public share links** — without it, the shared dashboard's queries are denied
-- **screenshot generation** — the same path, so screenshots fail too
-
-So add it when the dashboard will be shared publicly or needs screenshots, with
-one `{"domain": "<data type>", "query": "<the widget query>"}` entry per widget
-query. Otherwise you can leave it out. `edx` warns when it is missing, but that
-is only a warning and the command still exits 0.
-
-Worth knowing: the UI regenerates `resource_accesses` from the widgets whenever
-anyone saves the dashboard in the builder, so an omission is self-correcting the
-first time a human edits it.
-
 ## Start From an Example
 
 Four validated examples ship with this skill in `examples/`. Copy the closest one
@@ -141,7 +116,7 @@ dashboard body you can pass straight to `edx dashboards create --file`:
 
 | File | Shows |
 | --- | --- |
-| `examples/01-minimal.json` | The smallest thing that renders: a root grid and one `bignumber`. Omits `resource_accesses` to show it is optional. |
+| `examples/01-minimal.json` | The smallest thing that renders: a root grid and one `bignumber`. |
 | `examples/02-timeseries-with-variables.json` | A `line` chart, a `facet-option` variable and the `variable-control` widget that exposes it. |
 | `examples/03-logs-and-markdown.json` | Mixed data types — a log count, a log breakdown `table`, a `markdown` panel. |
 | `examples/04-formula.json` | Two hidden queries (`A`, `B`) plus a `formula` visual (`W`) dividing one by the other. |
@@ -240,8 +215,7 @@ latest point with a sparkline).
                     "dataSource": {"type": "metric",
                                    "params": {"query": "sum:service.tokens{*}"}}}]}
     ]
-  },
-  "resource_accesses": [{"domain": "metric", "query": "sum:service.tokens{*}"}]
+  }
 }
 ```
 
@@ -255,8 +229,6 @@ Key fields:
 - **`visualizer.type`**: `bignumber` | `line` | `area` | `bar` | `pie` | `table`
   | `gauge` | ... — validation lists every accepted value if you get it wrong.
 - **`visuals[].id`**: `A`-`F` for queries, `W`-`Z` for formulas.
-- **`resource_accesses`**: optional. Mirror every widget query, one entry each,
-  only if the dashboard needs public sharing or screenshots.
 
 ## Validating Queries On Their Own
 

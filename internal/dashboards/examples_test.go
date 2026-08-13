@@ -59,31 +59,13 @@ func TestSkillExamplesValidate(t *testing.T) {
 				t.Errorf("%s", issue)
 			}
 
-			// resource_accesses is optional: the backend only consults it for
-			// dashboard-token auth (public share links and screenshots), so a definition
-			// without it renders normally. An example that does declare it is claiming to
-			// model the mapping, so then it has to be complete — a partial allowlist
-			// would silently deny some widgets on a shared dashboard.
-			if len(body.ResourceAccesses) == 0 {
-				return
-			}
-
-			covered := map[string]bool{}
-			for _, access := range body.ResourceAccesses {
-				covered[access.Query] = true
-				if access.Domain == "" {
-					t.Errorf("resource_accesses entry for %q has no domain", access.Query)
-				}
-			}
-			for _, site := range QuerySites(body.Definition) {
-				// Formulas reference other visuals rather than querying a data source, so
-				// they get no entry of their own.
-				if site.Dialect == "formula" {
-					continue
-				}
-				if !covered[site.Query] {
-					t.Errorf("query %q has no resource_accesses entry", site.Query)
-				}
+			// edx derives resource_accesses from the definition on create and update, so
+			// an example must not carry one. Shipping a hand-written copy would teach
+			// authors to maintain a field they should never touch, and it would go stale
+			// the moment someone edited the widgets.
+			if len(body.ResourceAccesses) > 0 {
+				t.Errorf("example declares %d resource_accesses entries; edx generates them, "+
+					"so remove the field", len(body.ResourceAccesses))
 			}
 		})
 	}
