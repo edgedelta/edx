@@ -118,6 +118,92 @@ The UI resolves a dashboard through `resource_accesses`; it needs one
 blank or errors, and this is a **warning**, not an error — the command still
 exits 0. Mirror every widget query there.
 
+## Start From an Example
+
+Four validated examples ship with this skill in `examples/`. Copy the closest one
+and edit it rather than writing a definition from scratch — each is a complete
+dashboard body you can pass straight to `edx dashboards create --file`:
+
+| File | Shows |
+| --- | --- |
+| `examples/01-minimal.json` | The smallest thing that renders: a root grid and one `bignumber`. |
+| `examples/02-timeseries-with-variables.json` | A `line` chart, a `facet-option` variable and the `variable-control` widget that exposes it. |
+| `examples/03-logs-and-markdown.json` | Mixed data types — a log count, a log breakdown `table`, a `markdown` panel. |
+| `examples/04-formula.json` | Two hidden queries (`A`, `B`) plus a `formula` visual (`W`) dividing one by the other. |
+
+All four are validated in CI, so they are correct for the schema this skill
+describes. If you are stuck, `edx dashboards validate --file examples/01-minimal.json`
+gives you a known-good baseline to diff against.
+
+## Every Option
+
+`type` fields are closed sets. These are the accepted values; the authoritative
+list comes from the CLI, which reads the same schema validation enforces:
+
+```bash
+edx dashboards options                              # all of them, as JSON
+edx dashboards options | jq -r '.visualizerTypes[]'
+```
+
+**Widget types** (`widgets[].type`) — 6:
+
+| Value | Purpose |
+| --- | --- |
+| `grid` | Layout container. One with `id: "root"` holds everything else. |
+| `viz` | A chart or number driven by queries. The main one. |
+| `markdown` | Static text/HTML via `params.content`. |
+| `variable-control` | Renders a variable's picker; needs `variableId`. |
+| `tabs` | Tabbed container; children use `position.type: "tab"`. |
+| `empty` | Placeholder. |
+
+**Data types** (`visuals[].dataSource.type`) — 7. The query for each lives in
+`params.query`, except `formula` which uses `params.formula`:
+
+| Value | Query dialect for `edx cql validate --type` |
+| --- | --- |
+| `metric` | `metric` |
+| `log` | `log` |
+| `event` | `event` (same grammar as log) |
+| `pattern` | `pattern` (same grammar as log) |
+| `trace` | `trace` (same grammar as log) |
+| `formula` | `formula` — references other visuals by id, e.g. `A / B` |
+| `empty` | none; carries no query |
+
+**Visualizer types** (`viz` widget's `visualizer.type`) — 23. Grouped by what
+they are for; the `resultType` column is the pairing the shipped dashboards use:
+
+| Group | Values | Usual `resultType` |
+| --- | --- | --- |
+| Single value | `bignumber`, `gauge` | `aggregate` |
+| Over time | `line`, `area`, `bar`, `column`, `step`, `smooth`, `scatter` | `timeseries` |
+| Proportion / breakdown | `pie`, `donut`, `treemap`, `sunburst`, `sankey`, `radar`, `bubble`, `boxplot` | `aggregate` |
+| Tabular | `table`, `list`, `json` | `aggregate` |
+| Raw rows | `raw-table` | `raw` |
+| Map | `geomap` | `aggregate` |
+| Placeholder | `empty` | `empty` |
+
+`bignumber` also appears with `timeseries` in shipped dashboards (it renders the
+latest point with a sparkline).
+
+**Variable types** (`variables[].type`) — 6:
+
+| Value | Meaning |
+| --- | --- |
+| `facet-option` | Dropdown of a facet's values. Needs `params.facet` and `params.scope`. |
+| `facet` | Pick a facet *name* rather than a value. |
+| `metric-name` | Pick a metric name. |
+| `query` | A free-form filter expression, substituted into widget queries. |
+| `string` | Free text; `params.options` restricts it to a list. |
+| `duration` | A time span, e.g. for rollups. |
+
+**Position types** (`widgets[].position.type`) — 5: `grid` (needs `area`), `tab`
+(needs `index`), `none`, `subtitle`, `inline`.
+
+**Result types** (`viz` widget's `resultType`) — 4: `aggregate`, `timeseries`,
+`raw`, `empty`.
+
+**Visual ids** (`visuals[].id`): `A`-`F` for queries, `W`-`Z` for formulas.
+
 ## Anatomy of a Metric Dashboard
 
 ```json

@@ -41,6 +41,20 @@ var (
 	compileErr  error
 )
 
+// schemaDocument returns the embedded schema as a decoded JSON object, for reading the
+// schema itself rather than validating against it (see options.go).
+func schemaDocument() (map[string]any, error) {
+	doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(schemaJSON))
+	if err != nil {
+		return nil, fmt.Errorf("parse embedded dashboard schema: %w", err)
+	}
+	obj, ok := doc.(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("embedded dashboard schema is not a JSON object")
+	}
+	return obj, nil
+}
+
 func schema() (*jsonschema.Schema, error) {
 	compileOnce.Do(func() {
 		doc, err := jsonschema.UnmarshalJSON(bytes.NewReader(schemaJSON))

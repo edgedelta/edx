@@ -1,0 +1,139 @@
+package dashboards
+
+import (
+	"encoding/json"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+// examplesDir holds the dashboard examples shipped with the ed-dashboards skill, vendored
+// from the agent-skills repo by `make sync-skills`.
+const examplesDir = "../skills/data/ed-dashboards/examples"
+
+// Agents copy these examples as a starting point, so an example that does not validate is
+// worse than no example at all: it teaches a shape the product rejects. This is the guard
+// that keeps them true as the schema changes.
+func TestSkillExamplesValidate(t *testing.T) {
+	paths, err := filepath.Glob(filepath.Join(examplesDir, "*.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(paths) == 0 {
+		t.Fatalf("no examples found in %s; if they moved, update this test rather than deleting it", examplesDir)
+	}
+
+	for _, path := range paths {
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			raw, err := os.ReadFile(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			// The examples are full dashboard bodies so they can be fed straight to
+			// `edx dashboards create`, so reach through to the definition.
+			var body struct {
+				DashboardName    string         `json:"dashboard_name"`
+				Definition       map[string]any `json:"definition"`
+				ResourceAccesses []struct {
+					Domain string `json:"domain"`
+					Query  string `json:"query"`
+				} `json:"resource_accesses"`
+			}
+			if err := json.Unmarshal(raw, &body); err != nil {
+				t.Fatalf("invalid JSON: %v", err)
+			}
+			if body.DashboardName == "" {
+				t.Error("example has no dashboard_name, so it cannot be created as-is")
+			}
+			if body.Definition == nil {
+				t.Fatal(`example has no "definition" object`)
+			}
+
+			issues, err := ValidateDefinition(body.Definition)
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			for _, issue := range issues {
+				t.Errorf("%s", issue)
+			}
+
+			// The skill teaches that every widget query needs a resource_accesses entry
+			// or the UI may fail to resolve the dashboard, so the examples must model it.
+			queries := map[string]bool{}
+			for _, site := range QuerySites(body.Definition) {
+				queries[site.Query] = true
+			}
+			covered := map[string]bool{}
+			for _, access := range body.ResourceAccesses {
+				covered[access.Query] = true
+				if access.Domain == "" {
+					t.Errorf("resource_accesses entry for %q has no domain", access.Query)
+				}
+			}
+			for query := range queries {
+				// Formulas reference other visuals rather than querying a data source, so
+				// they get no entry of their own.
+				if isFormula(body.Definition, query) {
+					continue
+				}
+				if !covered[query] {
+					t.Errorf("query %q has no resource_accesses entry", query)
+				}
+			}
+		})
+	}
+}
+
+// The skill lists every accepted widget, visualizer, data, variable, position and result
+// type so an agent knows its options without a CLI call. Those lists are prose, so this
+// asserts they still match the schema: adding a visualizer type to definition.ts and
+// regenerating must not silently leave the skill a value short.
+//
+// `edx dashboards options` prints the same values from the same source, which is the fix
+// when this fails — copy them across.
+func TestSkillDocumentsEverySchemaOption(t *testing.T) {
+	raw, err := os.ReadFile("../skills/data/ed-dashboards/SKILL.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	skill := string(raw)
+
+	opts, err := SchemaOptions()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, field := range []struct {
+		name   string
+		values []string
+	}{
+		{"widget type", opts.WidgetTypes},
+		{"visualizer type", opts.VisualizerTypes},
+		{"data type", opts.DataTypes},
+		{"variable type", opts.VariableTypes},
+		{"position type", opts.PositionTypes},
+		{"result type", opts.ResultTypes},
+	} {
+		for _, value := range field.values {
+			// The skill writes every option as inline code, which keeps this from
+			// matching the value incidentally in prose.
+			if !strings.Contains(skill, "`"+value+"`") {
+				t.Errorf("ed-dashboards/SKILL.md does not document the %s %q; "+
+					"run `edx dashboards options` and add it", field.name, value)
+			}
+		}
+	}
+}
+
+// isFormula reports whether query appears in the definition as a formula rather than a
+// data source query.
+func isFormula(definition any, query string) bool {
+	for _, site := range QuerySites(definition) {
+		if site.Query == query && site.Dialect == "formula" {
+			return true
+		}
+	}
+	return false
+}

@@ -29,9 +29,39 @@ UI is rejected here instead. Use "validate" to check a definition without saving
 		newDashboardsCreateCmd(),
 		newDashboardsUpdateCmd(),
 		newDashboardsValidateCmd(),
+		newDashboardsOptionsCmd(),
 		newDashboardsDeleteCmd(),
 	)
 	return cmd
+}
+
+func newDashboardsOptionsCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:     "options",
+		Aliases: []string{"types"},
+		Short:   "List the accepted widget, visualizer and data types",
+		Long: `List every accepted value for a definition's typed fields: widget types,
+visualizer types, data source types, variable types, position types and result
+types.
+
+Read out of the same embedded schema that "validate" enforces, so this is always
+in step with what validation accepts — useful when picking a visualizer or
+diagnosing a rejected "type".`,
+		Example: `  edx dashboards options
+  edx dashboards options --output yaml
+  edx dashboards options | jq -r '.visualizerTypes[]'`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			opts, err := dashboards.SchemaOptions()
+			if err != nil {
+				return err
+			}
+			data, err := json.Marshal(opts)
+			if err != nil {
+				return err
+			}
+			return printResult(data)
+		},
+	}
 }
 
 func newDashboardsValidateCmd() *cobra.Command {
