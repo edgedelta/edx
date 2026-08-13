@@ -16,9 +16,6 @@ List, inspect, create, update and delete dashboards.
 ## Prerequisites
 
 The `edx` CLI must be installed and authenticated. See the **ed-edx** skill.
-`create`/`update`/`delete` require `edx` >= 0.10.0 (`list`/`get` work on any version).
-Offline validation needs a build that ships the `cql` command; check with
-`edx cql validate --help` and upgrade via `edx update` if it is missing.
 
 ## Inspect
 
