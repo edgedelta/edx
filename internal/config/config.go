@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -123,6 +124,11 @@ type Profile struct {
 	// "cookie"), set by `edx auth login --cookie` to reach a support-enabled
 	// org. Sensitive; the config file is written 0600.
 	SessionCookie string `yaml:"session_cookie,omitempty"`
+
+	// CookieExpiry estimates when SessionCookie stops working (RFC3339,
+	// login time + ~24h). The cookie itself is opaque, so this is the only
+	// expiry signal available without a live API call.
+	CookieExpiry string `yaml:"cookie_expiry,omitempty"`
 }
 
 // File is the on-disk configuration document.
@@ -315,10 +321,18 @@ func Resolve(profileFlag, envFlag, orgFlag, tokenFlag string) (*Resolved, error)
 	return r, nil
 }
 
+// saveOAuthMu serializes SaveOAuthTokens' load-modify-save cycle. Profiles
+// can refresh concurrently (auth status checks them all in parallel); a lost
+// update here would drop a rotated refresh token and kill that profile.
+var saveOAuthMu sync.Mutex
+
 // SaveOAuthTokens persists a refreshed OAuth credential set onto a profile,
 // creating the profile if it does not exist. Used both by the login flow and
 // by the auto-refresh path so a renewed access token survives across runs.
 func SaveOAuthTokens(profileName, env, orgID, clientID, access, refresh string, expiry time.Time) error {
+	saveOAuthMu.Lock()
+	defer saveOAuthMu.Unlock()
+
 	cfg, err := Load()
 	if err != nil {
 		return err

@@ -138,6 +138,12 @@ func newClient() (*api.Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	return clientFromResolved(r)
+}
+
+// clientFromResolved builds an authenticated API client from already-resolved
+// credentials (used by newClient and by per-profile checks in `auth list`).
+func clientFromResolved(r *config.Resolved) (*api.Client, error) {
 	if r.UsesCookie() {
 		if r.OrgID == "" {
 			return nil, fmt.Errorf("no organization ID for the support session: run `edx auth login --org-id <org> --cookie`")

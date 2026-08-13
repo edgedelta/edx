@@ -36,18 +36,21 @@ func captureStderr(t *testing.T, buf *bytes.Buffer) func() {
 	saved := os.Stderr
 	os.Stderr = w
 
-	done := make(chan struct{})
+	// The drainer must not write into buf itself: the command under test
+	// writes to the same buffer, and pipe EOF is not a happens-before edge
+	// the race detector recognizes. Hand the bytes back over a channel and
+	// let the caller's goroutine do the write.
+	captured := make(chan []byte, 1)
 	go func() {
-		defer close(done)
 		var chunk bytes.Buffer
 		_, _ = chunk.ReadFrom(r)
-		buf.Write(chunk.Bytes())
+		captured <- chunk.Bytes()
 	}()
 
 	return func() {
 		os.Stderr = saved
 		_ = w.Close()
-		<-done
+		buf.Write(<-captured)
 		_ = r.Close()
 	}
 }
