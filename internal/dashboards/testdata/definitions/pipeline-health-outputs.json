@@ -1,0 +1,760 @@
+{
+  "timeFilters": {
+    "lookback": "15m"
+  },
+  "variables": [
+    {
+      "id": 1,
+      "key": "output_node_type",
+      "label": "⬆ Output Node Type",
+      "params": {
+        "allowEmpty": true,
+        "allowMultiple": true,
+        "facet": "ed.pipeline.node.type",
+        "query": "ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline",
+        "scope": "metric"
+      },
+      "type": "facet-option",
+      "value": ""
+    },
+    {
+      "id": 2,
+      "key": "output_node_name",
+      "label": "⬆ Output Node Name",
+      "params": {
+        "allowEmpty": true,
+        "allowMultiple": true,
+        "facet": "ed.pipeline.node.name",
+        "query": "ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline",
+        "scope": "metric"
+      },
+      "type": "facet-option",
+      "value": ""
+    },
+    {
+      "id": 3,
+      "key": "edge_delta_pipeline",
+      "label": "Edge Delta Pipeline(s)",
+      "params": {
+        "allowEmpty": true,
+        "allowMultiple": true,
+        "facet": "ed.tag",
+        "scope": "metric"
+      },
+      "type": "facet-option",
+      "value": ""
+    },
+    {
+      "id": 4,
+      "key": "host_name",
+      "label": "Host Name(s)",
+      "params": {
+        "allowEmpty": true,
+        "allowMultiple": true,
+        "facet": "host.name",
+        "scope": "metric"
+      },
+      "type": "facet-option",
+      "value": ""
+    }
+  ],
+  "version": 4,
+  "widgets": [
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "grid": "72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px / 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr",
+      "id": "root",
+      "type": "grid"
+    },
+    {
+      "displayOptions": {
+        "hideBackground": false
+      },
+      "id": 43,
+      "params": {
+        "content": "To use this dashboard:\n1. Choose your pipeline and host if desired\n2. Filter by Output Name and Type to narrow down results"
+      },
+      "position": {
+        "area": {
+          "column": 3,
+          "columnSpan": 3,
+          "row": 1,
+          "rowSpan": 2
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "markdown"
+    },
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "id": 19,
+      "position": {
+        "area": {
+          "column": 6,
+          "columnSpan": 3,
+          "row": 1,
+          "rowSpan": 1
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "variable-control",
+      "variableId": 3
+    },
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "id": 20,
+      "position": {
+        "area": {
+          "column": 6,
+          "columnSpan": 3,
+          "row": 2,
+          "rowSpan": 1
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "variable-control",
+      "variableId": 4
+    },
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "id": 38,
+      "position": {
+        "area": {
+          "column": 9,
+          "columnSpan": 4,
+          "row": 1,
+          "rowSpan": 1
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "variable-control",
+      "variableId": 1
+    },
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "id": 39,
+      "position": {
+        "area": {
+          "column": 9,
+          "columnSpan": 4,
+          "row": 2,
+          "rowSpan": 1
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "variable-control",
+      "variableId": 2
+    },
+    {
+      "displayOptions": {
+        "description": "by read_bytes",
+        "title": "⬇ Incoming Bytes"
+      },
+      "id": 1,
+      "position": {
+        "area": {
+          "column": 5,
+          "columnSpan": 6,
+          "row": 3,
+          "rowSpan": 3
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "type": "viz",
+      "visualizer": {
+        "appearance": "auto",
+        "coloring": {
+          "mode": "continuous",
+          "palette": [
+            "var(--extended-green-200)",
+            "var(--extended-green-300)",
+            "var(--extended-green-400)",
+            "var(--extended-green-500)",
+            "var(--extended-green-600)",
+            "var(--extended-green-700)",
+            "var(--extended-green-800)"
+          ]
+        },
+        "format": {
+          "formatOptions": {},
+          "options": {},
+          "preset": "fileSize"
+        },
+        "type": "area"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "sum:ed.pipeline.node.read_bytes{ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "description": "",
+        "title": "AVG In Bytes"
+      },
+      "id": 28,
+      "position": {
+        "area": {
+          "column": 11,
+          "columnSpan": 2,
+          "row": 3,
+          "rowSpan": 3
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "type": "viz",
+      "visualizer": {
+        "aggregation": {
+          "mode": "avg"
+        },
+        "appearance": "auto",
+        "coloring": {
+          "mode": "palette",
+          "palette": [
+            "var(--semantic_accent-green)",
+            "var(--extended-green-300)",
+            "var(--extended-green-400)",
+            "var(--extended-green-500)",
+            "var(--extended-green-600)",
+            "var(--extended-green-700)",
+            "var(--extended-green-800)"
+          ]
+        },
+        "format": {
+          "formatOptions": {},
+          "options": {},
+          "preset": "fileSize"
+        },
+        "type": "bignumber"
+      },
+      "visuals": [
+        {
+          "compareDataSource": {
+            "timeFiltersOffset": "inherit"
+          },
+          "dataSource": {
+            "params": {
+              "query": "avg:ed.pipeline.node.read_bytes{ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "description": "by write_bytes",
+        "title": "⬆ Outgoing Bytes"
+      },
+      "id": 33,
+      "position": {
+        "area": {
+          "column": 5,
+          "columnSpan": 6,
+          "row": 6,
+          "rowSpan": 3
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "type": "viz",
+      "visualizer": {
+        "appearance": "auto",
+        "coloring": {
+          "mode": "continuous",
+          "palette": [
+            "var(--extended-green-200)",
+            "var(--extended-green-300)",
+            "var(--extended-green-400)",
+            "var(--extended-green-500)",
+            "var(--extended-green-600)",
+            "var(--extended-green-700)",
+            "var(--extended-green-800)"
+          ]
+        },
+        "format": {
+          "formatOptions": {},
+          "options": {},
+          "preset": "fileSize"
+        },
+        "type": "area"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "sum:ed.pipeline.node.write_bytes{ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "description": "by read_items",
+        "title": "⬇ Incoming Items"
+      },
+      "id": 48,
+      "position": {
+        "area": {
+          "column": 5,
+          "columnSpan": 6,
+          "row": 9,
+          "rowSpan": 3
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "type": "viz",
+      "visualizer": {
+        "appearance": "auto",
+        "coloring": {
+          "mode": "continuous",
+          "palette": [
+            "var(--extended-green-200)",
+            "var(--extended-green-300)",
+            "var(--extended-green-400)",
+            "var(--extended-green-500)",
+            "var(--extended-green-600)",
+            "var(--extended-green-700)",
+            "var(--extended-green-800)"
+          ]
+        },
+        "format": {
+          "formatOptions": {},
+          "options": {},
+          "preset": "default"
+        },
+        "type": "area"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "sum:ed.pipeline.node.read_items{ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "description": "by read_items",
+        "title": "AVG In Items"
+      },
+      "id": 49,
+      "position": {
+        "area": {
+          "column": 11,
+          "columnSpan": 2,
+          "row": 9,
+          "rowSpan": 3
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "type": "viz",
+      "visualizer": {
+        "aggregation": {
+          "mode": "avg"
+        },
+        "appearance": "auto",
+        "coloring": {
+          "mode": "continuous",
+          "palette": [
+            "var(--extended-green-200)",
+            "var(--extended-green-300)",
+            "var(--extended-green-400)",
+            "var(--extended-green-500)",
+            "var(--extended-green-600)",
+            "var(--extended-green-700)",
+            "var(--extended-green-800)"
+          ]
+        },
+        "format": {
+          "formatOptions": {
+            "maximumFractionDigits": 0
+          },
+          "options": {},
+          "preset": "custom"
+        },
+        "type": "bignumber"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "avg:ed.pipeline.node.read_items{ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "description": "by write_items",
+        "title": "⬆ Outgoing Items"
+      },
+      "id": 50,
+      "position": {
+        "area": {
+          "column": 5,
+          "columnSpan": 6,
+          "row": 12,
+          "rowSpan": 3
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "type": "viz",
+      "visualizer": {
+        "appearance": "auto",
+        "coloring": {
+          "mode": "continuous",
+          "palette": [
+            "var(--extended-green-200)",
+            "var(--extended-green-300)",
+            "var(--extended-green-400)",
+            "var(--extended-green-500)",
+            "var(--extended-green-600)",
+            "var(--extended-green-700)",
+            "var(--extended-green-800)"
+          ]
+        },
+        "format": {
+          "formatOptions": {},
+          "options": {},
+          "preset": "default"
+        },
+        "type": "area"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "sum:ed.pipeline.node.write_items{ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "description": "by write_items",
+        "title": "AVG Out Items"
+      },
+      "id": 51,
+      "position": {
+        "area": {
+          "column": 11,
+          "columnSpan": 2,
+          "row": 12,
+          "rowSpan": 3
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "type": "viz",
+      "visualizer": {
+        "aggregation": {
+          "mode": "avg"
+        },
+        "appearance": "auto",
+        "coloring": {
+          "mode": "continuous",
+          "palette": [
+            "var(--extended-green-200)",
+            "var(--extended-green-300)",
+            "var(--extended-green-400)",
+            "var(--extended-green-500)",
+            "var(--extended-green-600)",
+            "var(--extended-green-700)",
+            "var(--extended-green-800)"
+          ]
+        },
+        "format": {
+          "formatOptions": {
+            "maximumFractionDigits": 0
+          },
+          "options": {},
+          "preset": "custom"
+        },
+        "type": "bignumber"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "avg:ed.pipeline.node.write_items{ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "hideBackground": false
+      },
+      "id": 53,
+      "params": {
+        "content": "<div style=\"display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; min-height: 100px;\">\n  <svg xmlns=\"http://www.w3.org/2000/svg\" width=\"76\" height=\"48\" viewBox=\"0 0 28 24\" fill=\"none\">\n    <path d=\"M28 7.75C28 16.5 15.0262 23.5825 14.4737 23.875C14.3281 23.9533 14.1654 23.9943 14 23.9943C13.8346 23.9943 13.6719 23.9533 13.5262 23.875C13.1075 23.65 5.5825 19.5388 1.94125 13.7638C1.89428 13.6881 1.86836 13.6013 1.86618 13.5123C1.86399 13.4233 1.88561 13.3353 1.92881 13.2574C1.97201 13.1796 2.03522 13.1147 2.1119 13.0694C2.18858 13.0241 2.27596 13.0002 2.365 13H7C7.16468 13.0001 7.32683 12.9595 7.47206 12.8819C7.61729 12.8043 7.7411 12.692 7.8325 12.555L9 10.805L12.1675 15.555C12.2889 15.737 12.4666 15.8742 12.6734 15.9456C12.8802 16.0169 13.1047 16.0185 13.3125 15.95C13.5329 15.8754 13.7215 15.7282 13.8475 15.5325L15.535 13H18C18.1371 13.0003 18.2728 12.9724 18.3986 12.9181C18.5245 12.8637 18.6378 12.7841 18.7316 12.6841C18.8254 12.5841 18.8976 12.4659 18.9438 12.3368C18.9899 12.2077 19.0091 12.0705 19 11.9338C18.9776 11.6767 18.8589 11.4376 18.6677 11.2645C18.4764 11.0913 18.2267 10.9968 17.9688 11H15C14.8353 10.9999 14.6732 11.0405 14.5279 11.1181C14.3827 11.1957 14.2589 11.308 14.1675 11.445L13 13.195L9.8325 8.445C9.71107 8.26271 9.53314 8.12534 9.32606 8.05398C9.11898 7.98262 8.8942 7.98122 8.68625 8.05C8.46638 8.12507 8.27831 8.27218 8.1525 8.4675L6.465 11H0.94125C0.83439 11.0003 0.730247 10.9663 0.644089 10.9031C0.55793 10.8399 0.494291 10.7508 0.4625 10.6488C0.160896 9.71186 0.00491256 8.73422 0 7.75C0.00231592 5.69528 0.819575 3.72539 2.27248 2.27248C3.72539 0.819575 5.69528 0.00231592 7.75 0C10.3312 0 12.5912 1.11 14 2.98625C15.4088 1.11 17.6688 0 20.25 0C22.3047 0.00231592 24.2746 0.819575 25.7275 2.27248C27.1804 3.72539 27.9977 5.69528 28 7.75Z\" fill=\"url(#paint0_linear_10458_15208)\"/>\n    <defs>\n      <linearGradient id=\"paint0_linear_10458_15208\" x1=\"2.63586e-07\" y1=\"1\" x2=\"49.7779\" y2=\"38.0067\" gradientUnits=\"userSpaceOnUse\">\n        <stop stop-color=\"#00FF00\"/>\n        <stop offset=\"0.401178\" stop-color=\"#0099FF\"/>\n        <stop offset=\"1\" stop-color=\"#9933FF\"/>\n      </linearGradient>\n    </defs>\n  </svg>\n</div>"
+      },
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 2,
+          "row": 1,
+          "rowSpan": 2
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "markdown"
+    },
+    {
+      "displayOptions": {
+        "description": "service.name:\"ed-agent-log\" ed.pipeline.node.category:output -ed.pipeline.node.type:\"edge_rollup_service\" (severity_text:error OR severity_text:warn)",
+        "title": "Error/Warn Logs"
+      },
+      "id": 56,
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 4,
+          "row": 6,
+          "rowSpan": 9
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "raw",
+      "type": "viz",
+      "visualizer": {
+        "type": "raw-table"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "{service.name:\"ed-agent-log\" ed.pipeline.node.category:output ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.tag:$edge_delta_pipeline host.name:$host_name -ed.pipeline.node.type:\"edge_rollup_service\" (severity_text:error OR severity_text:warn)}"
+            },
+            "type": "log"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "description": "service.name:\"ed-agent-log\" ed.pipeline.node.category:output -ed.pipeline.node.type:\"edge_rollup_service\" (severity_text:error OR severity_text:warn)",
+        "title": "Error/Warn Count"
+      },
+      "id": 54,
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 2,
+          "row": 3,
+          "rowSpan": 3
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "type": "viz",
+      "visualizer": {
+        "coloring": {
+          "mode": "auto"
+        },
+        "coloringOverrides": [
+          {
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--semantic_accent-yellow)"
+              ]
+            },
+            "name": "warn"
+          },
+          {
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--semantic_accent-red)"
+              ]
+            },
+            "name": "error"
+          }
+        ],
+        "type": "pie"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "{service.name:\"ed-agent-log\" ed.pipeline.node.category:output ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.tag:$edge_delta_pipeline host.name:$host_name -ed.pipeline.node.type:\"edge_rollup_service\" (severity_text:error OR severity_text:warn)} by {severity_text}"
+            },
+            "type": "log"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "description": "service.name:\"ed-agent-log\" ed.pipeline.node.category:output -ed.pipeline.node.type:\"edge_rollup_service\" (severity_text:error OR severity_text:warn)",
+        "title": "Errors and Warnings"
+      },
+      "id": 55,
+      "position": {
+        "area": {
+          "column": 3,
+          "columnSpan": 2,
+          "row": 3,
+          "rowSpan": 3
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "type": "viz",
+      "visualizer": {
+        "coloring": {
+          "mode": "auto"
+        },
+        "coloringOverrides": [
+          {
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--semantic_accent-yellow)"
+              ]
+            },
+            "name": "warn"
+          },
+          {
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--semantic_accent-red)"
+              ]
+            },
+            "name": "error"
+          }
+        ],
+        "type": "bar"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "{service.name:\"ed-agent-log\" ed.pipeline.node.category:output ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.tag:$edge_delta_pipeline host.name:$host_name -ed.pipeline.node.type:\"edge_rollup_service\" (severity_text:error OR severity_text:warn)} by {severity_text}"
+            },
+            "type": "log"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "description": "",
+        "title": "AVG Out Bytes"
+      },
+      "id": 29,
+      "position": {
+        "area": {
+          "column": 11,
+          "columnSpan": 2,
+          "row": 6,
+          "rowSpan": 3
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "type": "viz",
+      "visualizer": {
+        "aggregation": {
+          "ignoreZero": false,
+          "mode": "avg"
+        },
+        "appearance": "auto",
+        "coloring": {
+          "mode": "palette",
+          "palette": [
+            "var(--semantic_accent-green)",
+            "var(--extended-green-300)",
+            "var(--extended-green-400)",
+            "var(--extended-green-500)",
+            "var(--extended-green-600)",
+            "var(--extended-green-700)",
+            "var(--extended-green-800)"
+          ]
+        },
+        "format": {
+          "formatOptions": {},
+          "options": {},
+          "preset": "fileSize"
+        },
+        "type": "bignumber"
+      },
+      "visuals": [
+        {
+          "compareDataSource": {
+            "timeFiltersOffset": "auto"
+          },
+          "dataSource": {
+            "params": {
+              "query": "avg:ed.pipeline.node.write_bytes{ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.fill(zero).rollup(60)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    }
+  ]
+}

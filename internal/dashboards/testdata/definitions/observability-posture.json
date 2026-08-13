@@ -1,0 +1,253 @@
+{
+  "timeFilters": {
+    "lookback": "1h"
+  },
+  "variables": [
+    {
+      "id": 1,
+      "key": "fleet",
+      "label": "Fleet",
+      "params": {
+        "allowMultiple": false,
+        "facet": "ed.tag",
+        "scope": "log",
+        "allowEmpty": true,
+        "autoSelect": true
+      },
+      "type": "facet-option",
+      "value": null
+    }
+  ],
+  "version": 4,
+  "widgets": [
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "grid": "72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px / 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr",
+      "id": "root",
+      "type": "grid"
+    },
+    {
+      "type": "viz",
+      "id": 1,
+      "displayOptions": {
+        "description": "",
+        "title": "Alerts from Metric Monitors"
+      },
+      "position": {
+        "area": {
+          "column": 5,
+          "columnSpan": 4,
+          "row": 1,
+          "rowSpan": 4
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "bignumber"
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "dataSource": {
+            "type": "event",
+            "params": {
+              "eventDomain": "Monitor",
+              "query": "{severity_text:ALERT event.type:metric_threshold}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "id": 2,
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 4,
+          "row": 5,
+          "rowSpan": 1
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "variable-control",
+      "variableId": 1
+    },
+    {
+      "type": "viz",
+      "id": 3,
+      "displayOptions": {
+        "description": "This chart shows number of logs with error on a service grouped by host",
+        "title": "Erroneous Logs by Host"
+      },
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 6,
+          "row": 6,
+          "rowSpan": 4
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "visualizer": {
+        "type": "bar"
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "dataSource": {
+            "type": "log",
+            "params": {
+              "query": "{error AND ed.tag: $fleet} by {host.name}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 4,
+      "displayOptions": {
+        "title": "Erroneous Logs"
+      },
+      "filterOptions": {
+        "customTimeFilters": true,
+        "overrideTimeFilters": true
+      },
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 12,
+          "row": 10,
+          "rowSpan": 9
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "raw",
+      "visualizer": {
+        "type": "raw-table"
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "dataSource": {
+            "type": "log",
+            "params": {
+              "query": "{error ed.tag:$fleet}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 5,
+      "displayOptions": {
+        "title": "Negative Patterns by Host"
+      },
+      "position": {
+        "area": {
+          "column": 7,
+          "columnSpan": 6,
+          "row": 6,
+          "rowSpan": 4
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "visualizer": {
+        "type": "bar"
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "dataSource": {
+            "type": "pattern",
+            "params": {
+              "query": "ed.tag:$fleet",
+              "includeOther": true,
+              "negative": true
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 6,
+      "displayOptions": {
+        "description": "",
+        "title": "Alerts from Log Monitors"
+      },
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 4,
+          "row": 1,
+          "rowSpan": 4
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "bignumber"
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "dataSource": {
+            "type": "event",
+            "params": {
+              "eventDomain": "Monitor",
+              "query": "{severity_text:ALERT event.type:log_threshold}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 7,
+      "displayOptions": {
+        "title": "Alerts From Pattern Anomaly Monitors"
+      },
+      "position": {
+        "area": {
+          "column": 9,
+          "columnSpan": 4,
+          "row": 1,
+          "rowSpan": 4
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "bignumber"
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "dataSource": {
+            "type": "event",
+            "params": {
+              "query": "{severity_text:ALERT event.type:pattern_anomaly}"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

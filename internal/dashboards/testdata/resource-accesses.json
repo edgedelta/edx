@@ -1,0 +1,452 @@
+{
+  "k8s-overview": [
+    {
+      "domain": "metric",
+      "query": "count_unique(k8s.node.name):k8s.ksm.node.info.value{ed.tag:$cluster }.rollup(300)"
+    },
+    {
+      "domain": "metric",
+      "query": "count_unique(k8s.namespace.name):k8s.ksm.namespace.status_phase.value{ed.tag:$cluster}.rollup(300)"
+    },
+    {
+      "domain": "metric",
+      "query": "count_unique(k8s.pod.name):k8s.ksm.pod.status_phase.value{ed.tag:$cluster AND k8s.namespace.name:$namespace AND @phase: \"Running\"}.rollup(300)"
+    },
+    {
+      "domain": "metric",
+      "query": "count_unique(k8s.container.name,k8s.pod.name):k8s.ksm.pod.container_status_running.value{ed.tag:$cluster AND k8s.namespace.name:$namespace}.rollup(300)"
+    },
+    {
+      "domain": "event",
+      "query": "{(ed.tag:$cluster AND k8s.namespace.name:$namespace) AND (event.domain:\"K8s\")} by {severity_text}"
+    },
+    {
+      "domain": "pattern",
+      "query": "{ed.tag:$cluster AND k8s.namespace.name:$namespace}"
+    },
+    {
+      "domain": "event",
+      "query": "count_unique():{(ed.tag:$cluster AND k8s.namespace.name:$namespace) AND (event.domain:\"K8s\")} by {severity_text,event.type}"
+    },
+    {
+      "domain": "event",
+      "query": "count_unique():{(ed.tag:$cluster AND k8s.namespace.name:$namespace) AND (event.domain:\"K8s\")} by {event.type}"
+    },
+    {
+      "domain": "event",
+      "query": "count_unique():{(ed.tag:$cluster AND k8s.namespace.name:$namespace) AND (event.domain:\"K8s\")} by {severity_text}"
+    },
+    {
+      "domain": "pattern",
+      "query": "{ed.tag:$cluster AND k8s.namespace.name:$namespace}"
+    },
+    {
+      "domain": "metric",
+      "query": "count_unique(k8s.deployment.name):k8s.ksm.deployment_metadata_generation.value{ed.tag:$cluster AND k8s.namespace.name:$namespace}.rollup(300)"
+    },
+    {
+      "domain": "metric",
+      "query": "count_unique(k8s.daemonset.name):k8s.ksm.daemonset_metadata_generation.value{ed.tag:$cluster AND k8s.namespace.name:$namespace}.rollup(300)"
+    },
+    {
+      "domain": "metric",
+      "query": "count_unique(k8s.statefulset.name):k8s.ksm.statefulset_metadata_generation.value{ed.tag:$cluster AND k8s.namespace.name:$namespace}.rollup(300)"
+    },
+    {
+      "domain": "metric",
+      "query": "count_unique(k8s.cronjob.name):k8s.ksm.cronjob_info.value{ed.tag:$cluster AND k8s.namespace.name:$namespace}.rollup(300)"
+    },
+    {
+      "domain": "facet_option",
+      "query": "",
+      "scope": "metric",
+      "facet_path": "ed.tag"
+    },
+    {
+      "domain": "facet_option",
+      "query": "ed.tag:$cluster",
+      "scope": "metric",
+      "facet_path": "k8s.namespace.name"
+    }
+  ],
+  "top-talkers": [
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.read_bytes{*} by {ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.read_bytes{*} by {host.name}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.write_items{*} by {ed.tag}.rollup(60)"
+    }
+  ],
+  "observability-posture": [
+    {
+      "domain": "event",
+      "query": "{(severity_text:ALERT event.type:metric_threshold) AND (event.domain:(\"Monitor\" OR \"Monitor Alerts\"))}"
+    },
+    {
+      "domain": "log",
+      "query": "{error AND ed.tag: $fleet} by {host.name}"
+    },
+    {
+      "domain": "log",
+      "query": "{error ed.tag:$fleet}"
+    },
+    {
+      "domain": "pattern",
+      "query": "ed.tag:$fleet"
+    },
+    {
+      "domain": "event",
+      "query": "{(severity_text:ALERT event.type:log_threshold) AND (event.domain:(\"Monitor\" OR \"Monitor Alerts\"))}"
+    },
+    {
+      "domain": "event",
+      "query": "{severity_text:ALERT event.type:pattern_anomaly}"
+    },
+    {
+      "domain": "facet_option",
+      "query": "",
+      "scope": "log",
+      "facet_path": "ed.tag"
+    }
+  ],
+  "fleet-resource-usage": [
+    {
+      "domain": "metric",
+      "query": "avg:ed.agent.cpu.milicores{ed.tag: $fleet} by {host.name}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "max:ed.agent.memory.virtual{ed.tag: $fleet} by {host.name}.rollup(60)"
+    },
+    {
+      "domain": "facet_option",
+      "query": "",
+      "scope": "metric",
+      "facet_path": "ed.tag"
+    }
+  ],
+  "linux-observability": [
+    {
+      "domain": "metric",
+      "query": "avg:ed.host.cpu.user.percent{host.name:$hostname} by {host.name}.rollup(1800)"
+    },
+    {
+      "domain": "metric",
+      "query": "avg:ed.host.cpu.system.percent{host.name:$hostname} by {host.name}.rollup(1800)"
+    },
+    {
+      "domain": "metric",
+      "query": "avg:ed.host.memory.used.percentage{host.name:$hostname} by {host.name}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.host.disk.write_bytes{host.name:$hostname} by {host.name}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.host.disk.read_bytes{host.name:$hostname} by {host.name}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.host.net.write_bytes{host.name:$hostname} by {host.name}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.host.net.read_bytes{host.name:$hostname} by {host.name}.rollup(60)"
+    },
+    {
+      "domain": "facet_option",
+      "query": "",
+      "scope": "metric",
+      "facet_path": "host.name"
+    }
+  ],
+  "pipeline-health-sources": [
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.read_bytes{ed.pipeline.node.type:$source_node_type ed.pipeline.node.name:$source_node_name ed.pipeline.node.category:input ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.read_bytes{ed.pipeline.node.type:$source_node_type ed.pipeline.node.name:$source_node_name ed.pipeline.node.category:input ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.write_bytes{ed.pipeline.node.type:$source_node_type ed.pipeline.node.name:$source_node_name ed.pipeline.node.category:input ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.read_items{ed.pipeline.node.type:$source_node_type ed.pipeline.node.name:$source_node_name ed.pipeline.node.category:input ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "avg:ed.pipeline.node.read_items{ed.pipeline.node.type:$source_node_type ed.pipeline.node.name:$source_node_name ed.pipeline.node.category:input ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.write_items{ed.pipeline.node.type:$source_node_type ed.pipeline.node.name:$source_node_name ed.pipeline.node.category:input ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "avg:ed.pipeline.node.write_items{ed.pipeline.node.type:$source_node_type ed.pipeline.node.name:$source_node_name ed.pipeline.node.category:input ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "log",
+      "query": "{service.name:\"ed-agent-log\" ed.pipeline.node.category:input ed.pipeline.node.type:$source_node_type ed.pipeline.node.name:$source_node_name ed.tag:$edge_delta_pipeline host.name:$host_name -ed.pipeline.node.type:\"edge_rollup_service\" (severity_text:error OR severity_text:warn)}"
+    },
+    {
+      "domain": "log",
+      "query": "{service.name:\"ed-agent-log\" ed.pipeline.node.category:input ed.pipeline.node.type:$source_node_type ed.pipeline.node.name:$source_node_name ed.tag:$edge_delta_pipeline host.name:$host_name -ed.pipeline.node.type:\"edge_rollup_service\" (severity_text:error OR severity_text:warn)} by {severity_text}"
+    },
+    {
+      "domain": "log",
+      "query": "{service.name:\"ed-agent-log\" ed.pipeline.node.category:input ed.pipeline.node.type:$source_node_type ed.pipeline.node.name:$source_node_name ed.tag:$edge_delta_pipeline host.name:$host_name -ed.pipeline.node.type:\"edge_rollup_service\" (severity_text:error OR severity_text:warn)} by {severity_text}"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.read_bytes{ed.pipeline.node.type:$source_node_type ed.pipeline.node.name:$source_node_name ed.pipeline.node.category:input ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.write_bytes{ed.pipeline.node.type:$source_node_type ed.pipeline.node.name:$source_node_name ed.pipeline.node.category:input ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.write_bytes{ed.pipeline.node.type:$source_node_type ed.pipeline.node.name:$source_node_name ed.pipeline.node.category:input ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "facet_option",
+      "query": "ed.pipeline.node.category:input ed.tag:$edge_delta_pipeline",
+      "scope": "metric",
+      "facet_path": "ed.pipeline.node.type"
+    },
+    {
+      "domain": "facet_option",
+      "query": "ed.pipeline.node.category:input ed.tag:$edge_delta_pipeline",
+      "scope": "metric",
+      "facet_path": "ed.pipeline.node.name"
+    },
+    {
+      "domain": "facet_option",
+      "query": "",
+      "scope": "metric",
+      "facet_path": "ed.tag"
+    },
+    {
+      "domain": "facet_option",
+      "query": "",
+      "scope": "metric",
+      "facet_path": "host.name"
+    }
+  ],
+  "pipeline-health-processors": [
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.read_bytes{ed.pipeline.node.type:$processor_node_type ed.pipeline.node.name:$processor_node_name ed.pipeline.node.category:processor ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.read_bytes{ed.pipeline.node.type:$processor_node_type ed.pipeline.node.name:$processor_node_name ed.pipeline.node.category:processor ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.read_bytes{ed.pipeline.node.type:$processor_node_type ed.pipeline.node.name:$processor_node_name ed.pipeline.node.category:processor ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.write_bytes{ed.pipeline.node.type:$processor_node_type ed.pipeline.node.name:$processor_node_name ed.pipeline.node.category:processor ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.write_bytes{ed.pipeline.node.type:$processor_node_type ed.pipeline.node.name:$processor_node_name ed.pipeline.node.category:processor ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.write_bytes{ed.pipeline.node.type:$processor_node_type ed.pipeline.node.name:$processor_node_name ed.pipeline.node.category:processor ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.read_items{ed.pipeline.node.type:$processor_node_type ed.pipeline.node.name:$processor_node_name ed.pipeline.node.category:processor ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "avg:ed.pipeline.node.read_items{ed.pipeline.node.type:$processor_node_type ed.pipeline.node.name:$processor_node_name ed.pipeline.node.category:processor ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.write_items{ed.pipeline.node.type:$processor_node_type ed.pipeline.node.name:$processor_node_name ed.pipeline.node.category:processor ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "avg:ed.pipeline.node.write_items{ed.pipeline.node.type:$processor_node_type ed.pipeline.node.name:$processor_node_name ed.pipeline.node.category:processor ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "log",
+      "query": "{service.name:\"ed-agent-log\" ed.pipeline.node.category:processor ed.pipeline.node.type:$processor_node_type ed.pipeline.node.name:$processor_node_name ed.tag:$edge_delta_pipeline host.name:$host_name -ed.pipeline.node.type:\"edge_rollup_service\" (severity_text:error OR severity_text:warn)}"
+    },
+    {
+      "domain": "log",
+      "query": "{service.name:\"ed-agent-log\" ed.pipeline.node.category:processor ed.pipeline.node.type:$processor_node_type ed.pipeline.node.name:$processor_node_name ed.tag:$edge_delta_pipeline host.name:$host_name -ed.pipeline.node.type:\"edge_rollup_service\" (severity_text:error OR severity_text:warn)} by {severity_text}"
+    },
+    {
+      "domain": "log",
+      "query": "{service.name:\"ed-agent-log\" ed.pipeline.node.category:processor ed.pipeline.node.type:$processor_node_type ed.pipeline.node.name:$processor_node_name ed.tag:$edge_delta_pipeline host.name:$host_name -ed.pipeline.node.type:\"edge_rollup_service\" (severity_text:error OR severity_text:warn)} by {severity_text}"
+    },
+    {
+      "domain": "facet_option",
+      "query": "ed.pipeline.node.category:processor ed.tag:$edge_delta_pipeline",
+      "scope": "metric",
+      "facet_path": "ed.pipeline.node.type"
+    },
+    {
+      "domain": "facet_option",
+      "query": "ed.pipeline.node.category:processor ed.tag:$edge_delta_pipeline",
+      "scope": "metric",
+      "facet_path": "ed.pipeline.node.name"
+    },
+    {
+      "domain": "facet_option",
+      "query": "",
+      "scope": "metric",
+      "facet_path": "ed.tag"
+    },
+    {
+      "domain": "facet_option",
+      "query": "",
+      "scope": "metric",
+      "facet_path": "host.name"
+    }
+  ],
+  "pipeline-health-outputs": [
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.read_bytes{ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "avg:ed.pipeline.node.read_bytes{ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.write_bytes{ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.read_items{ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "avg:ed.pipeline.node.read_items{ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "sum:ed.pipeline.node.write_items{ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "metric",
+      "query": "avg:ed.pipeline.node.write_items{ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.rollup(60)"
+    },
+    {
+      "domain": "log",
+      "query": "{service.name:\"ed-agent-log\" ed.pipeline.node.category:output ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.tag:$edge_delta_pipeline host.name:$host_name -ed.pipeline.node.type:\"edge_rollup_service\" (severity_text:error OR severity_text:warn)}"
+    },
+    {
+      "domain": "log",
+      "query": "{service.name:\"ed-agent-log\" ed.pipeline.node.category:output ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.tag:$edge_delta_pipeline host.name:$host_name -ed.pipeline.node.type:\"edge_rollup_service\" (severity_text:error OR severity_text:warn)} by {severity_text}"
+    },
+    {
+      "domain": "log",
+      "query": "{service.name:\"ed-agent-log\" ed.pipeline.node.category:output ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.tag:$edge_delta_pipeline host.name:$host_name -ed.pipeline.node.type:\"edge_rollup_service\" (severity_text:error OR severity_text:warn)} by {severity_text}"
+    },
+    {
+      "domain": "metric",
+      "query": "avg:ed.pipeline.node.write_bytes{ed.pipeline.node.type:$output_node_type ed.pipeline.node.name:$output_node_name ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline host.name:$host_name} by {ed.pipeline.node.name,ed.pipeline.node.type,ed.tag}.fill(zero).rollup(60)"
+    },
+    {
+      "domain": "facet_option",
+      "query": "ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline",
+      "scope": "metric",
+      "facet_path": "ed.pipeline.node.type"
+    },
+    {
+      "domain": "facet_option",
+      "query": "ed.pipeline.node.category:output ed.tag:$edge_delta_pipeline",
+      "scope": "metric",
+      "facet_path": "ed.pipeline.node.name"
+    },
+    {
+      "domain": "facet_option",
+      "query": "",
+      "scope": "metric",
+      "facet_path": "ed.tag"
+    },
+    {
+      "domain": "facet_option",
+      "query": "",
+      "scope": "metric",
+      "facet_path": "host.name"
+    }
+  ],
+  "stateful-alerts": [
+    {
+      "domain": "log",
+      "query": "{@alert.status:alert ed.tag:$fleet host.name:$host @alert.severity:$severity}"
+    },
+    {
+      "domain": "log",
+      "query": "{@alert.status:alert_accumulating ed.tag:$fleet host.name:$host @alert.severity:$severity}"
+    },
+    {
+      "domain": "log",
+      "query": "{@alert.status:recovery ed.tag:$fleet host.name:$host @alert.severity:$severity}"
+    },
+    {
+      "domain": "log",
+      "query": "{(@alert.status:alert_duplicate OR @alert.status:recovery_duplicate) ed.tag:$fleet host.name:$host}"
+    },
+    {
+      "domain": "log",
+      "query": "{(@alert.status:alert OR @alert.status:recovery OR @alert.status:alert_accumulating OR @alert.status:alert_duplicate OR @alert.status:recovery_duplicate OR @alert.status:heartbeat_scan) ed.tag:$fleet host.name:$host @alert.severity:$severity} by {@alert.status}"
+    },
+    {
+      "domain": "log",
+      "query": "{@alert.status:alert ed.tag:$fleet host.name:$host} by {@alert.severity}"
+    },
+    {
+      "domain": "log",
+      "query": "{@alert.status:alert ed.tag:$fleet host.name:$host @alert.severity:$severity} by {@alert.normalized_message}"
+    },
+    {
+      "domain": "log",
+      "query": "{@alert.status:alert ed.tag:$fleet @alert.severity:$severity} by {host.name}"
+    },
+    {
+      "domain": "log",
+      "query": "{(@alert.status:alert OR @alert.status:recovery) ed.tag:$fleet host.name:$host @alert.severity:$severity}"
+    },
+    {
+      "domain": "facet_option",
+      "query": "",
+      "scope": "log",
+      "facet_path": "ed.tag"
+    },
+    {
+      "domain": "facet_option",
+      "query": "",
+      "scope": "log",
+      "facet_path": "host.name"
+    },
+    {
+      "domain": "facet_option",
+      "query": "",
+      "scope": "log",
+      "facet_path": "@alert.severity"
+    }
+  ]
+}

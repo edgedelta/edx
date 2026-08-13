@@ -2,7 +2,7 @@
 name: ed-dashboards
 description: Dashboards - create, update, inspect and validate metric dashboards from the CLI.
 metadata:
-  version: "1.0.0"
+  version: "1.2.0"
   author: edgedelta
   repository: https://github.com/edgedelta/agent-skills
   tags: edgedelta,dashboards,metrics,visualization
@@ -16,7 +16,6 @@ List, inspect, create, update and delete dashboards.
 ## Prerequisites
 
 The `edx` CLI must be installed and authenticated. See the **ed-edx** skill.
-`create`/`update`/`delete` require `edx` >= 0.10.0 (`list`/`get` work on any version).
 
 ## Inspect
 
@@ -25,20 +24,172 @@ edx dashboards list --output table --columns dashboard_id,dashboard_name,creator
 edx dashboards get <dashboard-id>          # full definition - use as a template
 ```
 
-## The One Rule That Saves Hours
+## Build by Validating, Not by Guessing
 
-A dashboard can **save fine via the API yet fail to render** in the UI
-("Dashboard could not be found"). Two causes:
+**Do not write a dashboard JSON and hope it renders.** Validation is offline,
+instant and needs no API call, so run it after every edit. A dashboard can
+**save fine via the API yet fail to render** in the UI ("Dashboard could not be
+found"), and validation is what catches that before you pollute the backend.
 
-1. **Schema / version mismatch.** Widgets that use the `visuals[]` array require
-   `definition.version: 3`. A `visuals[]` widget saved with version 1 is accepted
-   by the API but the UI cannot parse it.
-2. **Missing `resource_accesses`.** The UI resolves a dashboard through
-   `resource_accesses`; it must contain one `{domain, query}` entry per widget
-   query. An empty `resource_accesses` renders blank or errors.
+The loop:
 
-`edx dashboards create`/`update` validate both **client-side before** calling the
-API, so you catch these without polluting the backend.
+```bash
+# 1. Check the query on its own, before it goes anywhere near a dashboard.
+edx cql validate --type metric 'sum:service.tokens{*} by {model}.rollup(60)'
+
+# 2. Draft the definition, then validate after every edit. Repeat until clean.
+edx dashboards validate --file dashboard.json
+
+# 3. Only once it validates, create it.
+edx dashboards create --file dashboard.json
+```
+
+Iterate on step 2 until it prints `definition is valid`. Errors are JSON
+Pointers into your file, so fix exactly what is named and re-run:
+
+```
+$ edx dashboards validate --file dashboard.json
+! /widgets/1/displayOptions: additional properties 'titel' not allowed
+! /widgets/1/visualizer/type: value must be 'raw-table'
+! /widgets/1/visualizer/type: value must be one of 'empty', 'json', 'table', 'list',
+  'geomap', 'bignumber', 'gauge', 'pie', 'donut', 'column', 'radar', 'sunburst', ...
+Error: dashboard definition failed validation (3 issue(s)); fix, or pass --skip-validation to override
+```
+
+Fix one reported path at a time and re-run rather than rewriting the file — the
+error lists the accepted values, so you rarely have to guess.
+
+One path can be reported more than once, as `visualizer/type` is above. Widget
+shapes are variants, and some (like `raw-table`) accept a different set of
+sibling fields, so each variant reports its own accepted values. Treat the
+**union** of those messages as the valid set.
+
+`validate` takes either a full dashboard body or a bare `definition` object, so
+you can validate a draft before you have wrapped it in one.
+
+`create` and `update` run the same checks automatically and refuse to submit a
+bad definition. Validating first is still worth it: you iterate without network
+round-trips.
+
+### What validation does and does not catch
+
+| Checked offline | Not checked |
+| --- | --- |
+| Definition structure, against the schema generated from the UI's own types | Whether a facet or metric name **exists** (needs the backend) |
+| Unknown/misspelled keys, wrong enum values, wrong types | Whether a query returns any **data** |
+| Query **syntax**, per data type, with the backend's own grammars | Whether a group-by dimension is **indexed** (see Gotchas) |
+
+So a definition that validates is well-formed, not necessarily populated. After
+creating it, confirm the queries actually return data with `edx metrics query`
+or `edx logs search`.
+
+One finding is reported as a **warning** and does **not** fail the command, so
+read the output rather than only the exit code: `unsupported definition version`
+means you got **no** schema validation at all. See below.
+
+## Use `version: 4`
+
+Author new dashboards with `definition.version: 4`. It is the current schema and
+**the only version `edx` can validate**. Older versions still render (the UI
+migrates them) but validation skips them entirely:
+
+```
+$ edx dashboards validate --file old.json
+! unsupported definition version: got 3, edx can only validate version 4; skipping schema validation
+definition is valid          # <- this says nothing was checked, not that it is correct
+```
+
+That output is a trap: exit code 0 with no schema check performed. If you see
+it, bump the definition to version 4.
+
+When you use `edx dashboards get <id>` as a template, check its `version` — an
+older dashboard hands you an older schema.
+
+## Start From an Example
+
+Four validated examples ship with this skill in `examples/`. Copy the closest one
+and edit it rather than writing a definition from scratch — each is a complete
+dashboard body you can pass straight to `edx dashboards create --file`:
+
+| File | Shows |
+| --- | --- |
+| `examples/01-minimal.json` | The smallest thing that renders: a root grid and one `bignumber`. |
+| `examples/02-timeseries-with-variables.json` | A `line` chart, a `facet-option` variable and the `variable-control` widget that exposes it. |
+| `examples/03-logs-and-markdown.json` | Mixed data types — a log count, a log breakdown `table`, a `markdown` panel. |
+| `examples/04-formula.json` | Two hidden queries (`A`, `B`) plus a `formula` visual (`W`) dividing one by the other. |
+
+All four are validated in CI, so they are correct for the schema this skill
+describes. If you are stuck, `edx dashboards validate --file examples/01-minimal.json`
+gives you a known-good baseline to diff against.
+
+## Every Option
+
+`type` fields are closed sets. These are the accepted values; the authoritative
+list comes from the CLI, which reads the same schema validation enforces:
+
+```bash
+edx dashboards options                              # all of them, as JSON
+edx dashboards options | jq -r '.visualizerTypes[]'
+```
+
+**Widget types** (`widgets[].type`) — 6:
+
+| Value | Purpose |
+| --- | --- |
+| `grid` | Layout container. One with `id: "root"` holds everything else. |
+| `viz` | A chart or number driven by queries. The main one. |
+| `markdown` | Static text/HTML via `params.content`. |
+| `variable-control` | Renders a variable's picker; needs `variableId`. |
+| `tabs` | Tabbed container; children use `position.type: "tab"`. |
+| `empty` | Placeholder. |
+
+**Data types** (`visuals[].dataSource.type`) — 7. The query for each lives in
+`params.query`, except `formula` which uses `params.formula`:
+
+| Value | Query dialect for `edx cql validate --type` |
+| --- | --- |
+| `metric` | `metric` |
+| `log` | `log` |
+| `event` | `event` (same grammar as log) |
+| `pattern` | `pattern` (same grammar as log) |
+| `trace` | `trace` (same grammar as log) |
+| `formula` | `formula` — references other visuals by id, e.g. `A / B` |
+| `empty` | none; carries no query |
+
+**Visualizer types** (`viz` widget's `visualizer.type`) — 23. Grouped by what
+they are for; the `resultType` column is the pairing the shipped dashboards use:
+
+| Group | Values | Usual `resultType` |
+| --- | --- | --- |
+| Single value | `bignumber`, `gauge` | `aggregate` |
+| Over time | `line`, `area`, `bar`, `column`, `step`, `smooth`, `scatter` | `timeseries` |
+| Proportion / breakdown | `pie`, `donut`, `treemap`, `sunburst`, `sankey`, `radar`, `bubble`, `boxplot` | `aggregate` |
+| Tabular | `table`, `list`, `json` | `aggregate` |
+| Raw rows | `raw-table` | `raw` |
+| Map | `geomap` | `aggregate` |
+| Placeholder | `empty` | `empty` |
+
+`bignumber` also appears with `timeseries` in shipped dashboards (it renders the
+latest point with a sparkline).
+
+**Variable types** (`variables[].type`) — 6:
+
+| Value | Meaning |
+| --- | --- |
+| `facet-option` | Dropdown of a facet's values. Needs `params.facet` and `params.scope`. |
+| `facet` | Pick a facet *name* rather than a value. |
+| `metric-name` | Pick a metric name. |
+| `query` | A free-form filter expression, substituted into widget queries. |
+| `string` | Free text; `params.options` restricts it to a list. |
+| `duration` | A time span, e.g. for rollups. |
+
+**Position types** (`widgets[].position.type`) — 5: `grid` (needs `area`), `tab`
+(needs `index`), `none`, `subtitle`, `inline`.
+
+**Result types** (`viz` widget's `resultType`) — 4: `aggregate`, `timeseries`,
+`raw`, `empty`.
+
+**Visual ids** (`visuals[].id`): `A`-`F` for queries, `W`-`Z` for formulas.
 
 ## Anatomy of a Metric Dashboard
 
@@ -47,7 +198,7 @@ API, so you catch these without polluting the backend.
   "dashboard_name": "Service Usage",
   "description": "Tokens and cost",
   "definition": {
-    "version": 3,
+    "version": 4,
     "timeFilters": {"lookback": "1h"},
     "widgets": [
       {"id": "root", "type": "grid", "displayOptions": {"hideBackground": true},
@@ -61,21 +212,53 @@ API, so you catch these without polluting the backend.
                     "dataSource": {"type": "metric",
                                    "params": {"query": "sum:service.tokens{*}"}}}]}
     ]
-  },
-  "resource_accesses": [{"domain": "metric", "query": "sum:service.tokens{*}"}]
+  }
 }
 ```
 
 Key fields:
 
 - **root grid** is 12 columns (`1fr` x12), rows sized `72px`. Each viz widget is
-  placed with `position.area.{column,columnSpan,row,rowSpan}` (1-indexed).
+  placed with `position.area.{column,columnSpan,row,rowSpan}` (1-indexed). Add
+  more `72px` row tracks as the dashboard grows.
 - **`resultType`**: `aggregate` for a single value (bignumber), `timeseries` for
-  a trend (line/area/bar).
-- **`visualizer.type`**: `bignumber` | `line` | `table` | `bar` | `pie` | ...
-- **metric query CQL**: `<agg>:<name>{<filter>} by {<dim>}.rollup(<secs>)` -
-  identical to `edx metrics query` (see the **ed-metrics** skill).
-- **`resource_accesses`**: mirror every widget query, one entry each.
+  a trend (line/area/bar), `raw` for a raw-table, `empty` for none.
+- **`visualizer.type`**: `bignumber` | `line` | `area` | `bar` | `pie` | `table`
+  | `gauge` | ... — validation lists every accepted value if you get it wrong.
+- **`visuals[].id`**: `A`-`F` for queries, `W`-`Z` for formulas.
+
+## Validating Queries On Their Own
+
+Query syntax differs by data type and the grammars are **not** interchangeable —
+a metric query is a syntax error in a log widget and vice versa. Check a query
+before embedding it:
+
+```bash
+edx cql validate --type metric 'sum:ed.host.cpu{*} by {host.name}.rollup(60)'
+edx cql validate --type log '{error AND ed.tag:$fleet} by {host.name}'
+edx cql validate --type formula 'timeshift(q1, 3600) / q2'
+```
+
+`--type` takes the data type the widget targets: `log`, `event`, `pattern`,
+`trace`, `metric` or `formula`. Errors point at a column with a caret:
+
+```
+$ edx cql validate --type metric 'sum:foo{*}.rollup(abc)'
+! invalid metric query at column 18: mismatched input 'abc' expecting NUMBER
+    sum:foo{*}.rollup(abc)
+                      ^
+```
+
+To check every query in an existing dashboard at once:
+
+```bash
+edx dashboards get <id> \
+  | jq -r '.definition.widgets[]?.visuals[]?.dataSource | select(.type=="metric") | .params.query // empty' \
+  | edx cql validate --type metric --file -
+```
+
+`$variable` references are valid in a dashboard query and parse unsubstituted,
+so you can validate a template as-is.
 
 ## Create / Update / Delete
 
@@ -86,13 +269,19 @@ edx dashboards delete <dashboard-id> --yes
 ```
 
 Fastest authoring path: `edx dashboards get <id>` of a working dashboard, swap
-the widget queries and name, then `create`.
+the widget queries and name, bump `version` to 4 if it is older, then validate
+and `create`.
 
 ## Gotchas
 
 - Group-by breakdowns only work on **indexed** metric dimensions (see
   **ed-metrics**). `by {model}` on a non-indexed OTLP attribute collapses to a
   single series - break those down with logs or a dedicated `log_to_metric`.
-- Keep `definition.version` (3) in sync with the `visuals[]` widget schema.
+  Validation cannot detect this; it is a data-modelling issue, not a syntax one.
 - `--skip-validation` exists as an escape hatch, but a validation failure almost
-  always means the dashboard won't render.
+  always means the dashboard won't render. Fix the definition instead; reach for
+  the flag only when you have confirmed the validator is wrong.
+- `position.targetId` is a widget reference, and validation checks its type but
+  not that the target exists. Every shipped dashboard points grid-positioned
+  widgets at the root grid widget (`"root"`), so follow that and confirm the
+  target id is spelled the same in both places yourself.

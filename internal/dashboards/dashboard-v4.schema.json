@@ -1,0 +1,1891 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$ref": "#/definitions/DashboardsV4.Definition",
+  "definitions": {
+    "DashboardsV4.Definition": {
+      "type": "object",
+      "properties": {
+        "version": {
+          "$ref": "#/definitions/DashboardsV4.Version"
+        },
+        "widgets": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DashboardsV4.Widget"
+          }
+        },
+        "timeFilters": {
+          "$ref": "#/definitions/TimeFilterValue"
+        },
+        "compareOffset": {
+          "type": "string"
+        },
+        "variables": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DashboardsV4.Variable"
+          }
+        }
+      },
+      "required": ["version", "widgets"],
+      "additionalProperties": false
+    },
+    "DashboardsV4.Version": {
+      "type": "number",
+      "const": 4
+    },
+    "DashboardsV4.Widget": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/DashboardsV4.WidgetId"
+            },
+            "type": {
+              "type": "string",
+              "const": "empty"
+            },
+            "params": {
+              "type": "object"
+            },
+            "position": {
+              "$ref": "#/definitions/DashboardsV4.Position"
+            },
+            "displayOptions": {
+              "$ref": "#/definitions/DashboardsV4.DisplayOptions"
+            },
+            "filterOptions": {
+              "$ref": "#/definitions/DashboardsV4.FilterOptions"
+            }
+          },
+          "required": ["id", "type"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/DashboardsV4.WidgetId"
+            },
+            "type": {
+              "type": "string",
+              "const": "viz"
+            },
+            "resultType": {
+              "$ref": "#/definitions/DashboardsV4.ResultType"
+            },
+            "visualizer": {
+              "$ref": "#/definitions/DashboardsV4.VizOptions"
+            },
+            "visuals": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/DashboardsV4.WidgetVisual"
+              }
+            },
+            "params": {
+              "type": "object"
+            },
+            "position": {
+              "$ref": "#/definitions/DashboardsV4.Position"
+            },
+            "displayOptions": {
+              "$ref": "#/definitions/DashboardsV4.DisplayOptions"
+            },
+            "filterOptions": {
+              "$ref": "#/definitions/DashboardsV4.FilterOptions"
+            }
+          },
+          "required": ["id", "resultType", "type", "visualizer"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/DashboardsV4.WidgetId"
+            },
+            "type": {
+              "type": "string",
+              "const": "markdown"
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "content": {
+                  "type": "string"
+                }
+              }
+            },
+            "position": {
+              "$ref": "#/definitions/DashboardsV4.Position"
+            },
+            "displayOptions": {
+              "$ref": "#/definitions/DashboardsV4.DisplayOptions"
+            },
+            "filterOptions": {
+              "$ref": "#/definitions/DashboardsV4.FilterOptions"
+            }
+          },
+          "required": ["id", "type"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/DashboardsV4.WidgetId"
+            },
+            "type": {
+              "type": "string",
+              "const": "grid"
+            },
+            "grid": {
+              "type": "string"
+            },
+            "params": {
+              "type": "object"
+            },
+            "position": {
+              "$ref": "#/definitions/DashboardsV4.Position"
+            },
+            "displayOptions": {
+              "$ref": "#/definitions/DashboardsV4.DisplayOptions"
+            },
+            "filterOptions": {
+              "$ref": "#/definitions/DashboardsV4.FilterOptions"
+            }
+          },
+          "required": ["grid", "id", "type"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/DashboardsV4.WidgetId"
+            },
+            "type": {
+              "type": "string",
+              "const": "tabs"
+            },
+            "items": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string"
+                  }
+                },
+                "required": ["label"],
+                "additionalProperties": false
+              }
+            },
+            "params": {
+              "type": "object"
+            },
+            "position": {
+              "$ref": "#/definitions/DashboardsV4.Position"
+            },
+            "displayOptions": {
+              "$ref": "#/definitions/DashboardsV4.DisplayOptions"
+            },
+            "filterOptions": {
+              "$ref": "#/definitions/DashboardsV4.FilterOptions"
+            }
+          },
+          "required": ["id", "items", "type"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "$ref": "#/definitions/DashboardsV4.WidgetId"
+            },
+            "type": {
+              "type": "string",
+              "const": "variable-control"
+            },
+            "variableId": {
+              "$ref": "#/definitions/DashboardsV4.VarId"
+            },
+            "params": {
+              "type": "object"
+            },
+            "position": {
+              "$ref": "#/definitions/DashboardsV4.Position"
+            },
+            "displayOptions": {
+              "$ref": "#/definitions/DashboardsV4.DisplayOptions"
+            },
+            "filterOptions": {
+              "$ref": "#/definitions/DashboardsV4.FilterOptions"
+            }
+          },
+          "required": ["id", "type", "variableId"]
+        }
+      ]
+    },
+    "DashboardsV4.WidgetId": {
+      "anyOf": [
+        {
+          "type": "number"
+        },
+        {
+          "type": "string",
+          "const": "potential"
+        },
+        {
+          "type": "string",
+          "const": "root"
+        }
+      ]
+    },
+    "DashboardsV4.Position": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "targetId": {
+              "$ref": "#/definitions/DashboardsV4.WidgetId"
+            },
+            "type": {
+              "type": "string",
+              "enum": ["none", "subtitle", "inline"]
+            }
+          },
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "targetId": {
+              "$ref": "#/definitions/DashboardsV4.WidgetId"
+            },
+            "type": {
+              "type": "string",
+              "const": "grid"
+            },
+            "area": {
+              "$ref": "#/definitions/GridTemplateArea"
+            }
+          },
+          "required": ["area", "type"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "targetId": {
+              "$ref": "#/definitions/DashboardsV4.WidgetId"
+            },
+            "type": {
+              "type": "string",
+              "const": "tab"
+            },
+            "index": {
+              "type": "number"
+            }
+          },
+          "required": ["index", "type"]
+        }
+      ]
+    },
+    "GridTemplateArea": {
+      "type": "object",
+      "properties": {
+        "row": {
+          "type": "number"
+        },
+        "column": {
+          "type": "number"
+        },
+        "rowSpan": {
+          "type": "number"
+        },
+        "columnSpan": {
+          "type": "number"
+        }
+      },
+      "required": ["row", "column"],
+      "additionalProperties": false
+    },
+    "DashboardsV4.DisplayOptions": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "tooltip": {
+          "type": "string"
+        },
+        "footer": {
+          "type": "string"
+        },
+        "hideBackground": {
+          "type": "boolean"
+        },
+        "hideExplorerLink": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DashboardsV4.FilterOptions": {
+      "type": "object",
+      "properties": {
+        "customTimeFilters": {
+          "type": "boolean"
+        },
+        "customTimeFilterValue": {
+          "$ref": "#/definitions/TimeFilterValue"
+        },
+        "overrideTimeFilters": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "TimeFilterValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lookback": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        }
+      }
+    },
+    "DashboardsV4.ResultType": {
+      "type": "string",
+      "enum": ["empty", "aggregate", "timeseries", "raw"]
+    },
+    "DashboardsV4.VizOptions": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/DashboardsV4.RegularVizOptions"
+        },
+        {
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "raw-table"
+            },
+            "hideHeader": {
+              "type": "boolean"
+            },
+            "modifiedColumns": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ModifiedColumn"
+              }
+            },
+            "addedColumns": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AddedColumn"
+              }
+            }
+          },
+          "required": ["type"],
+          "additionalProperties": false
+        }
+      ]
+    },
+    "DashboardsV4.RegularVizOptions": {
+      "type": "object",
+      "properties": {
+        "type": {
+          "$ref": "#/definitions/DashboardsV4.RegularVizType"
+        },
+        "format": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "value": {
+              "type": ["number", "string", "null"]
+            },
+            "options": {
+              "type": "object",
+              "properties": {
+                "prefix": {
+                  "type": "string"
+                },
+                "suffix": {
+                  "type": "string"
+                },
+                "scale": {
+                  "type": "number"
+                },
+                "compactness": {
+                  "type": "string",
+                  "enum": ["none", "compact", "si", "si2"]
+                }
+              },
+              "additionalProperties": false
+            },
+            "formatOptions": {
+              "$ref": "#/definitions/Intl.NumberFormatOptions"
+            },
+            "filesizeOptions": {
+              "$ref": "#/definitions/FilesizeOptions"
+            },
+            "baseFormatter": {
+              "type": "string",
+              "enum": ["intl", "filesize"]
+            },
+            "preset": {
+              "$ref": "#/definitions/FormatNumberPreset"
+            }
+          }
+        },
+        "coloring": {
+          "$ref": "#/definitions/DashboardsV4.ColoringOptions"
+        },
+        "sizing": {
+          "$ref": "#/definitions/DashboardsV4.SizingOptions"
+        },
+        "dimension": {
+          "$ref": "#/definitions/DashboardsV4.DimensionOptions"
+        },
+        "limit": {
+          "$ref": "#/definitions/DashboardsV4.LimitOptions"
+        },
+        "coloringOverrides": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/DashboardsV4.StyleOverrideOptions"
+          }
+        },
+        "showLegend": {
+          "type": "string",
+          "enum": ["auto", "always", "never"]
+        },
+        "appearance": {
+          "type": "string",
+          "enum": ["auto", "solid", "subtle"]
+        },
+        "bounds": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/DashboardsV4.GeoCoordBounds"
+            },
+            {
+              "type": "string",
+              "const": "auto"
+            },
+            {
+              "type": "string",
+              "const": "world"
+            }
+          ]
+        },
+        "aggregation": {
+          "$ref": "#/definitions/DashboardsV4.ValueAggregationOptions"
+        },
+        "metricAnomaly": {
+          "type": "object",
+          "properties": {
+            "enabled": {
+              "type": "boolean"
+            },
+            "window": {
+              "type": "number"
+            },
+            "threshold": {
+              "type": "number"
+            },
+            "consecutive": {
+              "type": "number"
+            },
+            "direction": {
+              "$ref": "#/definitions/MetricAnomalyBandDirection"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": ["type"],
+      "additionalProperties": false
+    },
+    "DashboardsV4.RegularVizType": {
+      "type": "string",
+      "enum": [
+        "empty",
+        "json",
+        "table",
+        "list",
+        "geomap",
+        "bignumber",
+        "gauge",
+        "pie",
+        "donut",
+        "column",
+        "radar",
+        "sunburst",
+        "treemap",
+        "sankey",
+        "bubble",
+        "line",
+        "bar",
+        "area",
+        "scatter",
+        "step",
+        "smooth",
+        "boxplot"
+      ]
+    },
+    "Intl.NumberFormatOptions": {
+      "type": "object",
+      "properties": {
+        "localeMatcher": {
+          "type": "string",
+          "enum": ["lookup", "best fit"]
+        },
+        "style": {
+          "$ref": "#/definitions/Intl.NumberFormatOptionsStyle"
+        },
+        "currency": {
+          "type": "string"
+        },
+        "currencyDisplay": {
+          "$ref": "#/definitions/Intl.NumberFormatOptionsCurrencyDisplay"
+        },
+        "useGrouping": {
+          "$ref": "#/definitions/Intl.NumberFormatOptionsUseGrouping"
+        },
+        "minimumIntegerDigits": {
+          "type": "number"
+        },
+        "minimumFractionDigits": {
+          "type": "number"
+        },
+        "maximumFractionDigits": {
+          "type": "number"
+        },
+        "minimumSignificantDigits": {
+          "type": "number"
+        },
+        "maximumSignificantDigits": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "Intl.NumberFormatOptionsStyle": {},
+    "Intl.NumberFormatOptionsCurrencyDisplay": {},
+    "Intl.NumberFormatOptionsUseGrouping": {
+      "type": "boolean"
+    },
+    "FilesizeOptions": {
+      "type": "object",
+      "properties": {
+        "bits": {
+          "type": "boolean"
+        },
+        "pad": {
+          "type": "boolean"
+        },
+        "base": {
+          "type": "number"
+        },
+        "round": {
+          "type": "number"
+        },
+        "locale": {
+          "type": ["string", "boolean"]
+        },
+        "localeOptions": {
+          "$ref": "#/definitions/Intl.NumberFormatOptions"
+        },
+        "separator": {
+          "type": "string"
+        },
+        "spacer": {
+          "type": "string"
+        },
+        "symbols": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "standard": {
+          "type": "string",
+          "enum": ["si", "iec", "jedec", ""]
+        },
+        "output": {
+          "type": "string",
+          "enum": ["string", "array", "object", "exponent"]
+        },
+        "fullform": {
+          "type": "boolean"
+        },
+        "fullforms": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exponent": {
+          "type": "number"
+        },
+        "roundingMethod": {
+          "type": "string",
+          "enum": ["round", "floor", "ceil"]
+        },
+        "precision": {
+          "type": "number"
+        }
+      },
+      "additionalProperties": false
+    },
+    "FormatNumberPreset": {
+      "type": "string",
+      "enum": ["default", "custom", "precise", "percent", "fileSize", "currency", "time", "bitrate", "frequency"]
+    },
+    "DashboardsV4.ColoringOptions": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["auto", "categorical", "random", "palette", "continuous", "piecewise"]
+        },
+        "palette": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "min": {
+          "type": ["number", "null"]
+        },
+        "max": {
+          "type": ["number", "null"]
+        },
+        "thresholds": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "DashboardsV4.SizingOptions": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["auto", "fixed", "continuous", "piecewise"]
+        },
+        "sizes": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        },
+        "min": {
+          "type": ["number", "null"]
+        },
+        "max": {
+          "type": ["number", "null"]
+        },
+        "thresholds": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    "DashboardsV4.DimensionOptions": {
+      "type": "object",
+      "properties": {
+        "naming": {
+          "type": "string",
+          "enum": ["auto", "name", "path"]
+        },
+        "modifications": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/ModifiedColumn"
+          }
+        },
+        "valueColumn": {
+          "$ref": "#/definitions/ModifiedColumn"
+        },
+        "compareColumn": {
+          "$ref": "#/definitions/ModifiedColumn"
+        }
+      },
+      "additionalProperties": false
+    },
+    "ModifiedColumn": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "hide": {
+          "type": "boolean"
+        },
+        "size": {
+          "type": "number"
+        },
+        "grow": {
+          "type": "boolean"
+        },
+        "renderer": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "auto"
+                }
+              },
+              "required": ["type"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "date"
+                },
+                "format": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/StringLiteral"
+                    },
+                    {
+                      "type": "string",
+                      "const": "relative"
+                    },
+                    {
+                      "type": "string",
+                      "const": "medium"
+                    },
+                    {
+                      "type": "string",
+                      "const": "short"
+                    }
+                  ]
+                }
+              },
+              "required": ["type"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "hyperlink"
+                }
+              },
+              "required": ["type"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": ["id"],
+      "additionalProperties": false
+    },
+    "StringLiteral": {
+      "type": "string"
+    },
+    "DashboardsV4.LimitOptions": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": ["all", "top", "bottom"]
+        },
+        "count": {
+          "type": "number"
+        },
+        "skip": {
+          "type": "number"
+        },
+        "showOther": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DashboardsV4.StyleOverrideOptions": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "coloring": {
+          "$ref": "#/definitions/DashboardsV4.ColoringOptions"
+        },
+        "sizing": {
+          "$ref": "#/definitions/DashboardsV4.SizingOptions"
+        }
+      },
+      "required": ["name"],
+      "additionalProperties": false
+    },
+    "DashboardsV4.GeoCoordBounds": {
+      "type": "array",
+      "minItems": 2,
+      "items": [
+        {
+          "$ref": "#/definitions/DashboardsV4.GeoCoordRange",
+          "title": "lng"
+        },
+        {
+          "$ref": "#/definitions/DashboardsV4.GeoCoordRange",
+          "title": "lat"
+        }
+      ],
+      "maxItems": 2
+    },
+    "DashboardsV4.GeoCoordRange": {
+      "type": "array",
+      "minItems": 2,
+      "items": [
+        {
+          "type": "number",
+          "title": "min"
+        },
+        {
+          "type": "number",
+          "title": "max"
+        }
+      ],
+      "maxItems": 2
+    },
+    "DashboardsV4.ValueAggregationOptions": {
+      "type": "object",
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "sum",
+            "avg",
+            "median",
+            "count",
+            "distinct",
+            "min",
+            "max",
+            "first",
+            "last",
+            "p25",
+            "p50",
+            "p75",
+            "p90",
+            "p95",
+            "p99"
+          ]
+        },
+        "nthIndex": {
+          "type": "number"
+        },
+        "ignoreZero": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "MetricAnomalyBandDirection": {
+      "type": "string",
+      "enum": ["above", "below", "both"]
+    },
+    "AddedColumn": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "size": {
+          "type": "number"
+        },
+        "grow": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": false
+    },
+    "DashboardsV4.WidgetVisual": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "$ref": "#/definitions/DashboardsV4.DataSourceId"
+        },
+        "label": {
+          "type": "string"
+        },
+        "hidden": {
+          "type": "boolean"
+        },
+        "dataSource": {
+          "$ref": "#/definitions/DashboardsV4.DataSource"
+        },
+        "visualizer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DashboardsV4.RegularVizType"
+                },
+                {
+                  "type": "string",
+                  "const": "raw-table"
+                }
+              ]
+            },
+            "format": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "type": ["number", "string", "null"]
+                },
+                "options": {
+                  "type": "object",
+                  "properties": {
+                    "prefix": {
+                      "type": "string"
+                    },
+                    "suffix": {
+                      "type": "string"
+                    },
+                    "scale": {
+                      "type": "number"
+                    },
+                    "compactness": {
+                      "type": "string",
+                      "enum": ["none", "compact", "si", "si2"]
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "formatOptions": {
+                  "$ref": "#/definitions/Intl.NumberFormatOptions"
+                },
+                "filesizeOptions": {
+                  "$ref": "#/definitions/FilesizeOptions"
+                },
+                "baseFormatter": {
+                  "type": "string",
+                  "enum": ["intl", "filesize"]
+                },
+                "preset": {
+                  "$ref": "#/definitions/FormatNumberPreset"
+                }
+              }
+            },
+            "coloring": {
+              "$ref": "#/definitions/DashboardsV4.ColoringOptions"
+            },
+            "sizing": {
+              "$ref": "#/definitions/DashboardsV4.SizingOptions"
+            },
+            "dimension": {
+              "$ref": "#/definitions/DashboardsV4.DimensionOptions"
+            },
+            "limit": {
+              "$ref": "#/definitions/DashboardsV4.LimitOptions"
+            },
+            "coloringOverrides": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/DashboardsV4.StyleOverrideOptions"
+              }
+            },
+            "showLegend": {
+              "type": "string",
+              "enum": ["auto", "always", "never"]
+            },
+            "appearance": {
+              "type": "string",
+              "enum": ["auto", "solid", "subtle"]
+            },
+            "bounds": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DashboardsV4.GeoCoordBounds"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "world"
+                }
+              ]
+            },
+            "aggregation": {
+              "$ref": "#/definitions/DashboardsV4.ValueAggregationOptions"
+            },
+            "metricAnomaly": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "window": {
+                  "type": "number"
+                },
+                "threshold": {
+                  "type": "number"
+                },
+                "consecutive": {
+                  "type": "number"
+                },
+                "direction": {
+                  "$ref": "#/definitions/MetricAnomalyBandDirection"
+                }
+              },
+              "additionalProperties": false
+            },
+            "hideHeader": {
+              "type": "boolean"
+            },
+            "modifiedColumns": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ModifiedColumn"
+              }
+            },
+            "addedColumns": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AddedColumn"
+              }
+            }
+          },
+          "additionalProperties": false
+        },
+        "compareDataSource": {
+          "type": "object",
+          "properties": {
+            "timeFiltersOffset": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                }
+              ]
+            },
+            "type": {
+              "type": "string",
+              "enum": ["empty", "log", "event", "metric", "pattern", "trace", "formula"]
+            },
+            "params": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "eventDomain": {
+                      "type": "string"
+                    },
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "type": "string"
+                    },
+                    "includeOther": {
+                      "type": "boolean"
+                    },
+                    "negative": {
+                      "type": "boolean"
+                    },
+                    "unique": {
+                      "type": "boolean"
+                    },
+                    "volatility": {
+                      "$ref": "#/definitions/PatternVolatilityOption"
+                    },
+                    "order": {
+                      "type": "string",
+                      "enum": ["asc", "desc"]
+                    },
+                    "limit": {
+                      "type": "number"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "query": {
+                      "type": "string"
+                    },
+                    "dataType": {
+                      "$ref": "#/definitions/TraceGraphType"
+                    },
+                    "includeChildSpans": {
+                      "type": "boolean"
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                {
+                  "type": "object",
+                  "properties": {
+                    "formula": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              ]
+            }
+          },
+          "additionalProperties": false
+        },
+        "compareOptions": {
+          "$ref": "#/definitions/DashboardsV4.CompareOptions"
+        }
+      },
+      "required": ["id", "dataSource"],
+      "additionalProperties": false
+    },
+    "DashboardsV4.DataSourceId": {
+      "anyOf": [
+        {
+          "$ref": "#/definitions/DashboardsV4.QueryKeys"
+        },
+        {
+          "$ref": "#/definitions/DashboardsV4.FormulaKeys"
+        }
+      ]
+    },
+    "DashboardsV4.QueryKeys": {
+      "type": "string",
+      "enum": ["A", "B", "C", "D", "E", "F"]
+    },
+    "DashboardsV4.FormulaKeys": {
+      "type": "string",
+      "enum": ["W", "X", "Y", "Z"]
+    },
+    "DashboardsV4.DataSource": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "empty"
+            },
+            "timeFiltersOffset": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                }
+              ]
+            }
+          },
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "log"
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "timeFiltersOffset": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                }
+              ]
+            }
+          },
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "event"
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "eventDomain": {
+                  "type": "string"
+                },
+                "query": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "timeFiltersOffset": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                }
+              ]
+            }
+          },
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "metric"
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "timeFiltersOffset": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                }
+              ]
+            }
+          },
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "pattern"
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string"
+                },
+                "includeOther": {
+                  "type": "boolean"
+                },
+                "negative": {
+                  "type": "boolean"
+                },
+                "unique": {
+                  "type": "boolean"
+                },
+                "volatility": {
+                  "$ref": "#/definitions/PatternVolatilityOption"
+                },
+                "order": {
+                  "type": "string",
+                  "enum": ["asc", "desc"]
+                },
+                "limit": {
+                  "type": "number"
+                }
+              },
+              "additionalProperties": false
+            },
+            "timeFiltersOffset": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                }
+              ]
+            }
+          },
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "trace"
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "query": {
+                  "type": "string"
+                },
+                "dataType": {
+                  "$ref": "#/definitions/TraceGraphType"
+                },
+                "includeChildSpans": {
+                  "type": "boolean"
+                }
+              },
+              "additionalProperties": false
+            },
+            "timeFiltersOffset": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                }
+              ]
+            }
+          },
+          "required": ["type"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "formula"
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "formula": {
+                  "type": "string"
+                }
+              },
+              "additionalProperties": false
+            },
+            "timeFiltersOffset": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                }
+              ]
+            }
+          },
+          "required": ["type"]
+        }
+      ]
+    },
+    "PatternVolatilityOption": {
+      "type": "string",
+      "enum": ["all", "new", "existing", "gone"]
+    },
+    "TraceGraphType": {
+      "type": "string",
+      "enum": ["request", "latency"]
+    },
+    "DashboardsV4.CompareOptions": {
+      "type": "object",
+      "properties": {
+        "isProminent": {
+          "type": "boolean"
+        },
+        "visualizer": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DashboardsV4.RegularVizType"
+                },
+                {
+                  "type": "string",
+                  "const": "raw-table"
+                }
+              ]
+            },
+            "format": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "type": ["number", "string", "null"]
+                },
+                "options": {
+                  "type": "object",
+                  "properties": {
+                    "prefix": {
+                      "type": "string"
+                    },
+                    "suffix": {
+                      "type": "string"
+                    },
+                    "scale": {
+                      "type": "number"
+                    },
+                    "compactness": {
+                      "type": "string",
+                      "enum": ["none", "compact", "si", "si2"]
+                    }
+                  },
+                  "additionalProperties": false
+                },
+                "formatOptions": {
+                  "$ref": "#/definitions/Intl.NumberFormatOptions"
+                },
+                "filesizeOptions": {
+                  "$ref": "#/definitions/FilesizeOptions"
+                },
+                "baseFormatter": {
+                  "type": "string",
+                  "enum": ["intl", "filesize"]
+                },
+                "preset": {
+                  "$ref": "#/definitions/FormatNumberPreset"
+                }
+              }
+            },
+            "coloring": {
+              "$ref": "#/definitions/DashboardsV4.ColoringOptions"
+            },
+            "sizing": {
+              "$ref": "#/definitions/DashboardsV4.SizingOptions"
+            },
+            "dimension": {
+              "$ref": "#/definitions/DashboardsV4.DimensionOptions"
+            },
+            "limit": {
+              "$ref": "#/definitions/DashboardsV4.LimitOptions"
+            },
+            "coloringOverrides": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/DashboardsV4.StyleOverrideOptions"
+              }
+            },
+            "showLegend": {
+              "type": "string",
+              "enum": ["auto", "always", "never"]
+            },
+            "appearance": {
+              "type": "string",
+              "enum": ["auto", "solid", "subtle"]
+            },
+            "bounds": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DashboardsV4.GeoCoordBounds"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "world"
+                }
+              ]
+            },
+            "aggregation": {
+              "$ref": "#/definitions/DashboardsV4.ValueAggregationOptions"
+            },
+            "metricAnomaly": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "window": {
+                  "type": "number"
+                },
+                "threshold": {
+                  "type": "number"
+                },
+                "consecutive": {
+                  "type": "number"
+                },
+                "direction": {
+                  "$ref": "#/definitions/MetricAnomalyBandDirection"
+                }
+              },
+              "additionalProperties": false
+            },
+            "hideHeader": {
+              "type": "boolean"
+            },
+            "modifiedColumns": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ModifiedColumn"
+              }
+            },
+            "addedColumns": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AddedColumn"
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "additionalProperties": false
+    },
+    "DashboardsV4.VarId": {
+      "type": "number"
+    },
+    "DashboardsV4.Variable": {
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "string"
+            },
+            "value": {
+              "type": ["string", "null"]
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "options": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
+            },
+            "id": {
+              "$ref": "#/definitions/DashboardsV4.VarId"
+            },
+            "label": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            }
+          },
+          "required": ["id", "key", "label", "type"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "duration"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                },
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "params": {
+              "type": "object"
+            },
+            "id": {
+              "$ref": "#/definitions/DashboardsV4.VarId"
+            },
+            "label": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            }
+          },
+          "required": ["id", "key", "label", "type"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "query"
+            },
+            "value": {
+              "type": ["string", "null"]
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "scope": {
+                  "$ref": "#/definitions/FacetScope"
+                }
+              }
+            },
+            "id": {
+              "$ref": "#/definitions/DashboardsV4.VarId"
+            },
+            "label": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            }
+          },
+          "required": ["id", "key", "label", "type"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "facet"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "scope": {
+                  "$ref": "#/definitions/FacetScope"
+                },
+                "allowMultiple": {
+                  "type": "boolean"
+                },
+                "allowEmpty": {
+                  "type": "boolean"
+                },
+                "maxCount": {
+                  "type": "number"
+                }
+              }
+            },
+            "id": {
+              "$ref": "#/definitions/DashboardsV4.VarId"
+            },
+            "label": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            }
+          },
+          "required": ["id", "key", "label", "type"]
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "type": {
+              "type": "string",
+              "enum": ["facet-option", "metric-name"]
+            },
+            "value": {
+              "type": ["string", "null"]
+            },
+            "params": {
+              "type": "object",
+              "properties": {
+                "facet": {
+                  "type": "string"
+                },
+                "scope": {
+                  "$ref": "#/definitions/FacetScope"
+                },
+                "allowMultiple": {
+                  "type": "boolean"
+                },
+                "allowEmpty": {
+                  "type": "boolean"
+                },
+                "maxCount": {
+                  "type": "number"
+                },
+                "query": {
+                  "type": "string"
+                },
+                "autoSelect": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "id": {
+              "$ref": "#/definitions/DashboardsV4.VarId"
+            },
+            "label": {
+              "type": "string"
+            },
+            "key": {
+              "type": "string"
+            }
+          },
+          "required": ["id", "key", "label", "type"]
+        }
+      ]
+    },
+    "FacetScope": {
+      "type": "string",
+      "enum": [
+        "log",
+        "audit",
+        "pattern",
+        "metric",
+        "monitor-config",
+        "monitor-status",
+        "rehydration",
+        "event",
+        "k8s-event",
+        "trace",
+        "recommendation",
+        "ai-event",
+        "generic-events",
+        "custom"
+      ]
+    }
+  },
+  "$id": "https://edgedelta.com/schemas/dashboard-v4.schema.json",
+  "x-generated-from": "web/src/modules/dashboards/versions/v4/definition.ts",
+  "x-generated-from-sha256": "9847a2ac1ad95dd9e69aaf1830e2afd5c7e7e5e03327da647b5c04045ec2308f"
+}

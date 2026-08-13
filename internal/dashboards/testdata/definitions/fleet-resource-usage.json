@@ -1,0 +1,129 @@
+{
+  "timeFilters": {
+    "lookback": "1h"
+  },
+  "variables": [
+    {
+      "id": 1,
+      "key": "fleet",
+      "label": "Fleet",
+      "params": {
+        "allowEmpty": true,
+        "allowMultiple": false,
+        "facet": "ed.tag",
+        "scope": "metric",
+        "autoSelect": true
+      },
+      "type": "facet-option"
+    }
+  ],
+  "version": 4,
+  "widgets": [
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "grid": "72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px / 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr",
+      "id": "root",
+      "type": "grid"
+    },
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "id": 2,
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 4,
+          "row": 1,
+          "rowSpan": 1
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "variable-control",
+      "variableId": 1
+    },
+    {
+      "type": "viz",
+      "id": 3,
+      "displayOptions": {
+        "description": "",
+        "title": "Average CPU Usage"
+      },
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 12,
+          "row": 7,
+          "rowSpan": 5
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "visualizer": {
+        "format": {
+          "formatOptions": {},
+          "options": {
+            "scale": 0.001,
+            "suffix": " core"
+          },
+          "preset": "custom"
+        },
+        "type": "line"
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "hidden": false,
+          "dataSource": {
+            "params": {
+              "query": "avg:ed.agent.cpu.milicores{ed.tag: $fleet} by {host.name}.rollup(60)"
+            },
+            "type": "metric"
+          }
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 4,
+      "displayOptions": {
+        "title": "Maximum Memory Used"
+      },
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 12,
+          "row": 2,
+          "rowSpan": 5
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "visualizer": {
+        "format": {
+          "formatOptions": {},
+          "options": {},
+          "preset": "fileSize"
+        },
+        "type": "line"
+      },
+      "visuals": [
+        {
+          "id": "A",
+          "hidden": false,
+          "dataSource": {
+            "params": {
+              "query": "max:ed.agent.memory.virtual{ed.tag: $fleet} by {host.name}.rollup(60)"
+            },
+            "type": "metric"
+          }
+        }
+      ]
+    }
+  ]
+}

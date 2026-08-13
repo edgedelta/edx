@@ -2,30 +2,100 @@ package cli
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
 
 	"github.com/spf13/cobra"
+
+	"github.com/edgedelta/edx/internal/dashboards"
 )
 
 func newDashboardsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dashboards",
 		Short: "Manage dashboards",
-		Long: `List, inspect, create, update and delete dashboards.
+		Long: `List, inspect, create, update, validate and delete dashboards.
 
 Dashboards are defined by a JSON body with a "definition" object. Tip: fetch an
 existing dashboard with "edx dashboards get <id>" to use as a starting template.
-"create" and "update" validate the definition client-side to catch the common
-mistakes that make a dashboard save via the API but fail to render in the UI.`,
+"create" and "update" validate the definition against the frontend's own Dashboard
+schema first, so a definition that would save via the API yet fail to render in the
+UI is rejected here instead. Use "validate" to check a definition without saving.`,
 	}
 	cmd.AddCommand(
 		newDashboardsListCmd(),
 		newDashboardsGetCmd(),
 		newDashboardsCreateCmd(),
 		newDashboardsUpdateCmd(),
+		newDashboardsValidateCmd(),
+		newDashboardsOptionsCmd(),
 		newDashboardsDeleteCmd(),
 	)
+	return cmd
+}
+
+func newDashboardsOptionsCmd() *cobra.Command {
+	return &cobra.Command{
+		Use:     "options",
+		Aliases: []string{"types"},
+		Short:   "List the accepted widget, visualizer and data types",
+		Long: `List every accepted value for a definition's typed fields: widget types,
+visualizer types, data source types, variable types, position types and result
+types.
+
+Read out of the same embedded schema that "validate" enforces, so this is always
+in step with what validation accepts — useful when picking a visualizer or
+diagnosing a rejected "type".`,
+		Example: `  edx dashboards options
+  edx dashboards options --output yaml
+  edx dashboards options | jq -r '.visualizerTypes[]'`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			opts, err := dashboards.SchemaOptions()
+			if err != nil {
+				return err
+			}
+			data, err := json.Marshal(opts)
+			if err != nil {
+				return err
+			}
+			return printResult(data)
+		},
+	}
+}
+
+func newDashboardsValidateCmd() *cobra.Command {
+	var file string
+	cmd := &cobra.Command{
+		Use:   "validate --file dashboard.json",
+		Short: "Validate a dashboard definition without saving it",
+		Long: `Validate a dashboard JSON body, or a bare definition object, against the
+frontend's Dashboard schema, and check the syntax of the queries inside it. Exits
+non-zero when the definition would not render.
+
+Queries are parsed with the same ANTLR grammars the backend uses, choosing the
+grammar from each data source's type — metric, log and formula queries have
+different syntax. This is a syntax check only: telling whether a facet or metric
+name exists needs a live backend.
+
+Accepts either a full dashboard body ({"dashboard_name": ..., "definition": {...}})
+or just the definition object ({"version": 4, "widgets": [...]}).`,
+		Example: `  edx dashboards validate --file dashboard.json
+  edx dashboards get <id> | edx dashboards validate --file -`,
+		RunE: func(cmd *cobra.Command, args []string) error {
+			body, err := readFileOrStdin(file)
+			if err != nil {
+				return err
+			}
+			if err := checkDashboard(body, false); err != nil {
+				return err
+			}
+			fmt.Fprintln(cmd.OutOrStdout(), "definition is valid")
+			return nil
+		},
+	}
+	cmd.Flags().StringVarP(&file, "file", "f", "", `dashboard JSON file ("-" for stdin)`)
+	_ = cmd.MarkFlagRequired("file")
 	return cmd
 }
 
@@ -73,6 +143,14 @@ func newDashboardsCreateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "create --file dashboard.json",
 		Short: "Create a dashboard from a JSON definition",
+		Long: `Create a dashboard from a JSON body, after running the same checks as
+"validate".
+
+resource_accesses is derived from the definition and added for you, replacing
+anything in the file, exactly as the UI does when a dashboard is saved. It is the
+allowlist public share links and screenshots are authorized against, and it is
+fully determined by the widgets and variables, so there is no reason to write it
+by hand.`,
 		Example: `  edx dashboards create --file dashboard.json
   edx dashboards get <id> | jq '.dashboard_name="copy"' | edx dashboards create --file -`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -85,6 +163,10 @@ func newDashboardsCreateCmd() *cobra.Command {
 				return err
 			}
 			if err := checkDashboard(body, skipValidation); err != nil {
+				return err
+			}
+			body, err = fillResourceAccesses(body)
+			if err != nil {
 				return err
 			}
 			data, err := c.Post(cmdContext(cmd), "/dashboards", nil, body)
@@ -106,7 +188,12 @@ func newDashboardsUpdateCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "update <dashboard-id> --file dashboard.json",
 		Short: "Update a dashboard from a JSON definition",
-		Args:  cobra.ExactArgs(1),
+		Long: `Update a dashboard from a JSON body, after running the same checks as
+"validate".
+
+resource_accesses is regenerated from the definition, so a body round-tripped
+through "get" carries a fresh allowlist rather than the one it was fetched with.`,
+		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := newClient()
 			if err != nil {
@@ -117,6 +204,10 @@ func newDashboardsUpdateCmd() *cobra.Command {
 				return err
 			}
 			if err := checkDashboard(body, skipValidation); err != nil {
+				return err
+			}
+			body, err = fillResourceAccesses(body)
+			if err != nil {
 				return err
 			}
 			data, err := c.Put(cmdContext(cmd), "/dashboards/"+url.PathEscape(args[0]), nil, body)
@@ -156,6 +247,42 @@ func newDashboardsDeleteCmd() *cobra.Command {
 
 // checkDashboard runs client-side validation, printing warnings to stderr and
 // returning an error for hard failures unless skip is set.
+// fillResourceAccesses derives resource_accesses from the definition and writes it into
+// the request body, the same way the UI does when a dashboard is saved.
+//
+// It is the allowlist that public share links and screenshots are authorized against, and
+// it is fully determined by the definition, so nobody authoring a dashboard should have to
+// write it. Any value already in the body is replaced — again matching the UI, which
+// regenerates the whole array on every save.
+//
+// A body without a "definition" object is passed through untouched: `validate` accepts a
+// bare definition, but create and update always send a full body, and inventing a
+// top-level key for something else's payload would be wrong.
+func fillResourceAccesses(body []byte) ([]byte, error) {
+	var envelope map[string]any
+	if err := json.Unmarshal(body, &envelope); err != nil {
+		return nil, fmt.Errorf("invalid JSON: %w", err)
+	}
+	definition, ok := envelope["definition"]
+	if !ok {
+		return body, nil
+	}
+
+	accesses := dashboards.ResourceAccesses(definition)
+	if accesses == nil {
+		// Encode as [] rather than null: the field is a list, and a null would read as a
+		// different thing from "nothing to allow".
+		accesses = []dashboards.ResourceAccess{}
+	}
+	envelope["resource_accesses"] = accesses
+
+	filled, err := json.Marshal(envelope)
+	if err != nil {
+		return nil, fmt.Errorf("re-encode dashboard body: %w", err)
+	}
+	return filled, nil
+}
+
 func checkDashboard(body []byte, skip bool) error {
 	if skip {
 		return nil
@@ -173,40 +300,48 @@ func checkDashboard(body []byte, skip bool) error {
 	return nil
 }
 
-// validateDashboard catches the common definition mistakes that let a dashboard
-// save via the API yet fail to render in the UI: a widget-schema/version
-// mismatch, and missing resource_accesses.
+// validateDashboard checks the definition against the frontend's Dashboard schema
+// (see internal/dashboards), which is generated from the TypeScript type the UI
+// itself renders from. Warnings cover things the schema cannot express.
 func validateDashboard(body []byte) (errs, warns []string) {
 	var d struct {
-		Definition struct {
-			Version int              `json:"version"`
-			Widgets []map[string]any `json:"widgets"`
-		} `json:"definition"`
-		ResourceAccesses []any `json:"resource_accesses"`
+		Definition       map[string]any `json:"definition"`
+		ResourceAccesses []any          `json:"resource_accesses"`
 	}
 	if err := json.Unmarshal(body, &d); err != nil {
 		return []string{fmt.Sprintf("invalid JSON: %v", err)}, nil
 	}
-	if len(d.Definition.Widgets) == 0 {
+
+	definition := d.Definition
+	if definition == nil {
+		// Also accept a bare definition object, which is what "validate" is usually
+		// handed while a definition is still being drafted.
+		var bare map[string]any
+		if err := json.Unmarshal(body, &bare); err != nil {
+			return []string{fmt.Sprintf("invalid JSON: %v", err)}, nil
+		}
+		if _, hasWidgets := bare["widgets"]; !hasWidgets {
+			return []string{`no "definition" object found, and the body is not a bare definition (no "widgets" key)`}, nil
+		}
+		definition = bare
+	}
+
+	widgets, _ := definition["widgets"].([]any)
+	if len(widgets) == 0 {
 		warns = append(warns, "definition.widgets is empty — the dashboard will render blank")
 	}
-	usesVisuals := false
-	vizCount := 0
-	for _, w := range d.Definition.Widgets {
-		if t, _ := w["type"].(string); t == "viz" {
-			vizCount++
+
+	issues, err := dashboards.ValidateDefinition(definition)
+	if err != nil {
+		if errors.Is(err, dashboards.ErrUnsupportedVersion) {
+			// v3 and older are migrated in the UI; edx only ships the v4 schema.
+			warns = append(warns, fmt.Sprintf("%v; skipping schema validation", err))
+			return errs, warns
 		}
-		if _, ok := w["visuals"]; ok {
-			usesVisuals = true
-		}
+		return append(errs, err.Error()), warns
 	}
-	if usesVisuals && d.Definition.Version != 3 {
-		errs = append(errs, fmt.Sprintf(
-			"widgets use the visuals[] schema, which requires definition.version 3 (got %d); the UI reports \"Dashboard could not be found\" on a version mismatch",
-			d.Definition.Version))
-	}
-	if vizCount > 0 && len(d.ResourceAccesses) == 0 {
-		warns = append(warns, "resource_accesses is empty; the UI may fail to resolve the dashboard. Add one {\"domain\":...,\"query\":...} entry per widget query.")
+	for _, iss := range issues {
+		errs = append(errs, iss.String())
 	}
 	return errs, warns
 }

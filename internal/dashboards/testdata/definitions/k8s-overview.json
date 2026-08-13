@@ -1,0 +1,689 @@
+{
+  "timeFilters": {
+    "lookback": "1h"
+  },
+  "variables": [
+    {
+      "id": 1,
+      "key": "cluster",
+      "label": "Cluster",
+      "params": {
+        "allowEmpty": true,
+        "allowMultiple": false,
+        "facet": "ed.tag",
+        "scope": "metric",
+        "autoSelect": true
+      },
+      "type": "facet-option",
+      "value": null
+    },
+    {
+      "id": 2,
+      "key": "namespace",
+      "label": "Namespace",
+      "params": {
+        "allowEmpty": true,
+        "allowMultiple": false,
+        "facet": "k8s.namespace.name",
+        "query": "ed.tag:$cluster",
+        "scope": "metric",
+        "autoSelect": false
+      },
+      "type": "facet-option",
+      "value": null
+    }
+  ],
+  "version": 4,
+  "widgets": [
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "grid": "72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px / 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr",
+      "id": "root",
+      "type": "grid"
+    },
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "id": 1,
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 4,
+          "row": 1,
+          "rowSpan": 1
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "variable-control",
+      "variableId": 1
+    },
+    {
+      "type": "viz",
+      "id": 2,
+      "displayOptions": {
+        "title": "Nodes"
+      },
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 3,
+          "row": 2,
+          "rowSpan": 2
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "bignumber"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "count_unique(k8s.node.name):k8s.ksm.node.info.value{ed.tag:$cluster }.rollup(300)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 3,
+      "displayOptions": {
+        "title": "Namespaces"
+      },
+      "position": {
+        "area": {
+          "column": 4,
+          "columnSpan": 3,
+          "row": 2,
+          "rowSpan": 2
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "bignumber"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "count_unique(k8s.namespace.name):k8s.ksm.namespace.status_phase.value{ed.tag:$cluster}.rollup(300)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 4,
+      "displayOptions": {
+        "title": "Pods"
+      },
+      "position": {
+        "area": {
+          "column": 7,
+          "columnSpan": 3,
+          "row": 2,
+          "rowSpan": 2
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "bignumber"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "count_unique(k8s.pod.name):k8s.ksm.pod.status_phase.value{ed.tag:$cluster AND k8s.namespace.name:$namespace AND @phase: \"Running\"}.rollup(300)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 5,
+      "displayOptions": {
+        "title": "Containers"
+      },
+      "position": {
+        "area": {
+          "column": 10,
+          "columnSpan": 3,
+          "row": 2,
+          "rowSpan": 2
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "bignumber"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "count_unique(k8s.container.name,k8s.pod.name):k8s.ksm.pod.container_status_running.value{ed.tag:$cluster AND k8s.namespace.name:$namespace}.rollup(300)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "id": 6,
+      "position": {
+        "area": {
+          "column": 5,
+          "columnSpan": 4,
+          "row": 1,
+          "rowSpan": 1
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "variable-control",
+      "variableId": 2
+    },
+    {
+      "type": "viz",
+      "id": 7,
+      "displayOptions": {
+        "title": "Events"
+      },
+      "position": {
+        "area": {
+          "column": 7,
+          "columnSpan": 6,
+          "row": 13,
+          "rowSpan": 7
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "visualizer": {
+        "coloringOverrides": [
+          {
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--semantic_accent-green)"
+              ]
+            },
+            "name": "Normal"
+          },
+          {
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--semantic_accent-yellow)"
+              ]
+            },
+            "name": "Warning"
+          }
+        ],
+        "type": "bar"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "eventDomain": "K8s",
+              "query": "{ed.tag:$cluster AND k8s.namespace.name:$namespace} by {severity_text}"
+            },
+            "type": "event"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 8,
+      "displayOptions": {
+        "hideBackground": true,
+        "hideExplorerLink": true,
+        "title": ""
+      },
+      "position": {
+        "index": 0,
+        "targetId": 13,
+        "type": "tab"
+      },
+      "resultType": "timeseries",
+      "visualizer": {
+        "type": "bar",
+        "coloringOverrides": [
+          {
+            "name": "Other",
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--data-categorical-other)"
+              ]
+            }
+          }
+        ]
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "includeOther": true,
+              "query": "{ed.tag:$cluster AND k8s.namespace.name:$namespace}"
+            },
+            "type": "pattern"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 9,
+      "displayOptions": {
+        "hideBackground": true,
+        "hideExplorerLink": true,
+        "title": ""
+      },
+      "position": {
+        "area": {
+          "column": 3,
+          "columnSpan": 4,
+          "row": 1,
+          "rowSpan": 6
+        },
+        "targetId": 16,
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "coloring": {
+          "mode": "auto",
+          "palette": [
+            "var(--data-categorical-primary-1)"
+          ]
+        },
+        "coloringOverrides": [
+          {
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--semantic_accent-green)"
+              ]
+            },
+            "name": "Normal"
+          },
+          {
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--semantic_accent-yellow)"
+              ]
+            },
+            "name": "Warning"
+          }
+        ],
+        "showLegend": "auto",
+        "type": "sunburst"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "eventDomain": "K8s",
+              "query": "count_unique():{ed.tag:$cluster AND k8s.namespace.name:$namespace} by {severity_text,event.type}"
+            },
+            "type": "event"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 11,
+      "displayOptions": {
+        "hideBackground": true,
+        "hideExplorerLink": false,
+        "title": "Event Reason"
+      },
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 2,
+          "row": 2,
+          "rowSpan": 5
+        },
+        "targetId": 16,
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "coloring": {
+          "mode": "palette",
+          "palette": [
+            "rgba(0, 0, 0, 0)"
+          ]
+        },
+        "coloringOverrides": [],
+        "showLegend": "auto",
+        "type": "list"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "eventDomain": "K8s",
+              "query": "count_unique():{ed.tag:$cluster AND k8s.namespace.name:$namespace} by {event.type}"
+            },
+            "type": "event"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 12,
+      "displayOptions": {
+        "hideBackground": true,
+        "hideExplorerLink": false,
+        "title": "Event Type"
+      },
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 2,
+          "row": 1,
+          "rowSpan": 1
+        },
+        "targetId": 16,
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "coloring": {
+          "mode": "auto",
+          "palette": [],
+          "thresholds": []
+        },
+        "coloringOverrides": [
+          {
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--semantic_accent-green)"
+              ]
+            },
+            "name": "Normal"
+          },
+          {
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--semantic_accent-yellow)"
+              ]
+            },
+            "name": "Warning"
+          }
+        ],
+        "format": {
+          "formatOptions": {},
+          "options": {},
+          "preset": "default"
+        },
+        "showLegend": "auto",
+        "type": "list"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "eventDomain": "K8s",
+              "query": "count_unique():{ed.tag:$cluster AND k8s.namespace.name:$namespace} by {severity_text}"
+            },
+            "type": "event"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "hideBackground": false
+      },
+      "id": 13,
+      "items": [
+        {
+          "label": "All Patterns"
+        },
+        {
+          "label": "New Patterns"
+        }
+      ],
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 12,
+          "row": 6,
+          "rowSpan": 7
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "tabs"
+    },
+    {
+      "type": "viz",
+      "id": 14,
+      "displayOptions": {
+        "hideBackground": true,
+        "hideExplorerLink": true,
+        "title": ""
+      },
+      "position": {
+        "index": 1,
+        "targetId": 13,
+        "type": "tab"
+      },
+      "resultType": "timeseries",
+      "visualizer": {
+        "type": "bar",
+        "coloringOverrides": [
+          {
+            "name": "Other",
+            "coloring": {
+              "mode": "palette",
+              "palette": [
+                "var(--data-categorical-other)"
+              ]
+            }
+          }
+        ]
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "volatility": "new",
+              "query": "{ed.tag:$cluster AND k8s.namespace.name:$namespace}",
+              "limit": 1000
+            },
+            "type": "pattern"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "hideBackground": false
+      },
+      "grid": "92px 1fr 1fr 1fr 1fr 1fr / 1fr 1fr 1fr 1fr 1fr 1fr",
+      "id": 16,
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 6,
+          "row": 13,
+          "rowSpan": 7
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "type": "grid"
+    },
+    {
+      "type": "viz",
+      "id": 17,
+      "displayOptions": {
+        "title": "Deployments"
+      },
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 3,
+          "row": 4,
+          "rowSpan": 2
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "bignumber"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "count_unique(k8s.deployment.name):k8s.ksm.deployment_metadata_generation.value{ed.tag:$cluster AND k8s.namespace.name:$namespace}.rollup(300)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 18,
+      "displayOptions": {
+        "title": "Daemonsets"
+      },
+      "position": {
+        "area": {
+          "column": 4,
+          "columnSpan": 3,
+          "row": 4,
+          "rowSpan": 2
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "bignumber"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "count_unique(k8s.daemonset.name):k8s.ksm.daemonset_metadata_generation.value{ed.tag:$cluster AND k8s.namespace.name:$namespace}.rollup(300)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 19,
+      "displayOptions": {
+        "title": "Statefulsets"
+      },
+      "position": {
+        "area": {
+          "column": 7,
+          "columnSpan": 3,
+          "row": 4,
+          "rowSpan": 2
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "bignumber"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "count_unique(k8s.statefulset.name):k8s.ksm.statefulset_metadata_generation.value{ed.tag:$cluster AND k8s.namespace.name:$namespace}.rollup(300)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "type": "viz",
+      "id": 20,
+      "displayOptions": {
+        "title": "Cronjobs"
+      },
+      "position": {
+        "area": {
+          "column": 10,
+          "columnSpan": 3,
+          "row": 4,
+          "rowSpan": 2
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "visualizer": {
+        "type": "bignumber"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "count_unique(k8s.cronjob.name):k8s.ksm.cronjob_info.value{ed.tag:$cluster AND k8s.namespace.name:$namespace}.rollup(300)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    }
+  ]
+}

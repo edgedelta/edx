@@ -1,0 +1,126 @@
+{
+  "timeFilters": {
+    "lookback": "1h"
+  },
+  "version": 4,
+  "widgets": [
+    {
+      "displayOptions": {
+        "hideBackground": true
+      },
+      "grid": "72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px 72px / 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr",
+      "id": "root",
+      "type": "grid"
+    },
+    {
+      "displayOptions": {
+        "description": "",
+        "footer": "",
+        "title": "Top Talkers by Fleet (Volume)",
+        "tooltip": ""
+      },
+      "id": 1,
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 6,
+          "row": 1,
+          "rowSpan": 8
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "type": "viz",
+      "visualizer": {
+        "format": {
+          "formatOptions": {},
+          "options": {},
+          "preset": "fileSize"
+        },
+        "type": "pie"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "sum:ed.pipeline.node.read_bytes{*} by {ed.tag}.rollup(60)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "title": "Top Talkers by Host"
+      },
+      "id": 2,
+      "position": {
+        "area": {
+          "column": 1,
+          "columnSpan": 12,
+          "row": 9,
+          "rowSpan": 6
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "timeseries",
+      "type": "viz",
+      "visualizer": {
+        "format": {
+          "formatOptions": {},
+          "options": {},
+          "preset": "fileSize"
+        },
+        "type": "line"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "sum:ed.pipeline.node.read_bytes{*} by {host.name}.rollup(60)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    },
+    {
+      "displayOptions": {
+        "description": "sum:ed.pipeline.node.write_items{*} by {ed.tag}.rollup(60)",
+        "title": "Top Talkers by Fleet (Lines)"
+      },
+      "id": 3,
+      "position": {
+        "area": {
+          "column": 7,
+          "columnSpan": 6,
+          "row": 1,
+          "rowSpan": 8
+        },
+        "targetId": "root",
+        "type": "grid"
+      },
+      "resultType": "aggregate",
+      "type": "viz",
+      "visualizer": {
+        "type": "pie"
+      },
+      "visuals": [
+        {
+          "dataSource": {
+            "params": {
+              "query": "sum:ed.pipeline.node.write_items{*} by {ed.tag}.rollup(60)"
+            },
+            "type": "metric"
+          },
+          "id": "A"
+        }
+      ]
+    }
+  ]
+}
