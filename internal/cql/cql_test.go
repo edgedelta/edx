@@ -124,6 +124,105 @@ func TestValidateRejectsUnknownDialect(t *testing.T) {
 	}
 }
 
+func TestDialectForDataType(t *testing.T) {
+	// The log-family data types share one grammar; this mapping is what lets a dashboard
+	// and `edx cql validate --type trace` agree.
+	for _, dataType := range []string{"log", "event", "pattern", "trace"} {
+		if d, ok := DialectForDataType(dataType); !ok || d != DialectLog {
+			t.Errorf("DialectForDataType(%q) = (%q, %v), want (log, true)", dataType, d, ok)
+		}
+	}
+	if d, ok := DialectForDataType("metric"); !ok || d != DialectMetric {
+		t.Errorf("metric mapped to (%q, %v)", d, ok)
+	}
+	if d, ok := DialectForDataType("formula"); !ok || d != DialectFormula {
+		t.Errorf("formula mapped to (%q, %v)", d, ok)
+	}
+	// A dashboard's "empty" data source carries no query, so it has no grammar.
+	if _, ok := DialectForDataType("empty"); ok {
+		t.Error(`DialectForDataType("empty") reported a dialect, want none`)
+	}
+	if _, ok := DialectForDataType(""); ok {
+		t.Error("the empty data type reported a dialect, want none")
+	}
+}
+
+func TestDataTypesListsEveryMapping(t *testing.T) {
+	got := DataTypes()
+	want := []string{"event", "formula", "log", "metric", "pattern", "trace"}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("DataTypes() = %v, want %v (sorted)", got, want)
+	}
+	for _, dataType := range got {
+		if _, ok := DialectForDataType(dataType); !ok {
+			t.Errorf("DataTypes() lists %q but DialectForDataType rejects it", dataType)
+		}
+	}
+}
+
+func TestAnnotatePutsTheCaretUnderTheProblem(t *testing.T) {
+	const query = "sum:foo{*}.rollup(abc)"
+	errs, err := Validate(DialectMetric, query)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(errs) != 1 {
+		t.Fatalf("got %d errors, want 1", len(errs))
+	}
+
+	lines := strings.Split(errs[0].Annotate(query), "\n")
+	if len(lines) != 2 {
+		t.Fatalf("Annotate returned %d lines, want 2: %q", len(lines), lines)
+	}
+	if lines[0] != query {
+		t.Errorf("first line = %q, want the query", lines[0])
+	}
+	caret := strings.IndexByte(lines[1], '^')
+	if caret != errs[0].Column {
+		t.Errorf("caret at %d, want column %d", caret, errs[0].Column)
+	}
+	// The caret should land on `abc`, the token the parser objected to.
+	if !strings.HasPrefix(query[caret:], "abc") {
+		t.Errorf("caret points at %q, want it at `abc`", query[caret:])
+	}
+}
+
+// Columns are byte offsets, so a multi-byte character earlier in the query must not push
+// the caret out of alignment.
+func TestAnnotateAlignsWithMultiByteCharacters(t *testing.T) {
+	const query = `{service.name:"café"} by {`
+	errs, err := Validate(DialectLog, query)
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if len(errs) == 0 {
+		t.Fatal("expected a syntax error for the unclosed brace")
+	}
+
+	annotated := errs[0].Annotate(query)
+	lines := strings.Split(annotated, "\n")
+	if len(lines) != 2 {
+		t.Fatalf("Annotate returned %d lines, want 2", len(lines))
+	}
+	// The caret's rune offset must match the rune offset of the byte column, not the
+	// byte count, or every character after "café" would be off by one.
+	wantRunes := len([]rune(query[:errs[0].Column]))
+	if gotRunes := len([]rune(lines[1])) - 1; gotRunes != wantRunes {
+		t.Errorf("caret at rune %d, want %d\n%s", gotRunes, wantRunes, annotated)
+	}
+}
+
+// An out-of-range column must not panic; it just yields the query unannotated.
+func TestAnnotateToleratesAnOutOfRangeColumn(t *testing.T) {
+	const query = "sum:a{*}"
+	for _, column := range []int{-1, len(query) + 1, 9999} {
+		e := SyntaxError{Column: column, Message: "synthetic"}
+		if got := e.Annotate(query); got != query {
+			t.Errorf("Annotate with column %d = %q, want the bare query", column, got)
+		}
+	}
+}
+
 func TestSyntaxErrorLocatesTheProblem(t *testing.T) {
 	errs, err := Validate(DialectMetric, "sum:foo{*}.rollup(abc)")
 	if err != nil {

@@ -21,6 +21,8 @@ package cql
 
 import (
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/antlr4-go/antlr/v4"
 
@@ -43,6 +45,40 @@ const (
 	DialectFormula Dialect = "formula"
 )
 
+// dialectsByDataType maps an Edge Delta data type to the grammar the backend parses its
+// queries with. The log-family types share EDCqlLogParser: the backend reaches them
+// through pkg/antlrcql/log (chcommon for logs and events, tracerepo for traces,
+// cluster/clickhouse for patterns, monitorvisitor for facet options).
+//
+// The keys are the same strings a dashboard data source uses as its `type`, so
+// dashboards and the `edx cql validate` command agree on which grammar applies.
+var dialectsByDataType = map[string]Dialect{
+	"log":     DialectLog,
+	"event":   DialectLog,
+	"pattern": DialectLog,
+	"trace":   DialectLog,
+	"metric":  DialectMetric,
+	"formula": DialectFormula,
+}
+
+// DialectForDataType resolves a data type name to its grammar. It reports false for a
+// type that has no query syntax of its own, such as a dashboard's "empty" data source.
+func DialectForDataType(dataType string) (Dialect, bool) {
+	d, ok := dialectsByDataType[dataType]
+	return d, ok
+}
+
+// DataTypes lists the accepted DialectForDataType inputs, sorted, for help text and
+// error messages.
+func DataTypes() []string {
+	out := make([]string, 0, len(dialectsByDataType))
+	for name := range dialectsByDataType {
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out
+}
+
 // SyntaxError is one problem the grammar found, located within the query string.
 type SyntaxError struct {
 	// Line is 1-based, Column 0-based, matching ANTLR.
@@ -52,6 +88,21 @@ type SyntaxError struct {
 
 func (e SyntaxError) String() string {
 	return fmt.Sprintf("at column %d: %s", e.Column, e.Message)
+}
+
+// Annotate renders the query with a caret under the column an error points at:
+//
+//	sum:foo{*}.rollup(abc)
+//	                  ^
+//
+// Columns are byte offsets from ANTLR, so the padding counts runes up to that offset to
+// stay aligned when the query contains multi-byte characters.
+func (e SyntaxError) Annotate(query string) string {
+	if e.Column < 0 || e.Column > len(query) {
+		return query
+	}
+	pad := strings.Repeat(" ", len([]rune(query[:e.Column])))
+	return query + "\n" + pad + "^"
 }
 
 // errorListener collects syntax errors instead of ANTLR's default of printing them to

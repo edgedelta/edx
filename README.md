@@ -157,6 +157,11 @@ edx facets keys --scope log
 edx facets options --scope log --facet service.name
 edx facets options --scope metric --facet name      # all metric names
 
+# --- CQL syntax checking (offline, no API call) ------------------------------
+edx cql validate --type metric 'sum:ed.host.cpu{*} by {host.name}.rollup(60)'
+edx cql validate --type log '{error AND ed.tag:$fleet} by {host.name}'
+edx cql validate --type metric --file queries.txt   # one query per line
+
 # --- Pipeline / fleet management --------------------------------------------
 edx pipelines list --output table
 edx pipelines get <conf-id>                         # includes config content

@@ -16,21 +16,6 @@ type QuerySite struct {
 	Query   string
 }
 
-// dataSourceDialects maps a data source's `type` to the grammar the backend parses its
-// query with. The log-family types all share EDCqlLogParser: the backend reaches them
-// through pkg/antlrcql/log (chcommon for logs and events, tracerepo for traces,
-// cluster/clickhouse for patterns).
-//
-// A type that is absent here has no query to check: "empty" carries none, and "formula"
-// is handled separately because its query lives in params.formula.
-var dataSourceDialects = map[string]cql.Dialect{
-	"log":     cql.DialectLog,
-	"event":   cql.DialectLog,
-	"pattern": cql.DialectLog,
-	"trace":   cql.DialectLog,
-	"metric":  cql.DialectMetric,
-}
-
 // QuerySites returns every query in a definition, in document order.
 //
 // The walk is shape-aware rather than a blind search for "query" keys, so each site gets
@@ -117,23 +102,23 @@ func dataSourceSites(path string, source map[string]any, inheritedType string) [
 		return nil
 	}
 
-	if sourceType == "formula" {
-		formula, ok := params["formula"].(string)
-		if !ok {
-			return nil
-		}
-		return []QuerySite{{Path: path + "/params/formula", Dialect: cql.DialectFormula, Query: formula}}
-	}
-
-	dialect, known := dataSourceDialects[sourceType]
+	// A type with no dialect has no query to check: "empty" carries none.
+	dialect, known := cql.DialectForDataType(sourceType)
 	if !known {
 		return nil
 	}
-	query, ok := params["query"].(string)
+
+	// A formula's query lives under a different key from everything else.
+	key := "query"
+	if dialect == cql.DialectFormula {
+		key = "formula"
+	}
+
+	query, ok := params[key].(string)
 	if !ok {
 		return nil
 	}
-	return []QuerySite{{Path: path + "/params/query", Dialect: dialect, Query: query}}
+	return []QuerySite{{Path: path + "/params/" + key, Dialect: dialect, Query: query}}
 }
 
 // validateQueries syntax-checks every query in a definition.

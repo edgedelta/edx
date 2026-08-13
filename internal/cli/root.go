@@ -109,6 +109,7 @@ EXAMPLES
 		newCaptureCmd(),
 		newDashboardsCmd(),
 		newFacetsCmd(),
+		newCQLCmd(),
 		newLookupCmd(),
 		newServiceMapCmd(),
 		newAICmd(),
