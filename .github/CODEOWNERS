@@ -4,6 +4,8 @@
 # of these owners — enforced by branch protection ("Require review from Code
 # Owners"). Owners must have write access for this to take effect.
 #
-# Any one listed owner approving satisfies the requirement.
+# Any one listed owner approving satisfies the requirement. Code owners are
+# also on the branch-protection bypass list, so they can merge their own PRs
+# without a separate approval.
 
-*   @yildizfatih @onrylmz @asimerel
+*   @yildizfatih @onrylmz @asimerel @gkurt
