@@ -50,6 +50,15 @@ edx capture start <pipeline-id> --duration 2m && edx capture results <pipeline-i
 `samples.jsonl` is one JSON-encoded OTEL log per line, e.g.
 `{"body":"...","attributes":{},"resource":{},"timestamp":1}`.
 
+To watch step 7 as it happens instead of re-running `results`, tail it - one
+line of decoded JSON per newly captured item (see **ed-pipelines** for the
+caveats):
+
+```bash
+edx capture start <pipeline-id> --duration 10m --nodes <node>
+edx capture results <pipeline-id> --follow --param nodes=<node>
+```
+
 ## Processor toolbox
 
 Processors live in a `sequence` multiprocessor node (`processors:` list) or, for
