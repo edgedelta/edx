@@ -1,10 +1,10 @@
 // Package dashboards validates dashboard definitions against the frontend's own
 // Dashboard type, deterministically and offline.
 //
-// dashboard-v4.schema.json is generated from web/src/modules/dashboards/versions/v4
-// in the edgedelta monorepo, where the TypeScript type is the source of truth; a
-// type-level drift guard there fails the web typecheck if the two diverge. Refresh
-// the vendored copy with `make sync-dashboard-schema`.
+// dashboard-v4.schema.json is generated directly from the DashboardsV4 types in
+// web/src/modules/dashboards/versions/v4/definition.ts in the edgedelta monorepo — the
+// same types the UI renders from, so there is no second definition to drift from.
+// Refresh the vendored copy with `make sync-dashboard-schema`.
 package dashboards
 
 import (

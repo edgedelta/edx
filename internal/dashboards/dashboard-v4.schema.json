@@ -1,11 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
-  "$ref": "#/definitions/DashboardDefinitionV4",
+  "$ref": "#/definitions/DashboardsV4.Definition",
   "definitions": {
-    "DashboardDefinitionV4": {
-      "$ref": "#/definitions/DashboardsV4.Definition",
-      "description": "Generation entry point — `ts-json-schema-generator -t DashboardDefinitionV4`."
-    },
     "DashboardsV4.Definition": {
       "type": "object",
       "properties": {
@@ -19,19 +15,7 @@
           }
         },
         "timeFilters": {
-          "type": "object",
-          "properties": {
-            "from": {
-              "type": "string"
-            },
-            "to": {
-              "type": "string"
-            },
-            "lookback": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
+          "$ref": "#/definitions/TimeFilterValue"
         },
         "compareOffset": {
           "type": "string"
@@ -64,8 +48,7 @@
               "const": "empty"
             },
             "params": {
-              "type": "object",
-              "description": "The escape-hatch `params` bag. `../definition.ts` expresses this as `params?: Record<string, any>` on the intersection base, which leaves known keys constrained while allowing unknown ones. Reproduced here as an index signature because the intersection form defeats the generator (see file header)."
+              "type": "object"
             },
             "position": {
               "$ref": "#/definitions/DashboardsV4.Position"
@@ -103,8 +86,7 @@
               }
             },
             "params": {
-              "type": "object",
-              "description": "The escape-hatch `params` bag. `../definition.ts` expresses this as `params?: Record<string, any>` on the intersection base, which leaves known keys constrained while allowing unknown ones. Reproduced here as an index signature because the intersection form defeats the generator (see file header)."
+              "type": "object"
             },
             "position": {
               "$ref": "#/definitions/DashboardsV4.Position"
@@ -164,8 +146,7 @@
               "type": "string"
             },
             "params": {
-              "type": "object",
-              "description": "The escape-hatch `params` bag. `../definition.ts` expresses this as `params?: Record<string, any>` on the intersection base, which leaves known keys constrained while allowing unknown ones. Reproduced here as an index signature because the intersection form defeats the generator (see file header)."
+              "type": "object"
             },
             "position": {
               "$ref": "#/definitions/DashboardsV4.Position"
@@ -204,8 +185,7 @@
               }
             },
             "params": {
-              "type": "object",
-              "description": "The escape-hatch `params` bag. `../definition.ts` expresses this as `params?: Record<string, any>` on the intersection base, which leaves known keys constrained while allowing unknown ones. Reproduced here as an index signature because the intersection form defeats the generator (see file header)."
+              "type": "object"
             },
             "position": {
               "$ref": "#/definitions/DashboardsV4.Position"
@@ -234,8 +214,7 @@
               "$ref": "#/definitions/DashboardsV4.VarId"
             },
             "params": {
-              "type": "object",
-              "description": "The escape-hatch `params` bag. `../definition.ts` expresses this as `params?: Record<string, any>` on the intersection base, which leaves known keys constrained while allowing unknown ones. Reproduced here as an index signature because the intersection form defeats the generator (see file header)."
+              "type": "object"
             },
             "position": {
               "$ref": "#/definitions/DashboardsV4.Position"
@@ -294,23 +273,7 @@
               "const": "grid"
             },
             "area": {
-              "type": "object",
-              "properties": {
-                "row": {
-                  "type": "number"
-                },
-                "column": {
-                  "type": "number"
-                },
-                "rowSpan": {
-                  "type": "number"
-                },
-                "columnSpan": {
-                  "type": "number"
-                }
-              },
-              "required": ["row", "column"],
-              "additionalProperties": false
+              "$ref": "#/definitions/GridTemplateArea"
             }
           },
           "required": ["area", "type"]
@@ -333,6 +296,25 @@
           "required": ["index", "type"]
         }
       ]
+    },
+    "GridTemplateArea": {
+      "type": "object",
+      "properties": {
+        "row": {
+          "type": "number"
+        },
+        "column": {
+          "type": "number"
+        },
+        "rowSpan": {
+          "type": "number"
+        },
+        "columnSpan": {
+          "type": "number"
+        }
+      },
+      "required": ["row", "column"],
+      "additionalProperties": false
     },
     "DashboardsV4.DisplayOptions": {
       "type": "object",
@@ -365,25 +347,28 @@
           "type": "boolean"
         },
         "customTimeFilterValue": {
-          "type": "object",
-          "properties": {
-            "from": {
-              "type": "string"
-            },
-            "to": {
-              "type": "string"
-            },
-            "lookback": {
-              "type": "string"
-            }
-          },
-          "additionalProperties": false
+          "$ref": "#/definitions/TimeFilterValue"
         },
         "overrideTimeFilters": {
           "type": "boolean"
         }
       },
       "additionalProperties": false
+    },
+    "TimeFilterValue": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "lookback": {
+          "type": "string"
+        },
+        "from": {
+          "type": "string"
+        },
+        "to": {
+          "type": "string"
+        }
+      }
     },
     "DashboardsV4.ResultType": {
       "type": "string",
@@ -395,7 +380,30 @@
           "$ref": "#/definitions/DashboardsV4.RegularVizOptions"
         },
         {
-          "$ref": "#/definitions/DashboardsV4.RawTableVizOptions"
+          "type": "object",
+          "properties": {
+            "type": {
+              "type": "string",
+              "const": "raw-table"
+            },
+            "hideHeader": {
+              "type": "boolean"
+            },
+            "modifiedColumns": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ModifiedColumn"
+              }
+            },
+            "addedColumns": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AddedColumn"
+              }
+            }
+          },
+          "required": ["type"],
+          "additionalProperties": false
         }
       ]
     },
@@ -442,19 +450,7 @@
               "enum": ["intl", "filesize"]
             },
             "preset": {
-              "type": "string",
-              "enum": [
-                "default",
-                "custom",
-                "precise",
-                "percent",
-                "fileSize",
-                "currency",
-                "time",
-                "bitrate",
-                "frequency"
-              ],
-              "description": "`typeof FormatNumberPresets.type` — keep in sync with `#src/components/formatters/number/presets.ts`."
+              "$ref": "#/definitions/FormatNumberPreset"
             }
           }
         },
@@ -518,8 +514,7 @@
               "type": "number"
             },
             "direction": {
-              "type": "string",
-              "enum": ["above", "below", "both"]
+              "$ref": "#/definitions/MetricAnomalyBandDirection"
             }
           },
           "additionalProperties": false
@@ -601,81 +596,68 @@
       "type": "object",
       "properties": {
         "bits": {
-          "type": "boolean",
-          "description": "If true, calculates bits instead of bytes"
+          "type": "boolean"
         },
         "pad": {
-          "type": "boolean",
-          "description": "If true, pads decimal places to match round parameter"
+          "type": "boolean"
         },
         "base": {
-          "type": "number",
-          "description": "Number base (2 for binary, 10 for decimal, -1 for auto)"
+          "type": "number"
         },
         "round": {
-          "type": "number",
-          "description": "Number of decimal places to round to"
+          "type": "number"
         },
         "locale": {
-          "type": ["string", "boolean"],
-          "description": "Locale for number formatting, true for system locale"
+          "type": ["string", "boolean"]
         },
         "localeOptions": {
-          "$ref": "#/definitions/Intl.NumberFormatOptions",
-          "description": "Additional options for locale formatting"
+          "$ref": "#/definitions/Intl.NumberFormatOptions"
         },
         "separator": {
-          "type": "string",
-          "description": "Custom decimal separator"
+          "type": "string"
         },
         "spacer": {
-          "type": "string",
-          "description": "String to separate value and unit"
+          "type": "string"
         },
         "symbols": {
           "type": "object",
           "additionalProperties": {
             "type": "string"
-          },
-          "description": "Custom unit symbols"
+          }
         },
         "standard": {
           "type": "string",
-          "enum": ["si", "iec", "jedec", ""],
-          "description": "Unit standard to use (SI, IEC, JEDEC)"
+          "enum": ["si", "iec", "jedec", ""]
         },
         "output": {
           "type": "string",
-          "enum": ["string", "array", "object", "exponent"],
-          "description": "Output format: \"string\", \"array\", \"object\", or \"exponent\""
+          "enum": ["string", "array", "object", "exponent"]
         },
         "fullform": {
-          "type": "boolean",
-          "description": "If true, uses full unit names instead of abbreviations"
+          "type": "boolean"
         },
         "fullforms": {
           "type": "array",
           "items": {
             "type": "string"
-          },
-          "description": "Custom full unit names"
+          }
         },
         "exponent": {
-          "type": "number",
-          "description": "Force specific exponent (-1 for auto)"
+          "type": "number"
         },
         "roundingMethod": {
           "type": "string",
-          "enum": ["round", "floor", "ceil"],
-          "description": "Math rounding method to use"
+          "enum": ["round", "floor", "ceil"]
         },
         "precision": {
-          "type": "number",
-          "description": "Number of significant digits (0 for auto)"
+          "type": "number"
         }
       },
-      "additionalProperties": false,
-      "description": "Options interface for configuring filesize behavior"
+      "additionalProperties": false
+    },
+    "FormatNumberPreset": {
+      "type": "string",
+      "enum": ["default", "custom", "precise", "percent", "fileSize", "currency", "time", "bitrate", "frequency"]
     },
     "DashboardsV4.ColoringOptions": {
       "type": "object",
@@ -743,194 +725,98 @@
         "modifications": {
           "type": "array",
           "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              },
-              "hide": {
-                "type": "boolean"
-              },
-              "size": {
-                "type": "number"
-              },
-              "grow": {
-                "type": "boolean"
-              },
-              "renderer": {
-                "anyOf": [
-                  {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "type": "string",
-                        "const": "auto"
-                      }
-                    },
-                    "required": ["type"],
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "type": "string",
-                        "const": "date"
-                      },
-                      "format": {
-                        "type": "string"
-                      }
-                    },
-                    "required": ["type"],
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "type": "string",
-                        "const": "hyperlink"
-                      }
-                    },
-                    "required": ["type"],
-                    "additionalProperties": false
-                  }
-                ]
-              }
-            },
-            "required": ["id"],
-            "additionalProperties": false
+            "$ref": "#/definitions/ModifiedColumn"
           }
         },
         "valueColumn": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string"
-            },
-            "name": {
-              "type": "string"
-            },
-            "hide": {
-              "type": "boolean"
-            },
-            "size": {
-              "type": "number"
-            },
-            "grow": {
-              "type": "boolean"
-            },
-            "renderer": {
-              "anyOf": [
-                {
-                  "type": "object",
-                  "properties": {
-                    "type": {
-                      "type": "string",
-                      "const": "auto"
-                    }
-                  },
-                  "required": ["type"],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "type": {
-                      "type": "string",
-                      "const": "date"
-                    },
-                    "format": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["type"],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "type": {
-                      "type": "string",
-                      "const": "hyperlink"
-                    }
-                  },
-                  "required": ["type"],
-                  "additionalProperties": false
-                }
-              ]
-            }
-          },
-          "required": ["id"],
-          "additionalProperties": false
+          "$ref": "#/definitions/ModifiedColumn"
         },
         "compareColumn": {
-          "type": "object",
-          "properties": {
-            "id": {
-              "type": "string"
-            },
-            "name": {
-              "type": "string"
-            },
-            "hide": {
-              "type": "boolean"
-            },
-            "size": {
-              "type": "number"
-            },
-            "grow": {
-              "type": "boolean"
-            },
-            "renderer": {
-              "anyOf": [
-                {
-                  "type": "object",
-                  "properties": {
-                    "type": {
-                      "type": "string",
-                      "const": "auto"
-                    }
-                  },
-                  "required": ["type"],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "type": {
-                      "type": "string",
-                      "const": "date"
-                    },
-                    "format": {
-                      "type": "string"
-                    }
-                  },
-                  "required": ["type"],
-                  "additionalProperties": false
-                },
-                {
-                  "type": "object",
-                  "properties": {
-                    "type": {
-                      "type": "string",
-                      "const": "hyperlink"
-                    }
-                  },
-                  "required": ["type"],
-                  "additionalProperties": false
-                }
-              ]
-            }
-          },
-          "required": ["id"],
-          "additionalProperties": false
+          "$ref": "#/definitions/ModifiedColumn"
         }
       },
       "additionalProperties": false
+    },
+    "ModifiedColumn": {
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "hide": {
+          "type": "boolean"
+        },
+        "size": {
+          "type": "number"
+        },
+        "grow": {
+          "type": "boolean"
+        },
+        "renderer": {
+          "anyOf": [
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "auto"
+                }
+              },
+              "required": ["type"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "date"
+                },
+                "format": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/definitions/StringLiteral"
+                    },
+                    {
+                      "type": "string",
+                      "const": "relative"
+                    },
+                    {
+                      "type": "string",
+                      "const": "medium"
+                    },
+                    {
+                      "type": "string",
+                      "const": "short"
+                    }
+                  ]
+                }
+              },
+              "required": ["type"],
+              "additionalProperties": false
+            },
+            {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "const": "hyperlink"
+                }
+              },
+              "required": ["type"],
+              "additionalProperties": false
+            }
+          ]
+        }
+      },
+      "required": ["id"],
+      "additionalProperties": false
+    },
+    "StringLiteral": {
+      "type": "string"
     },
     "DashboardsV4.LimitOptions": {
       "type": "object",
@@ -1030,104 +916,26 @@
       },
       "additionalProperties": false
     },
-    "DashboardsV4.RawTableVizOptions": {
+    "MetricAnomalyBandDirection": {
+      "type": "string",
+      "enum": ["above", "below", "both"]
+    },
+    "AddedColumn": {
       "type": "object",
       "properties": {
-        "type": {
-          "type": "string",
-          "const": "raw-table"
+        "name": {
+          "type": "string"
         },
-        "hideHeader": {
+        "path": {
+          "type": "string"
+        },
+        "size": {
+          "type": "number"
+        },
+        "grow": {
           "type": "boolean"
-        },
-        "modifiedColumns": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "id": {
-                "type": "string"
-              },
-              "name": {
-                "type": "string"
-              },
-              "hide": {
-                "type": "boolean"
-              },
-              "size": {
-                "type": "number"
-              },
-              "grow": {
-                "type": "boolean"
-              },
-              "renderer": {
-                "anyOf": [
-                  {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "type": "string",
-                        "const": "auto"
-                      }
-                    },
-                    "required": ["type"],
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "type": "string",
-                        "const": "date"
-                      },
-                      "format": {
-                        "type": "string"
-                      }
-                    },
-                    "required": ["type"],
-                    "additionalProperties": false
-                  },
-                  {
-                    "type": "object",
-                    "properties": {
-                      "type": {
-                        "type": "string",
-                        "const": "hyperlink"
-                      }
-                    },
-                    "required": ["type"],
-                    "additionalProperties": false
-                  }
-                ]
-              }
-            },
-            "required": ["id"],
-            "additionalProperties": false
-          }
-        },
-        "addedColumns": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "name": {
-                "type": "string"
-              },
-              "path": {
-                "type": "string"
-              },
-              "size": {
-                "type": "number"
-              },
-              "grow": {
-                "type": "boolean"
-              }
-            },
-            "additionalProperties": false
-          }
         }
       },
-      "required": ["type"],
       "additionalProperties": false
     },
     "DashboardsV4.WidgetVisual": {
@@ -1146,241 +954,160 @@
           "$ref": "#/definitions/DashboardsV4.DataSource"
         },
         "visualizer": {
-          "anyOf": [
-            {
-              "type": "object",
-              "properties": {
-                "type": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "anyOf": [
+                {
                   "$ref": "#/definitions/DashboardsV4.RegularVizType"
                 },
-                "format": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "value": {
-                      "type": ["number", "string", "null"]
-                    },
-                    "options": {
-                      "type": "object",
-                      "properties": {
-                        "prefix": {
-                          "type": "string"
-                        },
-                        "suffix": {
-                          "type": "string"
-                        },
-                        "scale": {
-                          "type": "number"
-                        },
-                        "compactness": {
-                          "type": "string",
-                          "enum": ["none", "compact", "si", "si2"]
-                        }
-                      },
-                      "additionalProperties": false
-                    },
-                    "formatOptions": {
-                      "$ref": "#/definitions/Intl.NumberFormatOptions"
-                    },
-                    "filesizeOptions": {
-                      "$ref": "#/definitions/FilesizeOptions"
-                    },
-                    "baseFormatter": {
-                      "type": "string",
-                      "enum": ["intl", "filesize"]
-                    },
-                    "preset": {
-                      "type": "string",
-                      "enum": [
-                        "default",
-                        "custom",
-                        "precise",
-                        "percent",
-                        "fileSize",
-                        "currency",
-                        "time",
-                        "bitrate",
-                        "frequency"
-                      ],
-                      "description": "`typeof FormatNumberPresets.type` — keep in sync with `#src/components/formatters/number/presets.ts`."
-                    }
-                  }
-                },
-                "coloring": {
-                  "$ref": "#/definitions/DashboardsV4.ColoringOptions"
-                },
-                "sizing": {
-                  "$ref": "#/definitions/DashboardsV4.SizingOptions"
-                },
-                "dimension": {
-                  "$ref": "#/definitions/DashboardsV4.DimensionOptions"
-                },
-                "limit": {
-                  "$ref": "#/definitions/DashboardsV4.LimitOptions"
-                },
-                "coloringOverrides": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/definitions/DashboardsV4.StyleOverrideOptions"
-                  }
-                },
-                "showLegend": {
+                {
                   "type": "string",
-                  "enum": ["auto", "always", "never"]
+                  "const": "raw-table"
+                }
+              ]
+            },
+            "format": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "type": ["number", "string", "null"]
                 },
-                "appearance": {
-                  "type": "string",
-                  "enum": ["auto", "solid", "subtle"]
-                },
-                "bounds": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/definitions/DashboardsV4.GeoCoordBounds"
-                    },
-                    {
-                      "type": "string",
-                      "const": "auto"
-                    },
-                    {
-                      "type": "string",
-                      "const": "world"
-                    }
-                  ]
-                },
-                "aggregation": {
-                  "$ref": "#/definitions/DashboardsV4.ValueAggregationOptions"
-                },
-                "metricAnomaly": {
+                "options": {
                   "type": "object",
                   "properties": {
-                    "enabled": {
-                      "type": "boolean"
+                    "prefix": {
+                      "type": "string"
                     },
-                    "window": {
+                    "suffix": {
+                      "type": "string"
+                    },
+                    "scale": {
                       "type": "number"
                     },
-                    "threshold": {
-                      "type": "number"
-                    },
-                    "consecutive": {
-                      "type": "number"
-                    },
-                    "direction": {
+                    "compactness": {
                       "type": "string",
-                      "enum": ["above", "below", "both"]
+                      "enum": ["none", "compact", "si", "si2"]
                     }
                   },
                   "additionalProperties": false
+                },
+                "formatOptions": {
+                  "$ref": "#/definitions/Intl.NumberFormatOptions"
+                },
+                "filesizeOptions": {
+                  "$ref": "#/definitions/FilesizeOptions"
+                },
+                "baseFormatter": {
+                  "type": "string",
+                  "enum": ["intl", "filesize"]
+                },
+                "preset": {
+                  "$ref": "#/definitions/FormatNumberPreset"
+                }
+              }
+            },
+            "coloring": {
+              "$ref": "#/definitions/DashboardsV4.ColoringOptions"
+            },
+            "sizing": {
+              "$ref": "#/definitions/DashboardsV4.SizingOptions"
+            },
+            "dimension": {
+              "$ref": "#/definitions/DashboardsV4.DimensionOptions"
+            },
+            "limit": {
+              "$ref": "#/definitions/DashboardsV4.LimitOptions"
+            },
+            "coloringOverrides": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/DashboardsV4.StyleOverrideOptions"
+              }
+            },
+            "showLegend": {
+              "type": "string",
+              "enum": ["auto", "always", "never"]
+            },
+            "appearance": {
+              "type": "string",
+              "enum": ["auto", "solid", "subtle"]
+            },
+            "bounds": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DashboardsV4.GeoCoordBounds"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "world"
+                }
+              ]
+            },
+            "aggregation": {
+              "$ref": "#/definitions/DashboardsV4.ValueAggregationOptions"
+            },
+            "metricAnomaly": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "window": {
+                  "type": "number"
+                },
+                "threshold": {
+                  "type": "number"
+                },
+                "consecutive": {
+                  "type": "number"
+                },
+                "direction": {
+                  "$ref": "#/definitions/MetricAnomalyBandDirection"
                 }
               },
               "additionalProperties": false
             },
-            {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "const": "raw-table"
-                },
-                "hideHeader": {
-                  "type": "boolean"
-                },
-                "modifiedColumns": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "hide": {
-                        "type": "boolean"
-                      },
-                      "size": {
-                        "type": "number"
-                      },
-                      "grow": {
-                        "type": "boolean"
-                      },
-                      "renderer": {
-                        "anyOf": [
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "const": "auto"
-                              }
-                            },
-                            "required": ["type"],
-                            "additionalProperties": false
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "const": "date"
-                              },
-                              "format": {
-                                "type": "string"
-                              }
-                            },
-                            "required": ["type"],
-                            "additionalProperties": false
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "const": "hyperlink"
-                              }
-                            },
-                            "required": ["type"],
-                            "additionalProperties": false
-                          }
-                        ]
-                      }
-                    },
-                    "required": ["id"],
-                    "additionalProperties": false
-                  }
-                },
-                "addedColumns": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "name": {
-                        "type": "string"
-                      },
-                      "path": {
-                        "type": "string"
-                      },
-                      "size": {
-                        "type": "number"
-                      },
-                      "grow": {
-                        "type": "boolean"
-                      }
-                    },
-                    "additionalProperties": false
-                  }
-                }
-              },
-              "additionalProperties": false
+            "hideHeader": {
+              "type": "boolean"
+            },
+            "modifiedColumns": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ModifiedColumn"
+              }
+            },
+            "addedColumns": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AddedColumn"
+              }
             }
-          ]
+          },
+          "additionalProperties": false
         },
         "compareDataSource": {
           "type": "object",
           "properties": {
             "timeFiltersOffset": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                }
+              ]
             },
             "type": {
               "type": "string",
@@ -1434,9 +1161,7 @@
                       "type": "boolean"
                     },
                     "volatility": {
-                      "type": "string",
-                      "enum": ["all", "new", "existing", "gone"],
-                      "description": "`typeof PatternVolatilityOptions.type` — keep in sync with `#src/pages/log-patterns/utils.ts`."
+                      "$ref": "#/definitions/PatternVolatilityOption"
                     },
                     "order": {
                       "type": "string",
@@ -1455,8 +1180,7 @@
                       "type": "string"
                     },
                     "dataType": {
-                      "type": "string",
-                      "enum": ["request", "latency"]
+                      "$ref": "#/definitions/TraceGraphType"
                     },
                     "includeChildSpans": {
                       "type": "boolean"
@@ -1514,7 +1238,19 @@
               "const": "empty"
             },
             "timeFiltersOffset": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                }
+              ]
             }
           },
           "required": ["type"]
@@ -1537,7 +1273,19 @@
               "additionalProperties": false
             },
             "timeFiltersOffset": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                }
+              ]
             }
           },
           "required": ["type"]
@@ -1563,7 +1311,19 @@
               "additionalProperties": false
             },
             "timeFiltersOffset": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                }
+              ]
             }
           },
           "required": ["type"]
@@ -1586,7 +1346,19 @@
               "additionalProperties": false
             },
             "timeFiltersOffset": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                }
+              ]
             }
           },
           "required": ["type"]
@@ -1615,9 +1387,7 @@
                   "type": "boolean"
                 },
                 "volatility": {
-                  "type": "string",
-                  "enum": ["all", "new", "existing", "gone"],
-                  "description": "`typeof PatternVolatilityOptions.type` — keep in sync with `#src/pages/log-patterns/utils.ts`."
+                  "$ref": "#/definitions/PatternVolatilityOption"
                 },
                 "order": {
                   "type": "string",
@@ -1630,7 +1400,19 @@
               "additionalProperties": false
             },
             "timeFiltersOffset": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                }
+              ]
             }
           },
           "required": ["type"]
@@ -1650,8 +1432,7 @@
                   "type": "string"
                 },
                 "dataType": {
-                  "type": "string",
-                  "enum": ["request", "latency"]
+                  "$ref": "#/definitions/TraceGraphType"
                 },
                 "includeChildSpans": {
                   "type": "boolean"
@@ -1660,7 +1441,19 @@
               "additionalProperties": false
             },
             "timeFiltersOffset": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                }
+              ]
             }
           },
           "required": ["type"]
@@ -1683,12 +1476,32 @@
               "additionalProperties": false
             },
             "timeFiltersOffset": {
-              "type": "string"
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                }
+              ]
             }
           },
           "required": ["type"]
         }
       ]
+    },
+    "PatternVolatilityOption": {
+      "type": "string",
+      "enum": ["all", "new", "existing", "gone"]
+    },
+    "TraceGraphType": {
+      "type": "string",
+      "enum": ["request", "latency"]
     },
     "DashboardsV4.CompareOptions": {
       "type": "object",
@@ -1697,235 +1510,142 @@
           "type": "boolean"
         },
         "visualizer": {
-          "anyOf": [
-            {
-              "type": "object",
-              "properties": {
-                "type": {
+          "type": "object",
+          "properties": {
+            "type": {
+              "anyOf": [
+                {
                   "$ref": "#/definitions/DashboardsV4.RegularVizType"
                 },
-                "format": {
-                  "type": "object",
-                  "additionalProperties": false,
-                  "properties": {
-                    "value": {
-                      "type": ["number", "string", "null"]
-                    },
-                    "options": {
-                      "type": "object",
-                      "properties": {
-                        "prefix": {
-                          "type": "string"
-                        },
-                        "suffix": {
-                          "type": "string"
-                        },
-                        "scale": {
-                          "type": "number"
-                        },
-                        "compactness": {
-                          "type": "string",
-                          "enum": ["none", "compact", "si", "si2"]
-                        }
-                      },
-                      "additionalProperties": false
-                    },
-                    "formatOptions": {
-                      "$ref": "#/definitions/Intl.NumberFormatOptions"
-                    },
-                    "filesizeOptions": {
-                      "$ref": "#/definitions/FilesizeOptions"
-                    },
-                    "baseFormatter": {
-                      "type": "string",
-                      "enum": ["intl", "filesize"]
-                    },
-                    "preset": {
-                      "type": "string",
-                      "enum": [
-                        "default",
-                        "custom",
-                        "precise",
-                        "percent",
-                        "fileSize",
-                        "currency",
-                        "time",
-                        "bitrate",
-                        "frequency"
-                      ],
-                      "description": "`typeof FormatNumberPresets.type` — keep in sync with `#src/components/formatters/number/presets.ts`."
-                    }
-                  }
-                },
-                "coloring": {
-                  "$ref": "#/definitions/DashboardsV4.ColoringOptions"
-                },
-                "sizing": {
-                  "$ref": "#/definitions/DashboardsV4.SizingOptions"
-                },
-                "dimension": {
-                  "$ref": "#/definitions/DashboardsV4.DimensionOptions"
-                },
-                "limit": {
-                  "$ref": "#/definitions/DashboardsV4.LimitOptions"
-                },
-                "coloringOverrides": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/definitions/DashboardsV4.StyleOverrideOptions"
-                  }
-                },
-                "showLegend": {
+                {
                   "type": "string",
-                  "enum": ["auto", "always", "never"]
+                  "const": "raw-table"
+                }
+              ]
+            },
+            "format": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "value": {
+                  "type": ["number", "string", "null"]
                 },
-                "appearance": {
-                  "type": "string",
-                  "enum": ["auto", "solid", "subtle"]
-                },
-                "bounds": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/definitions/DashboardsV4.GeoCoordBounds"
-                    },
-                    {
-                      "type": "string",
-                      "const": "auto"
-                    },
-                    {
-                      "type": "string",
-                      "const": "world"
-                    }
-                  ]
-                },
-                "aggregation": {
-                  "$ref": "#/definitions/DashboardsV4.ValueAggregationOptions"
-                },
-                "metricAnomaly": {
+                "options": {
                   "type": "object",
                   "properties": {
-                    "enabled": {
-                      "type": "boolean"
+                    "prefix": {
+                      "type": "string"
                     },
-                    "window": {
+                    "suffix": {
+                      "type": "string"
+                    },
+                    "scale": {
                       "type": "number"
                     },
-                    "threshold": {
-                      "type": "number"
-                    },
-                    "consecutive": {
-                      "type": "number"
-                    },
-                    "direction": {
+                    "compactness": {
                       "type": "string",
-                      "enum": ["above", "below", "both"]
+                      "enum": ["none", "compact", "si", "si2"]
                     }
                   },
                   "additionalProperties": false
+                },
+                "formatOptions": {
+                  "$ref": "#/definitions/Intl.NumberFormatOptions"
+                },
+                "filesizeOptions": {
+                  "$ref": "#/definitions/FilesizeOptions"
+                },
+                "baseFormatter": {
+                  "type": "string",
+                  "enum": ["intl", "filesize"]
+                },
+                "preset": {
+                  "$ref": "#/definitions/FormatNumberPreset"
+                }
+              }
+            },
+            "coloring": {
+              "$ref": "#/definitions/DashboardsV4.ColoringOptions"
+            },
+            "sizing": {
+              "$ref": "#/definitions/DashboardsV4.SizingOptions"
+            },
+            "dimension": {
+              "$ref": "#/definitions/DashboardsV4.DimensionOptions"
+            },
+            "limit": {
+              "$ref": "#/definitions/DashboardsV4.LimitOptions"
+            },
+            "coloringOverrides": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/DashboardsV4.StyleOverrideOptions"
+              }
+            },
+            "showLegend": {
+              "type": "string",
+              "enum": ["auto", "always", "never"]
+            },
+            "appearance": {
+              "type": "string",
+              "enum": ["auto", "solid", "subtle"]
+            },
+            "bounds": {
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/DashboardsV4.GeoCoordBounds"
+                },
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "world"
+                }
+              ]
+            },
+            "aggregation": {
+              "$ref": "#/definitions/DashboardsV4.ValueAggregationOptions"
+            },
+            "metricAnomaly": {
+              "type": "object",
+              "properties": {
+                "enabled": {
+                  "type": "boolean"
+                },
+                "window": {
+                  "type": "number"
+                },
+                "threshold": {
+                  "type": "number"
+                },
+                "consecutive": {
+                  "type": "number"
+                },
+                "direction": {
+                  "$ref": "#/definitions/MetricAnomalyBandDirection"
                 }
               },
               "additionalProperties": false
             },
-            {
-              "type": "object",
-              "properties": {
-                "type": {
-                  "type": "string",
-                  "const": "raw-table"
-                },
-                "hideHeader": {
-                  "type": "boolean"
-                },
-                "modifiedColumns": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "id": {
-                        "type": "string"
-                      },
-                      "name": {
-                        "type": "string"
-                      },
-                      "hide": {
-                        "type": "boolean"
-                      },
-                      "size": {
-                        "type": "number"
-                      },
-                      "grow": {
-                        "type": "boolean"
-                      },
-                      "renderer": {
-                        "anyOf": [
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "const": "auto"
-                              }
-                            },
-                            "required": ["type"],
-                            "additionalProperties": false
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "const": "date"
-                              },
-                              "format": {
-                                "type": "string"
-                              }
-                            },
-                            "required": ["type"],
-                            "additionalProperties": false
-                          },
-                          {
-                            "type": "object",
-                            "properties": {
-                              "type": {
-                                "type": "string",
-                                "const": "hyperlink"
-                              }
-                            },
-                            "required": ["type"],
-                            "additionalProperties": false
-                          }
-                        ]
-                      }
-                    },
-                    "required": ["id"],
-                    "additionalProperties": false
-                  }
-                },
-                "addedColumns": {
-                  "type": "array",
-                  "items": {
-                    "type": "object",
-                    "properties": {
-                      "name": {
-                        "type": "string"
-                      },
-                      "path": {
-                        "type": "string"
-                      },
-                      "size": {
-                        "type": "number"
-                      },
-                      "grow": {
-                        "type": "boolean"
-                      }
-                    },
-                    "additionalProperties": false
-                  }
-                }
-              },
-              "additionalProperties": false
+            "hideHeader": {
+              "type": "boolean"
+            },
+            "modifiedColumns": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/ModifiedColumn"
+              }
+            },
+            "addedColumns": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/AddedColumn"
+              }
             }
-          ]
+          },
+          "additionalProperties": false
         }
       },
       "additionalProperties": false
@@ -1978,11 +1698,25 @@
               "const": "duration"
             },
             "value": {
-              "type": ["string", "null"]
+              "anyOf": [
+                {
+                  "type": "string",
+                  "const": "auto"
+                },
+                {
+                  "type": "string",
+                  "const": "inherit"
+                },
+                {
+                  "$ref": "#/definitions/StringLiteral"
+                },
+                {
+                  "type": "null"
+                }
+              ]
             },
             "params": {
-              "type": "object",
-              "description": "The escape-hatch `params` bag. `../definition.ts` expresses this as `params?: Record<string, any>` on the intersection base, which leaves known keys constrained while allowing unknown ones. Reproduced here as an index signature because the intersection form defeats the generator (see file header)."
+              "type": "object"
             },
             "id": {
               "$ref": "#/definitions/DashboardsV4.VarId"
@@ -2011,24 +1745,7 @@
               "type": "object",
               "properties": {
                 "scope": {
-                  "type": "string",
-                  "enum": [
-                    "log",
-                    "audit",
-                    "pattern",
-                    "metric",
-                    "monitor-config",
-                    "monitor-status",
-                    "rehydration",
-                    "event",
-                    "k8s-event",
-                    "trace",
-                    "recommendation",
-                    "ai-event",
-                    "generic-events",
-                    "custom"
-                  ],
-                  "description": "`typeof FacetScopes.type` — keep in sync with `#src/hooks/api/facets/constants.ts`."
+                  "$ref": "#/definitions/FacetScope"
                 }
               }
             },
@@ -2072,24 +1789,7 @@
               "type": "object",
               "properties": {
                 "scope": {
-                  "type": "string",
-                  "enum": [
-                    "log",
-                    "audit",
-                    "pattern",
-                    "metric",
-                    "monitor-config",
-                    "monitor-status",
-                    "rehydration",
-                    "event",
-                    "k8s-event",
-                    "trace",
-                    "recommendation",
-                    "ai-event",
-                    "generic-events",
-                    "custom"
-                  ],
-                  "description": "`typeof FacetScopes.type` — keep in sync with `#src/hooks/api/facets/constants.ts`."
+                  "$ref": "#/definitions/FacetScope"
                 },
                 "allowMultiple": {
                   "type": "boolean"
@@ -2132,24 +1832,7 @@
                   "type": "string"
                 },
                 "scope": {
-                  "type": "string",
-                  "enum": [
-                    "log",
-                    "audit",
-                    "pattern",
-                    "metric",
-                    "monitor-config",
-                    "monitor-status",
-                    "rehydration",
-                    "event",
-                    "k8s-event",
-                    "trace",
-                    "recommendation",
-                    "ai-event",
-                    "generic-events",
-                    "custom"
-                  ],
-                  "description": "`typeof FacetScopes.type` — keep in sync with `#src/hooks/api/facets/constants.ts`."
+                  "$ref": "#/definitions/FacetScope"
                 },
                 "allowMultiple": {
                   "type": "boolean"
@@ -2181,9 +1864,28 @@
           "required": ["id", "key", "label", "type"]
         }
       ]
+    },
+    "FacetScope": {
+      "type": "string",
+      "enum": [
+        "log",
+        "audit",
+        "pattern",
+        "metric",
+        "monitor-config",
+        "monitor-status",
+        "rehydration",
+        "event",
+        "k8s-event",
+        "trace",
+        "recommendation",
+        "ai-event",
+        "generic-events",
+        "custom"
+      ]
     }
   },
   "$id": "https://edgedelta.com/schemas/dashboard-v4.schema.json",
-  "x-generated-from": "web/src/modules/dashboards/versions/v4/schema/definition.standalone.ts",
-  "x-generated-from-sha256": "d33718252053c51bab3751c24e71d6111f30d68262f9290ffc6ae70a3d6fe19c"
+  "x-generated-from": "web/src/modules/dashboards/versions/v4/definition.ts",
+  "x-generated-from-sha256": "9847a2ac1ad95dd9e69aaf1830e2afd5c7e7e5e03327da647b5c04045ec2308f"
 }
