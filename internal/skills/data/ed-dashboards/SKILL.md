@@ -274,7 +274,7 @@ so you can validate a template as-is.
 
 ```bash
 edx dashboards create --file dashboard.json --tag generated --tag preview
-edx dashboards update <dashboard-id> --file dashboard.json --tag generated
+edx dashboards update <dashboard-id> --file dashboard.json --tag generated   # update replaces the record, so re-pass tags
 edx dashboards delete <dashboard-id> --yes
 ```
 
@@ -284,20 +284,6 @@ and `create`.
 
 **Put the link in your reply** — an ID is not clickable. `create` returns
 `dashboard_id`; the page is `https://app.edgedelta.com/dashboards/view/<id>`.
-
-## Tag What You Generate
-
-Tag with `generated`, plus `preview` until you have looked at the render. Leave
-`preview` on anything you could not verify.
-
-```bash
-edx dashboards create --file dashboard.json --tag generated --tag preview
-edx dashboards tag <id> --remove preview     # once it looks right
-```
-
-`update --file` clears any tags the body omits, so pass `--tag` again or use
-`edx dashboards tag`, which touches nothing else. Delete the scratch dashboards
-you made while iterating.
 
 ## Look At It (Post-Validation)
 
