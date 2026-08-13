@@ -16,7 +16,7 @@ func TestParseSemver(t *testing.T) {
 		{"v1.2.3", 1, 2, 3, true},
 		{"1.2.3", 1, 2, 3, true},
 		{"v10.0.11", 10, 0, 11, true},
-		{"v1.2.3-rc1", 1, 2, 3, true},          // pre-release suffix dropped
+		{"v1.2.3-rc1", 1, 2, 3, true},             // pre-release suffix dropped
 		{"v1.2.3-3-gabc123-dirty", 1, 2, 3, true}, // git-describe suffix dropped
 		{"v1.2.3+meta", 1, 2, 3, true},
 		{"dev", 0, 0, 0, false},

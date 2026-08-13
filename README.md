@@ -174,6 +174,8 @@ edx health problems
 edx capture start <conf-id> --duration 2m --nodes mask_pii
 edx capture status <task-id>
 edx capture results <conf-id>
+edx capture results <conf-id> --follow              # NDJSON, one line per new item
+edx capture results <conf-id> --follow --since-now  # ... skipping the existing backlog
 
 # --- AI Teammate (issues/threads/channels on chat.*, teammates on agent.*) ---
 edx ai issues list                                  # open issues
