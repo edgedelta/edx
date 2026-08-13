@@ -59,12 +59,15 @@ func TestSkillExamplesValidate(t *testing.T) {
 				t.Errorf("%s", issue)
 			}
 
-			// The skill teaches that every widget query needs a resource_accesses entry
-			// or the UI may fail to resolve the dashboard, so the examples must model it.
-			queries := map[string]bool{}
-			for _, site := range QuerySites(body.Definition) {
-				queries[site.Query] = true
+			// resource_accesses is optional: the backend only consults it for
+			// dashboard-token auth (public share links and screenshots), so a definition
+			// without it renders normally. An example that does declare it is claiming to
+			// model the mapping, so then it has to be complete — a partial allowlist
+			// would silently deny some widgets on a shared dashboard.
+			if len(body.ResourceAccesses) == 0 {
+				return
 			}
+
 			covered := map[string]bool{}
 			for _, access := range body.ResourceAccesses {
 				covered[access.Query] = true
@@ -72,14 +75,14 @@ func TestSkillExamplesValidate(t *testing.T) {
 					t.Errorf("resource_accesses entry for %q has no domain", access.Query)
 				}
 			}
-			for query := range queries {
+			for _, site := range QuerySites(body.Definition) {
 				// Formulas reference other visuals rather than querying a data source, so
 				// they get no entry of their own.
-				if isFormula(body.Definition, query) {
+				if site.Dialect == "formula" {
 					continue
 				}
-				if !covered[query] {
-					t.Errorf("query %q has no resource_accesses entry", query)
+				if !covered[site.Query] {
+					t.Errorf("query %q has no resource_accesses entry", site.Query)
 				}
 			}
 		})
@@ -125,15 +128,4 @@ func TestSkillDocumentsEverySchemaOption(t *testing.T) {
 			}
 		}
 	}
-}
-
-// isFormula reports whether query appears in the definition as a formula rather than a
-// data source query.
-func isFormula(definition any, query string) bool {
-	for _, site := range QuerySites(definition) {
-		if site.Query == query && site.Dialect == "formula" {
-			return true
-		}
-	}
-	return false
 }

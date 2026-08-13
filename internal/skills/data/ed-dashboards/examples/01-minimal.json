@@ -1,40 +1,52 @@
 {
   "dashboard_name": "Minimal Example",
-  "description": "The smallest dashboard that renders: one grid, one number.",
+  "description": "The smallest dashboard that renders: one grid, one number. No resource_accesses, which is optional.",
   "definition": {
     "version": 4,
-    "timeFilters": { "lookback": "1h" },
+    "timeFilters": {
+      "lookback": "1h"
+    },
     "widgets": [
       {
         "id": "root",
         "type": "grid",
-        "displayOptions": { "hideBackground": true },
+        "displayOptions": {
+          "hideBackground": true
+        },
         "grid": "72px 72px 72px / 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr 1fr"
       },
       {
         "id": 1,
         "type": "viz",
-        "displayOptions": { "title": "Agent CPU (avg cores)" },
+        "displayOptions": {
+          "title": "Agent CPU (avg cores)"
+        },
         "position": {
           "type": "grid",
           "targetId": "root",
-          "area": { "column": 1, "columnSpan": 3, "row": 1, "rowSpan": 3 }
+          "area": {
+            "column": 1,
+            "columnSpan": 3,
+            "row": 1,
+            "rowSpan": 3
+          }
         },
         "resultType": "aggregate",
-        "visualizer": { "type": "bignumber" },
+        "visualizer": {
+          "type": "bignumber"
+        },
         "visuals": [
           {
             "id": "A",
             "dataSource": {
               "type": "metric",
-              "params": { "query": "avg:ed.agent.cpu.milicores{*}" }
+              "params": {
+                "query": "avg:ed.agent.cpu.milicores{*}"
+              }
             }
           }
         ]
       }
     ]
-  },
-  "resource_accesses": [
-    { "domain": "metric", "query": "avg:ed.agent.cpu.milicores{*}" }
-  ]
+  }
 }

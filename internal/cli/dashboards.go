@@ -283,8 +283,12 @@ func validateDashboard(body []byte) (errs, warns []string) {
 			vizCount++
 		}
 	}
+	// resource_accesses is the allowlist of what an anonymous viewer may query. The
+	// backend only consults it for dashboard-token auth — public share links and
+	// screenshot generation — so a dashboard without it renders normally for signed-in
+	// users. The UI refills it from the widgets whenever someone saves in the builder.
 	if vizCount > 0 && len(d.ResourceAccesses) == 0 && d.Definition != nil {
-		warns = append(warns, `resource_accesses is empty; the UI may fail to resolve the dashboard. Add one {"domain":...,"query":...} entry per widget query.`)
+		warns = append(warns, `resource_accesses is empty; the dashboard renders normally for signed-in users, but public share links and screenshots will be denied. Add one {"domain":...,"query":...} entry per widget query if you need those.`)
 	}
 
 	issues, err := dashboards.ValidateDefinition(definition)
