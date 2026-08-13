@@ -1,6 +1,6 @@
 ---
 name: ed-ai-teammate
-description: AI Teammate - manage connectors (PagerDuty, Slack, GitHub, ...), update teammates (agents) and view teammate activity.
+description: AI Teammate - manage connectors (PagerDuty, Slack, GitHub, ...), update teammates (agents), view teammate activity and query the knowledge graph.
 metadata:
   version: "1.0.0"
   author: edgedelta
@@ -68,6 +68,52 @@ only prompts prefer the flags above, or send just the prompt fields:
 edx ai agents get <id> | jq '.data | {masterPrompt,userPrompt,toolingPrompt}' \
   | edx ai agents update <id> --file - --yes
 ```
+
+## Knowledge Graph (read-only)
+
+The AI Teammate builds a knowledge graph from the connected tools: services,
+repos, teams, people, channels, incidents, documents and the edges between
+them (OWNED_BY, DEPENDS_ON, RUNS_ON, MONITORED_BY, DISCUSSED_IN, TRACKED_IN,
+AFFECTS, DOCUMENTS). It is the org's top-down map — use it to answer
+"who owns X", "what depends on X", "what should we monitor" before digging
+into logs and metrics.
+
+```bash
+edx ai knowledge stats                    # node/edge counts by type + source, last sync
+edx ai knowledge topology --limit 500     # graph slice: nodes, edges, stats
+edx ai knowledge search "payment" --types Service   # find entities by name/alias
+edx ai knowledge get <entity-id>          # one entity + neighbors + edges
+edx ai knowledge subgraph <entity-id> --hops 2      # N-hop neighborhood
+edx ai knowledge blast-radius <entity-id> # downstream impact if it fails
+edx ai knowledge criticality --limit 20   # most-depended-on entities
+```
+
+- Entity IDs are `{orgId}::{type}::{externalId}` — always find them with
+  `search` first; quote them (they contain `::` and may contain `/`).
+- Node types: Org, Integration, Service, Repo, Channel, JiraProject,
+  PagerDutyService, AwsResource, Team, Person, Incident, Document.
+- Filter flags: `--types` (csv), `--min-confidence` (0..1), `--source`,
+  `--namespaces topology,learned`. Search is cursor-paginated (`--cursor`).
+- All commands are read-only; graph writes happen via connector sync, not edx.
+
+Workflow examples:
+
+```bash
+# What should this org monitor? Rank by dependency, then check coverage.
+edx ai knowledge criticality --limit 20
+edx monitors list
+
+# Who owns a service and where is it discussed?
+edx ai knowledge search "ingestion" --types Service
+edx ai knowledge get "<id>"        # OWNED_BY team, DISCUSSED_IN channels
+
+# Impact analysis before a risky change
+edx ai knowledge blast-radius "<id>" --max-hops 3
+```
+
+Caveat: `criticality` returns `"basis": "degree"` when the org has few
+dependency edges; blast-radius quality grows with the graph's DEPENDS_ON /
+RUNS_ON / USES coverage.
 
 ## Add or Update a Connector
 

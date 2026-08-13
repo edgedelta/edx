@@ -32,8 +32,8 @@ data) and mint ingestion tokens for sending telemetry.`,
 
 	var confID, nodeName string
 	token := &cobra.Command{
-		Use:   "token",
-		Short: "Get or create an ingestion token",
+		Use:     "token",
+		Short:   "Get or create an ingestion token",
 		Example: `  edx ingest token --conf-id <pipeline-id> --node-name my_otlp_input`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := newClient()
