@@ -60,8 +60,9 @@ Re-run `edx auth login` (token from Admin > API Tokens, or `--oauth`).
 | Fleet | `edx fleet agents`, `edx fleet deployments` |
 | Live capture | `edx capture start/task/status/results` |
 | Health | `edx health components`, `edx health problems` |
-| Dashboards | `edx dashboards list/get` |
+| Dashboards | `edx dashboards list/get/create/update/delete/validate` |
 | Schema | `edx facets keys/options/list` |
+| Query syntax | `edx cql validate --type <type> '<query>'` (offline) |
 | Lookup tables | `edx lookup list/get/download/create/update/delete` |
 | AI Teammate | `edx ai connectors ...`, `edx ai activity` |
 | Ingestion | `edx ingest endpoints`, `edx ingest token` |
