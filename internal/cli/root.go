@@ -105,6 +105,7 @@ EXAMPLES
 		newEventsCmd(),
 		newMonitorsCmd(),
 		newPipelinesCmd(),
+		newRehydrationsCmd(),
 		newFleetCmd(),
 		newCaptureCmd(),
 		newDashboardsCmd(),

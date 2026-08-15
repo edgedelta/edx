@@ -134,3 +134,24 @@ func TestPrintUnknownFormat(t *testing.T) {
 		t.Error("expected error for unknown format")
 	}
 }
+
+func TestPrintTableRehydrationEnvelopes(t *testing.T) {
+	cases := map[string]struct{ data, wantHeader string }{
+		"rehydrations":           {`{"rehydrations":[{"rehydration_id":"rh-1","status":"in-progress"}],"next_cursor":""}`, "REHYDRATION_ID"},
+		"potential_rehydrations": {`{"total_jobs":1,"potential_rehydrations":[{"source":"s3-archive","destination":"dest-1"}]}`, "SOURCE"},
+	}
+	for name, c := range cases {
+		t.Run(name, func(t *testing.T) {
+			var buf bytes.Buffer
+			if err := Print(&buf, []byte(c.data), Options{Format: "table"}); err != nil {
+				t.Fatal(err)
+			}
+			// The rows must be the inner list items, not the envelope object
+			// flattened into columns like REHYDRATIONS.0.REHYDRATION_ID.
+			out := buf.String()
+			if !strings.Contains(out, c.wantHeader) || strings.Contains(out, "."+c.wantHeader) {
+				t.Errorf("%s envelope not unwrapped into rows:\n%s", name, out)
+			}
+		})
+	}
+}

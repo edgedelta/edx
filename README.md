@@ -5,7 +5,7 @@ products:
 
 | Product | Commands |
 |---------|----------|
-| **Pipeline** | `pipelines`, `fleet`, `capture`, `health`, `ingest` |
+| **Pipeline** | `pipelines`, `rehydrations`, `fleet`, `capture`, `health`, `ingest` |
 | **Observability** | `logs`, `patterns`, `metrics`, `traces`, `events`, `monitors`, `dashboards`, `facets`, `service-map` |
 | **AI Teammate** | `ai issues`, `ai threads`, `ai channels`, `ai agents`, `ai connectors`, `ai activity` |
 
@@ -174,6 +174,16 @@ edx pipelines status <conf-id>
 edx fleet agents
 edx fleet deployments
 edx health problems
+
+# --- Rehydration (replay archived data back through a pipeline) ---------------
+edx rehydrations list --output table --columns rehydration_id,status,percentage
+edx rehydrations validate --query 'service.name:"api"' --lookback 1h
+edx rehydrations analyze --query 'service.name:"api"' --tag prod --source my-s3
+edx rehydrations create --query 'service.name:"api"' --lookback 1h --dry-run
+edx rehydrations create --query 'service.name:"api"' --from 2026-08-15T08:00:00.000Z --to 2026-08-15T09:00:00.000Z
+edx rehydrations get <rehydration-id>               # job + progress percentage
+edx rehydrations cancel <rehydration-id>
+edx rehydrations delete <rehydration-id>
 
 # --- Live capture (debug data flowing through nodes) -------------------------
 edx capture start <conf-id> --duration 2m --nodes mask_pii
