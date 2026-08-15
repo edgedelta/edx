@@ -58,6 +58,7 @@ Re-run `edx auth login` (token from Admin > API Tokens, or `--oauth`).
 | Events | `edx events search` |
 | Monitors | `edx monitors list/get/create/update/delete/states` |
 | Pipelines | `edx pipelines list/get/history/save/deploy/validate/agents/status` |
+| Rehydrations | `edx rehydrations list/get/validate/analyze/create/cancel/delete` |
 | Fleet | `edx fleet agents`, `edx fleet deployments` |
 | Live capture | `edx capture start/task/status/results` |
 | Health | `edx health components`, `edx health problems` |
@@ -94,7 +95,7 @@ For endpoints without a dedicated command:
 edx api GET /v1/orgs/{org}/users          # {org} auto-substituted
 edx api GET /tokens                       # org-relative shorthand
 edx api POST /monitors --data @monitor.json
-edx api GET /rehydration --param limit=10
+edx api GET /settings_v2/rehydration-settings
 ```
 
 ## Troubleshooting
