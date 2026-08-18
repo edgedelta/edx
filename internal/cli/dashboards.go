@@ -1,10 +1,12 @@
 package cli
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net/url"
+	"strings"
 
 	"github.com/spf13/cobra"
 
@@ -15,13 +17,21 @@ func newDashboardsCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "dashboards",
 		Short: "Manage dashboards",
-		Long: `List, inspect, create, update, validate and delete dashboards.
+		Long: `List, inspect, create, update, validate, render and delete dashboards.
 
 Dashboards are defined by a JSON body with a "definition" object. Tip: fetch an
 existing dashboard with "edx dashboards get <id>" to use as a starting template.
 "create" and "update" validate the definition against the frontend's own Dashboard
 schema first, so a definition that would save via the API yet fail to render in the
-UI is rejected here instead. Use "validate" to check a definition without saving.`,
+UI is rejected here instead. Use "validate" to check a definition without saving.
+
+Validation is offline and instant; it cannot tell you whether a dashboard looks
+right or whether its widgets return data. "screenshot" answers that by rendering the
+saved dashboard in a real browser, which is slow enough to be worth running as a
+background task. Together they give the loop:
+
+  validate  ->  create --tag generated --tag preview  ->  screenshot  ->  look
+            ->  update  ->  screenshot  ->  tag --remove preview`,
 	}
 	cmd.AddCommand(
 		newDashboardsListCmd(),
@@ -29,9 +39,63 @@ UI is rejected here instead. Use "validate" to check a definition without saving
 		newDashboardsCreateCmd(),
 		newDashboardsUpdateCmd(),
 		newDashboardsValidateCmd(),
+		newDashboardsScreenshotCmd(),
+		newDashboardsTagCmd(),
 		newDashboardsOptionsCmd(),
 		newDashboardsDeleteCmd(),
 	)
+	return cmd
+}
+
+func newDashboardsTagCmd() *cobra.Command {
+	var add, remove []string
+	cmd := &cobra.Command{
+		Use:   "tag <dashboard-id>",
+		Short: "Add or remove tags on a dashboard",
+		Long: `Add or remove tags on an existing dashboard without touching its definition.
+
+Tags are how a dashboard says where it came from and whether anyone has looked at
+it. Two conventions worth following when generating dashboards:
+
+  generated  written by a tool or an agent rather than by hand
+  preview    not verified yet — carry it from creation until a rendered screenshot
+             has been checked, then remove it
+
+The dashboard is read and written back whole, so tags are the only thing that
+changes. resource_accesses is left exactly as it was, since the definition is
+unchanged.`,
+		Example: `  edx dashboards tag <id> --add generated --add preview
+  edx dashboards tag <id> --remove preview
+  edx dashboards list | jq -r '.[] | select(.tags | index("preview")) | .dashboard_id'`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(add) == 0 && len(remove) == 0 {
+				return errors.New("nothing to do: pass --add and/or --remove")
+			}
+			c, err := newClient()
+			if err != nil {
+				return err
+			}
+			ctx := cmdContext(cmd)
+			path := "/dashboards/" + url.PathEscape(args[0])
+
+			current, err := c.Get(ctx, path, nil)
+			if err != nil {
+				return err
+			}
+			updated, err := applyTags(current, add, remove)
+			if err != nil {
+				return err
+			}
+			data, err := c.Put(ctx, path, nil, updated)
+			if err != nil {
+				return err
+			}
+			return printResult(data)
+		},
+	}
+	cmd.Flags().StringArrayVar(&add, "add", nil, "tag to add (repeatable)")
+	cmd.Flags().StringArrayVar(&remove, "remove", nil, "tag to remove (repeatable)")
 	return cmd
 }
 
@@ -140,6 +204,7 @@ func newDashboardsGetCmd() *cobra.Command {
 func newDashboardsCreateCmd() *cobra.Command {
 	var file string
 	var skipValidation bool
+	var tags []string
 	cmd := &cobra.Command{
 		Use:   "create --file dashboard.json",
 		Short: "Create a dashboard from a JSON definition",
@@ -150,8 +215,12 @@ resource_accesses is derived from the definition and added for you, replacing
 anything in the file, exactly as the UI does when a dashboard is saved. It is the
 allowlist public share links and screenshots are authorized against, and it is
 fully determined by the widgets and variables, so there is no reason to write it
-by hand.`,
-		Example: `  edx dashboards create --file dashboard.json
+by hand.
+
+Tag what you create. A dashboard written by a tool should say so with "generated",
+and one nobody has looked at yet should carry "preview" until a rendered screenshot
+has been checked (see "edx dashboards screenshot" and "edx dashboards tag").`,
+		Example: `  edx dashboards create --file dashboard.json --tag generated --tag preview
   edx dashboards get <id> | jq '.dashboard_name="copy"' | edx dashboards create --file -`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := newClient()
@@ -163,6 +232,10 @@ by hand.`,
 				return err
 			}
 			if err := checkDashboard(body, skipValidation); err != nil {
+				return err
+			}
+			body, err = applyTags(body, tags, nil)
+			if err != nil {
 				return err
 			}
 			body, err = fillResourceAccesses(body)
@@ -179,12 +252,14 @@ by hand.`,
 	cmd.Flags().StringVarP(&file, "file", "f", "", `dashboard JSON file ("-" for stdin)`)
 	_ = cmd.MarkFlagRequired("file")
 	cmd.Flags().BoolVar(&skipValidation, "skip-validation", false, "skip client-side definition checks")
+	cmd.Flags().StringArrayVar(&tags, "tag", nil, `tag to add, on top of any in the file (repeatable); "generated" and "preview" are the conventions`)
 	return cmd
 }
 
 func newDashboardsUpdateCmd() *cobra.Command {
 	var file string
 	var skipValidation bool
+	var tags []string
 	cmd := &cobra.Command{
 		Use:   "update <dashboard-id> --file dashboard.json",
 		Short: "Update a dashboard from a JSON definition",
@@ -192,7 +267,10 @@ func newDashboardsUpdateCmd() *cobra.Command {
 "validate".
 
 resource_accesses is regenerated from the definition, so a body round-tripped
-through "get" carries a fresh allowlist rather than the one it was fetched with.`,
+through "get" carries a fresh allowlist rather than the one it was fetched with.
+
+The whole record is replaced, so a body that omits "tags" clears them: pass --tag
+to keep them, or use "edx dashboards tag" to change tags on their own.`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := newClient()
@@ -204,6 +282,10 @@ through "get" carries a fresh allowlist rather than the one it was fetched with.
 				return err
 			}
 			if err := checkDashboard(body, skipValidation); err != nil {
+				return err
+			}
+			body, err = applyTags(body, tags, nil)
+			if err != nil {
 				return err
 			}
 			body, err = fillResourceAccesses(body)
@@ -220,6 +302,7 @@ through "get" carries a fresh allowlist rather than the one it was fetched with.
 	cmd.Flags().StringVarP(&file, "file", "f", "", `dashboard JSON file ("-" for stdin)`)
 	_ = cmd.MarkFlagRequired("file")
 	cmd.Flags().BoolVar(&skipValidation, "skip-validation", false, "skip client-side definition checks")
+	cmd.Flags().StringArrayVar(&tags, "tag", nil, "tag to add, on top of any in the file (repeatable)")
 	return cmd
 }
 
@@ -281,6 +364,70 @@ func fillResourceAccesses(body []byte) ([]byte, error) {
 		return nil, fmt.Errorf("re-encode dashboard body: %w", err)
 	}
 	return filled, nil
+}
+
+// applyTags rewrites the body's top-level "tags" array. A body with nothing to change is
+// returned untouched, so the request carries exactly what the caller wrote.
+func applyTags(body []byte, add, remove []string) ([]byte, error) {
+	if len(add) == 0 && len(remove) == 0 {
+		return body, nil
+	}
+	// UseNumber so a round-tripped definition keeps its numeric literals: widget IDs and
+	// thresholds must come back the way they went in.
+	dec := json.NewDecoder(bytes.NewReader(body))
+	dec.UseNumber()
+	var envelope map[string]any
+	if err := dec.Decode(&envelope); err != nil {
+		return nil, fmt.Errorf("invalid JSON: %w", err)
+	}
+
+	tags := mergeTags(stringList(envelope["tags"]), add, remove)
+	if len(tags) == 0 {
+		delete(envelope, "tags")
+	} else {
+		envelope["tags"] = tags
+	}
+
+	tagged, err := json.Marshal(envelope)
+	if err != nil {
+		return nil, fmt.Errorf("re-encode dashboard body: %w", err)
+	}
+	return tagged, nil
+}
+
+// mergeTags applies the additions and removals, keeping the existing order and never
+// duplicating a tag.
+func mergeTags(existing, add, remove []string) []string {
+	drop := make(map[string]bool, len(remove))
+	for _, t := range remove {
+		drop[strings.TrimSpace(t)] = true
+	}
+	seen := make(map[string]bool, len(existing)+len(add))
+	out := make([]string, 0, len(existing)+len(add))
+	for _, t := range append(append([]string{}, existing...), add...) {
+		t = strings.TrimSpace(t)
+		if t == "" || drop[t] || seen[t] {
+			continue
+		}
+		seen[t] = true
+		out = append(out, t)
+	}
+	return out
+}
+
+// stringList reads a decoded JSON array of strings, ignoring anything else in it.
+func stringList(v any) []string {
+	items, ok := v.([]any)
+	if !ok {
+		return nil
+	}
+	out := make([]string, 0, len(items))
+	for _, item := range items {
+		if s, ok := item.(string); ok {
+			out = append(out, s)
+		}
+	}
+	return out
 }
 
 func checkDashboard(body []byte, skip bool) error {
