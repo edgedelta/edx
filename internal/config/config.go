@@ -52,37 +52,42 @@ const (
 	// port); when set they override only that service's host for the resolved
 	// environment. Deliberately env-var only — no flags or profile fields — so
 	// the common path never sees a URL.
-	EnvAPIURL   = "ED_API_URL"
-	EnvChatURL  = "ED_CHAT_URL"
-	EnvAgentURL = "ED_AGENT_URL"
+	EnvAPIURL      = "ED_API_URL"
+	EnvChatURL     = "ED_CHAT_URL"
+	EnvAgentURL    = "ED_AGENT_URL"
+	EnvWorkflowURL = "ED_WORKFLOW_URL"
 )
 
 // Endpoints is the full set of service base URLs for one environment.
 // The AI Teammate features (issues, threads, channels) are served by Chat;
 // teammates (agents) by Agent. Both are distinct hosts from the main API.
 type Endpoints struct {
-	API   string
-	Chat  string
-	Agent string
+	API      string
+	Chat     string
+	Agent    string
+	Workflow string
 }
 
 // envEndpoints mirrors backend/core/ai.go's service endpoint maps so edx
 // targets the same hosts the product uses.
 var envEndpoints = map[string]Endpoints{
 	EnvProd: {
-		API:   "https://api.edgedelta.com",
-		Chat:  "https://chat.ai.edgedelta.com",
-		Agent: "https://agent.ai.edgedelta.com",
+		API:      "https://api.edgedelta.com",
+		Chat:     "https://chat.ai.edgedelta.com",
+		Agent:    "https://agent.ai.edgedelta.com",
+		Workflow: "https://workflow.ai.edgedelta.com",
 	},
 	EnvStaging: {
-		API:   "https://api.staging.edgedelta.com",
-		Chat:  "https://chat.ai.staging.edgedelta.com",
-		Agent: "https://agent.ai.staging.edgedelta.com",
+		API:      "https://api.staging.edgedelta.com",
+		Chat:     "https://chat.ai.staging.edgedelta.com",
+		Agent:    "https://agent.ai.staging.edgedelta.com",
+		Workflow: "https://workflow.ai.staging.edgedelta.com",
 	},
 	EnvLocal: {
-		API:   "http://localhost:4444",
-		Chat:  "http://localhost:3001",
-		Agent: "http://localhost:3002",
+		API:      "http://localhost:4444",
+		Chat:     "http://localhost:3001",
+		Agent:    "http://localhost:3002",
+		Workflow: "http://localhost:3010",
 	},
 }
 
@@ -201,12 +206,13 @@ func (f *File) Save() error {
 
 // Resolved is the effective configuration after merging profile, env and flags.
 type Resolved struct {
-	Profile  string
-	Env      string
-	APIURL   string
-	ChatURL  string
-	AgentURL string
-	OrgID    string
+	Profile     string
+	Env         string
+	APIURL      string
+	ChatURL     string
+	AgentURL    string
+	WorkflowURL string
+	OrgID       string
 
 	AuthMethod string
 	APIToken   string
@@ -274,11 +280,12 @@ func Resolve(profileFlag, envFlag, orgFlag, tokenFlag string) (*Resolved, error)
 	}
 
 	r := &Resolved{
-		Profile:  name,
-		Env:      env,
-		APIURL:   eps.API,
-		ChatURL:  eps.Chat,
-		AgentURL: eps.Agent,
+		Profile:     name,
+		Env:         env,
+		APIURL:      eps.API,
+		ChatURL:     eps.Chat,
+		AgentURL:    eps.Agent,
+		WorkflowURL: eps.Workflow,
 	}
 	if p != nil {
 		r.OrgID = p.OrgID
@@ -304,6 +311,9 @@ func Resolve(profileFlag, envFlag, orgFlag, tokenFlag string) (*Resolved, error)
 	}
 	if v := os.Getenv(EnvAgentURL); v != "" {
 		r.AgentURL = v
+	}
+	if v := os.Getenv(EnvWorkflowURL); v != "" {
+		r.WorkflowURL = v
 	}
 
 	if v := os.Getenv(EnvOrgID); v != "" {

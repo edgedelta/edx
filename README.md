@@ -7,7 +7,7 @@ products:
 |---------|----------|
 | **Pipeline** | `pipelines`, `rehydrations`, `fleet`, `capture`, `health`, `ingest` |
 | **Observability** | `logs`, `patterns`, `metrics`, `traces`, `events`, `monitors`, `dashboards`, `facets`, `service-map` |
-| **AI Teammate** | `ai issues`, `ai threads`, `ai channels`, `ai agents`, `ai connectors`, `ai activity` |
+| **AI Teammate** | `ai issues`, `ai threads`, `ai channels`, `ai agents`, `ai connectors`, `ai activity`, `ai workflows` |
 
 Plus `api` as a raw escape hatch for any endpoint, and `auth` for credentials.
 
@@ -101,11 +101,11 @@ A profile targets an **environment** — `prod` (default), `staging` or `local` 
 and the environment selects every service host together. This matters because
 the AI Teammate features live on their own hosts, not under `api.edgedelta.com`:
 
-| Environment | Main API | Chat (issues, threads, channels) | Agent (teammates) |
-|-------------|----------|----------------------------------|-------------------|
-| `prod`      | `api.edgedelta.com` | `chat.ai.edgedelta.com` | `agent.ai.edgedelta.com` |
-| `staging`   | `api.staging.edgedelta.com` | `chat.ai.staging.edgedelta.com` | `agent.ai.staging.edgedelta.com` |
-| `local`     | `localhost:4444` | `localhost:3001` | `localhost:3002` |
+| Environment | Main API | Chat (issues, threads, channels) | Agent (teammates) | Workflow (workflows, runs) |
+|-------------|----------|----------------------------------|-------------------|----------------------------|
+| `prod`      | `api.edgedelta.com` | `chat.ai.edgedelta.com` | `agent.ai.edgedelta.com` | `workflow.ai.edgedelta.com` |
+| `staging`   | `api.staging.edgedelta.com` | `chat.ai.staging.edgedelta.com` | `agent.ai.staging.edgedelta.com` | `workflow.ai.staging.edgedelta.com` |
+| `local`     | `localhost:4444` | `localhost:3001` | `localhost:3002` | `localhost:3010` |
 
 Switch environments with a profile, the `--env` flag, or `ED_ENV` — never by
 hand-editing a single base URL:
@@ -121,8 +121,8 @@ knobs to set; switching the environment moves every host together.
 
 Escape hatch (advanced): to point a single service at a non-standard deployment
 (a branch deploy, an odd local port) without disturbing the rest, set
-`ED_API_URL`, `ED_CHAT_URL` or `ED_AGENT_URL`. When set, each overrides only
-that service's host for the chosen environment.
+`ED_API_URL`, `ED_CHAT_URL`, `ED_AGENT_URL` or `ED_WORKFLOW_URL`. When set,
+each overrides only that service's host for the chosen environment.
 
 ## Output
 
@@ -208,6 +208,12 @@ edx ai connectors list
 edx ai connectors specs
 edx ai connectors update --file connector.json
 edx ai activity
+edx ai workflows list                               # AI Team workflows
+edx ai workflows get <workflow-id>                  # node graph in "content"
+edx ai workflows run <workflow-id>                  # manual run, streams progress
+edx ai workflows run <workflow-id> --input '{"alert":"cpu high"}'
+edx ai workflows runs list <workflow-id>            # run history
+edx ai workflows runs steps <workflow-id> <execution-id>   # per-node step records
 
 # --- Config inspection -------------------------------------------------------
 edx config path                                     # where config.yaml lives

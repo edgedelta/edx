@@ -181,7 +181,7 @@ func TestVerifyAuth(t *testing.T) {
 		w.Write([]byte(`[]`))
 	}))
 	defer ok.Close()
-	c := api.New(ok.URL, ok.URL, ok.URL, "org", &api.Auth{APIToken: "t"}, 2*time.Second)
+	c := api.New(ok.URL, ok.URL, ok.URL, ok.URL, "org", &api.Auth{APIToken: "t"}, 2*time.Second)
 	if err := verifyAuth(context.Background(), c); err != nil {
 		t.Errorf("200 response should verify, got %v", err)
 	}
@@ -190,7 +190,7 @@ func TestVerifyAuth(t *testing.T) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 	}))
 	defer unauth.Close()
-	c = api.New(unauth.URL, unauth.URL, unauth.URL, "org", &api.Auth{APIToken: "t"}, 2*time.Second)
+	c = api.New(unauth.URL, unauth.URL, unauth.URL, unauth.URL, "org", &api.Auth{APIToken: "t"}, 2*time.Second)
 	if err := verifyAuth(context.Background(), c); err == nil {
 		t.Error("401 response should fail verification")
 	}

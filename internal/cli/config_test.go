@@ -41,6 +41,9 @@ func TestConfigViewFromResolveWithOverrides(t *testing.T) {
 	if v.ChatURL != "https://chat.ai.staging.edgedelta.com" {
 		t.Errorf("env should drive hosts: %+v", v)
 	}
+	if v.WorkflowURL != "https://workflow.ai.staging.edgedelta.com" {
+		t.Errorf("workflow host should be shown: %+v", v)
+	}
 	if v.APIToken != "(not set)" {
 		t.Errorf("unset token should be %q, got %q", "(not set)", v.APIToken)
 	}

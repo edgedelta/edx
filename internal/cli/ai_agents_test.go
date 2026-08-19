@@ -17,6 +17,7 @@ import (
 type capturedReq struct {
 	method string
 	path   string
+	query  string
 	body   []byte
 	hits   int
 }
