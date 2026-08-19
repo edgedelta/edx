@@ -18,6 +18,7 @@ type configView struct {
 	APIURL            string `json:"api_url"`
 	ChatURL           string `json:"chat_url"`
 	AgentURL          string `json:"agent_url"`
+	WorkflowURL       string `json:"workflow_url"`
 	OrgID             string `json:"org_id"`
 	APIToken          string `json:"api_token"`
 	OAuthClientID     string `json:"oauth_client_id"`
@@ -36,6 +37,7 @@ func newConfigView(r *config.Resolved) configView {
 		APIURL:            r.APIURL,
 		ChatURL:           r.ChatURL,
 		AgentURL:          r.AgentURL,
+		WorkflowURL:       r.WorkflowURL,
 		OrgID:             r.OrgID,
 		APIToken:          maskToken(r.APIToken),
 		OAuthClientID:     maskToken(r.OAuthClientID),

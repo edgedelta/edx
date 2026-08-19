@@ -21,9 +21,10 @@ func newAICmd() *cobra.Command {
 		Long: `Manage the AI Teammate product.
 
 Most AI Teammate data lives on dedicated service hosts, not the main API:
-  issues, threads, channels   chat service   (chat.ai.edgedelta.com)
-  teammates, knowledge graph  agent service  (agent.ai.edgedelta.com)
-  connectors, activity        main API       (api.edgedelta.com)
+  issues, threads, channels   chat service      (chat.ai.edgedelta.com)
+  teammates, knowledge graph  agent service     (agent.ai.edgedelta.com)
+  workflows, runs             workflow service  (workflow.ai.edgedelta.com)
+  connectors, activity        main API          (api.edgedelta.com)
 
 The active environment (prod, staging or local) selects which hosts are used,
 so "edx --env staging ai issues list" hits the staging chat service.`,
@@ -36,6 +37,7 @@ so "edx --env staging ai issues list" hits the staging chat service.`,
 		newAIConnectorsCmd(),
 		newAIActivityCmd(),
 		newAIKnowledgeCmd(),
+		newAIWorkflowsCmd(),
 	)
 	return cmd
 }

@@ -29,17 +29,21 @@ const (
 	// ServiceAgent is the AI Teammate agent service (agent.ai.edgedelta.com):
 	// teammates (agents) and their versions.
 	ServiceAgent
+	// ServiceWorkflow is the AI Team workflow service
+	// (workflow.ai.edgedelta.com): workflows, runs (executions) and revisions.
+	ServiceWorkflow
 )
 
 // Client talks to the Edge Delta services. Per-request authentication is
 // delegated to Auth, which selects an API token or an OAuth Bearer JWT
 // depending on the profile and the target endpoint.
 type Client struct {
-	// BaseURL is the main API host; ChatURL and AgentURL are the AI Teammate
-	// service hosts. All share the /v1/orgs/{org_id} path prefix.
-	BaseURL  string
-	ChatURL  string
-	AgentURL string
+	// BaseURL is the main API host; ChatURL, AgentURL and WorkflowURL are the
+	// AI Teammate service hosts. All share the /v1/orgs/{org_id} path prefix.
+	BaseURL     string
+	ChatURL     string
+	AgentURL    string
+	WorkflowURL string
 
 	OrgID string
 	Auth  *Auth
@@ -51,10 +55,10 @@ type Client struct {
 	MaxRetries int
 }
 
-// New builds a client with sane transport defaults. apiURL, chatURL and
-// agentURL are the base URLs for the main API and the AI Teammate services;
-// auth carries the credentials.
-func New(apiURL, chatURL, agentURL, orgID string, auth *Auth, timeout time.Duration) *Client {
+// New builds a client with sane transport defaults. apiURL, chatURL, agentURL
+// and workflowURL are the base URLs for the main API and the AI Teammate
+// services; auth carries the credentials.
+func New(apiURL, chatURL, agentURL, workflowURL, orgID string, auth *Auth, timeout time.Duration) *Client {
 	transport := &http.Transport{
 		Proxy: http.ProxyFromEnvironment,
 		DialContext: (&net.Dialer{
@@ -72,14 +76,15 @@ func New(apiURL, chatURL, agentURL, orgID string, auth *Auth, timeout time.Durat
 		auth = &Auth{}
 	}
 	return &Client{
-		BaseURL:    strings.TrimRight(apiURL, "/"),
-		ChatURL:    strings.TrimRight(chatURL, "/"),
-		AgentURL:   strings.TrimRight(agentURL, "/"),
-		OrgID:      orgID,
-		Auth:       auth,
-		HTTP:       &http.Client{Transport: transport, Timeout: timeout},
-		UserAgent:  "edx",
-		MaxRetries: 3,
+		BaseURL:     strings.TrimRight(apiURL, "/"),
+		ChatURL:     strings.TrimRight(chatURL, "/"),
+		AgentURL:    strings.TrimRight(agentURL, "/"),
+		WorkflowURL: strings.TrimRight(workflowURL, "/"),
+		OrgID:       orgID,
+		Auth:        auth,
+		HTTP:        &http.Client{Transport: transport, Timeout: timeout},
+		UserAgent:   "edx",
+		MaxRetries:  3,
 	}
 }
 
@@ -90,6 +95,8 @@ func (c *Client) baseFor(svc Service) string {
 		return c.ChatURL
 	case ServiceAgent:
 		return c.AgentURL
+	case ServiceWorkflow:
+		return c.WorkflowURL
 	default:
 		return c.BaseURL
 	}
@@ -256,4 +263,46 @@ func (c *Client) PutFrom(ctx context.Context, svc Service, orgRelPath string, qu
 // DeleteFrom performs a DELETE against an org-relative path on the named service.
 func (c *Client) DeleteFrom(ctx context.Context, svc Service, orgRelPath string, query url.Values, body []byte) ([]byte, error) {
 	return c.DoOn(ctx, svc, http.MethodDelete, c.OrgPath(orgRelPath), query, body)
+}
+
+// StreamFrom performs a request against an org-relative path on the named
+// service and returns the response body as a stream (for Server-Sent Events
+// endpoints such as the workflow manual run). Unlike DoOn it does not retry —
+// the request may have side effects — and it ignores the client's HTTP
+// timeout, since a stream legitimately outlives it; cancel via ctx instead.
+// The caller must Close the returned body.
+func (c *Client) StreamFrom(ctx context.Context, svc Service, method, orgRelPath string, query url.Values, body []byte) (io.ReadCloser, error) {
+	path := c.OrgPath(orgRelPath)
+	u := c.baseFor(svc) + path
+	if len(query) > 0 {
+		u += "?" + query.Encode()
+	}
+	var reader io.Reader
+	if body != nil {
+		reader = bytes.NewReader(body)
+	}
+	req, err := http.NewRequestWithContext(ctx, method, u, reader)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
+	req.Header.Set("User-Agent", c.UserAgent)
+	if err := c.Auth.apply(ctx, req, svc, path); err != nil {
+		return nil, err
+	}
+
+	// A dedicated client without the overall timeout: http.Client.Timeout
+	// bounds the whole body read, which would kill a long-running stream.
+	streamClient := &http.Client{Transport: c.HTTP.Transport}
+	resp, err := streamClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		return nil, &Error{Status: resp.StatusCode, Method: method, URL: u, Body: string(respBody)}
+	}
+	return resp.Body, nil
 }

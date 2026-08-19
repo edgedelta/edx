@@ -170,7 +170,7 @@ func extractRows(v any, depth int) []map[string]any {
 		}
 		return rows
 	case map[string]any:
-		for _, key := range []string{"items", "stats", "records", "data", "agents", "deployments", "spans", "traces", "monitors", "dashboards", "options", "rehydrations", "potential_rehydrations"} {
+		for _, key := range []string{"items", "stats", "records", "data", "agents", "deployments", "spans", "traces", "monitors", "dashboards", "options", "rehydrations", "potential_rehydrations", "workflows", "executions", "steps"} {
 			if inner, ok := t[key]; ok {
 				if rows := extractRows(inner, depth+1); rows != nil {
 					return rows

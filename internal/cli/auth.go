@@ -124,7 +124,7 @@ func newAuthLoginCmd() *cobra.Command {
 				if v := os.Getenv(config.EnvAPIURL); v != "" {
 					apiURL = v
 				}
-				c := api.New(apiURL, eps.Chat, eps.Agent, orgID, &api.Auth{SessionCookie: cookie}, flagTimeout)
+				c := api.New(apiURL, eps.Chat, eps.Agent, eps.Workflow, orgID, &api.Auth{SessionCookie: cookie}, flagTimeout)
 				q := url.Values{}
 				q.Set("scope", "log")
 				if _, err := c.Get(cmdContext(cmd), "/facet_keys", q); err != nil {

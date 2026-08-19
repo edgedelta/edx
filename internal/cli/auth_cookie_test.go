@@ -16,7 +16,7 @@ func clearEnv(t *testing.T) {
 	t.Helper()
 	for _, e := range []string{
 		config.EnvAPIToken, config.EnvOrgID, config.EnvEnv, config.EnvProfile,
-		config.EnvAPIURL, config.EnvChatURL, config.EnvAgentURL,
+		config.EnvAPIURL, config.EnvChatURL, config.EnvAgentURL, config.EnvWorkflowURL,
 	} {
 		t.Setenv(e, "")
 	}

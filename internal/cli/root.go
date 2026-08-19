@@ -154,7 +154,7 @@ func clientFromResolved(r *config.Resolved) (*api.Client, error) {
 			APIDomain:     hostOf(r.APIURL),
 			CookieJWT:     newCookieJWTSource(r.APIURL, r.SessionCookie, flagTimeout),
 		}
-		return api.New(r.APIURL, r.ChatURL, r.AgentURL, r.OrgID, auth, flagTimeout), nil
+		return api.New(r.APIURL, r.ChatURL, r.AgentURL, r.WorkflowURL, r.OrgID, auth, flagTimeout), nil
 	}
 	if r.APIToken == "" && !r.UsesOAuth() {
 		return nil, fmt.Errorf("no credentials configured: run `edx auth login --token <token> --org-id <org>` (or `--oauth`), or set %s", config.EnvAPIToken)
@@ -167,7 +167,7 @@ func clientFromResolved(r *config.Resolved) (*api.Client, error) {
 		expiry, _ := time.Parse(time.RFC3339, r.OAuthExpiry)
 		auth.OAuth = newOAuthTokenSource(r, expiry)
 	}
-	return api.New(r.APIURL, r.ChatURL, r.AgentURL, r.OrgID, auth, flagTimeout), nil
+	return api.New(r.APIURL, r.ChatURL, r.AgentURL, r.WorkflowURL, r.OrgID, auth, flagTimeout), nil
 }
 
 // hostOf returns the bare host (host:port) of a URL, used as X-ED-API-Domain.
