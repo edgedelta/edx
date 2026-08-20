@@ -4,8 +4,86 @@ import (
 	"archive/tar"
 	"bytes"
 	"compress/gzip"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"slices"
 	"testing"
+
+	"github.com/edgedelta/edx/internal/skills"
 )
+
+func TestUpdateCmdHasUpgradeAlias(t *testing.T) {
+	cmd := newUpdateCmd()
+	if !slices.Contains(cmd.Aliases, "upgrade") {
+		t.Errorf("update command aliases = %v, want to include %q", cmd.Aliases, "upgrade")
+	}
+	// The passive startup notice suppresses itself by cmd.Name(); the alias must
+	// not change the name, or `edx upgrade` would print its own update banner.
+	if cmd.Name() != "update" {
+		t.Errorf("cmd.Name() = %q, want %q", cmd.Name(), "update")
+	}
+}
+
+func TestSkillsRefreshTargets(t *testing.T) {
+	names, err := skills.Names(skills.Embedded())
+	if err != nil || len(names) == 0 {
+		t.Fatalf("embedded skills: %v (%d)", err, len(names))
+	}
+	home := filepath.FromSlash("/home/u")
+	claudeSkill := filepath.Join(home, ".claude", "skills", names[0])
+
+	// Only the claude root has an embedded skill installed.
+	got := skillsRefreshTargets(home, func(p string) bool { return p == claudeSkill })
+	if len(got) != 1 || got[0].Name != "claude" {
+		t.Errorf("targets = %v, want [claude]", got)
+	}
+
+	// Nothing installed anywhere: no targets, so update never touches skills.
+	if got := skillsRefreshTargets(home, func(string) bool { return false }); len(got) != 0 {
+		t.Errorf("targets = %v, want none", got)
+	}
+}
+
+func TestSkillsStale(t *testing.T) {
+	fsys := skills.Embedded()
+	names, err := skills.Names(fsys)
+	if err != nil || len(names) == 0 {
+		t.Fatalf("embedded skills: %v (%d)", err, len(names))
+	}
+	name := names[0]
+	root := t.TempDir()
+
+	// Not installed at all: not stale.
+	if skillsStale(fsys, root, names) {
+		t.Error("empty root reported stale")
+	}
+
+	// Installed copy matches the embedded one: not stale.
+	embedded, err := fs.ReadFile(fsys, name+"/SKILL.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(root, name)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	skillMD := filepath.Join(dir, "SKILL.md")
+	if err := os.WriteFile(skillMD, embedded, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if skillsStale(fsys, root, names) {
+		t.Error("matching install reported stale")
+	}
+
+	// Installed copy differs (older release): stale.
+	if err := os.WriteFile(skillMD, []byte("old contents"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if !skillsStale(fsys, root, names) {
+		t.Error("differing install not reported stale")
+	}
+}
 
 func TestParseSemver(t *testing.T) {
 	cases := []struct {

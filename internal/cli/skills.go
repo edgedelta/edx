@@ -96,8 +96,9 @@ func newSkillsInstallCmd() *cobra.Command {
 
 func newSkillsUpdateCmd() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "update [platform|all]",
-		Short: "Re-install skills, overwriting the previously installed copies",
+		Use:     "update [platform|all]",
+		Aliases: []string{"upgrade"},
+		Short:   "Re-install skills, overwriting the previously installed copies",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSkillsInstall(args, true)
