@@ -73,6 +73,16 @@ brews:
       email: release-bot@edgedelta.com
     install: |
       bin.install "edx"
+    # Runs after install, upgrade and reinstall. Installs/refreshes the agent
+    # skills for the coding assistants present on this machine, so a fresh
+    # `brew install edx` is agent-ready and a plain `brew upgrade edx` (which
+    # bypasses `edx update`) never leaves stale skills behind. Best-effort:
+    # Ruby's `system` does not raise on a non-zero exit, so a machine with no
+    # assistant just prints edx's "could not detect" note and the install
+    # still succeeds. `--yes` is required — post_install has no interactive
+    # stdin, so the confirm prompt would otherwise silently decline.
+    post_install: |
+      system bin/"edx", "skills", "install", "--yes"
     test: |
       assert_match version.to_s, shell_output("#{bin}/edx version")
     # Shown after `brew install` and in `brew info`. Kept free of backslashes:
@@ -84,6 +94,10 @@ brews:
       Get started:
         edx auth login      # sign in (opens your browser)
         edx --help          # explore commands
+
+      Agent skills for detected coding assistants were installed automatically.
+        edx skills list     # see them
+        edx skills install  # re-run detection (e.g. after installing an assistant)
 
       Docs: https://github.com/edgedelta/edx
 
