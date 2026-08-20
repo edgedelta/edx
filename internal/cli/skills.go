@@ -5,16 +5,28 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
+	"github.com/edgedelta/edx/internal/config"
 	"github.com/edgedelta/edx/internal/skills"
 )
 
 var (
 	flagSkillProject bool
 	flagSkillName    string
+)
+
+const (
+	// envNoSkillsOffer disables the one-time first-run skills offer.
+	envNoSkillsOffer = "EDX_NO_SKILLS_OFFER"
+
+	// skillsOfferFile marks that the first-run offer was answered, so it is
+	// never repeated. Lives in the state dir next to the update-check cache.
+	skillsOfferFile = "skills-offer.json"
 )
 
 func newSkillsCmd() *cobra.Command {
@@ -99,7 +111,7 @@ func newSkillsUpdateCmd() *cobra.Command {
 		Use:     "update [platform|all]",
 		Aliases: []string{"upgrade"},
 		Short:   "Re-install skills, overwriting the previously installed copies",
-		Args:  cobra.MaximumNArgs(1),
+		Args:    cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			return runSkillsInstall(args, true)
 		},
@@ -200,6 +212,127 @@ func resolvePlatforms(args []string) ([]skills.Platform, error) {
 func dirExists(path string) bool {
 	fi, err := os.Stat(path)
 	return err == nil && fi.IsDir()
+}
+
+// --- first-run offer ---------------------------------------------------------
+
+// maybeOfferSkillsInstall offers, once, to install the embedded agent skills
+// when a coding assistant is present but no skills are. Package managers can't
+// do this at install time (Homebrew's post_install runs sandboxed with a fake
+// HOME), so edx offers it the first time a human runs it — which also covers
+// go install and curl installs. Safe for automation: it only fires when both
+// stdin and stderr are TTYs, so agent, CI and piped callers never see it.
+func maybeOfferSkillsInstall(cmd *cobra.Command) {
+	if os.Getenv(envNoSkillsOffer) != "" {
+		return
+	}
+	if !fileIsTTY(os.Stderr) || !fileIsTTY(os.Stdin) {
+		return
+	}
+	if !skillsOfferApplies(cmd.CommandPath()) {
+		return
+	}
+	if skillsOfferAnswered() {
+		return
+	}
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	// Skills already installed somewhere: nothing to offer.
+	if len(skillsRefreshTargets(home, dirExists)) > 0 {
+		return
+	}
+	detected := skills.Installed(home, dirExists)
+	if len(detected) == 0 {
+		// No assistant on this machine yet. Stay silent and leave the offer
+		// open: installing one later makes a future run ask.
+		return
+	}
+
+	names := make([]string, len(detected))
+	for i, p := range detected {
+		names[i] = p.Name
+	}
+	fmt.Fprintf(os.Stderr, "edx ships agent skills that teach %s how to drive it.\n", strings.Join(names, ", "))
+	accepted := confirmDefaultYes("Install them now? (later: edx skills install)")
+	markSkillsOfferAnswered(accepted)
+	if !accepted {
+		return
+	}
+	installSkillsQuietly(home, detected)
+}
+
+// skillsOfferApplies reports whether the first-run offer may precede this
+// command. Skills commands manage skills explicitly, and meta commands must
+// stay noise-free (matching maybeNotifyUpdate's skip list).
+func skillsOfferApplies(commandPath string) bool {
+	fields := strings.Fields(commandPath)
+	if len(fields) < 2 {
+		return false // bare `edx` just prints help
+	}
+	switch fields[1] {
+	case "skills", "update", "version", "help", "completion", "__complete", "__completeNoDesc":
+		return false
+	}
+	return true
+}
+
+// installSkillsQuietly installs every embedded skill for the given platforms,
+// printing one summary line per platform. Failures warn with the manual
+// command instead of failing the user's actual command.
+func installSkillsQuietly(home string, plats []skills.Platform) {
+	fsys := skills.Embedded()
+	names, err := skills.Names(fsys)
+	if err != nil {
+		return
+	}
+	for _, p := range plats {
+		root := p.SkillsRoot(home, false)
+		total := 0
+		for _, n := range names {
+			written, err := skills.Install(fsys, n, root)
+			if err != nil {
+				warnf("failed to install %s skills (%v) — run `edx skills install %s`", p.Name, err, p.Name)
+				total = -1
+				break
+			}
+			total += written
+		}
+		if total >= 0 {
+			fmt.Fprintf(os.Stderr, "%s installed %d %s skill(s) (%d files) -> %s\n", okMark(), len(names), p.Name, total, root)
+		}
+	}
+}
+
+// skillsOfferAnswered reports whether the first-run offer was already made.
+func skillsOfferAnswered() bool {
+	dir, err := config.StateDir()
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(filepath.Join(dir, skillsOfferFile))
+	return err == nil
+}
+
+// markSkillsOfferAnswered records the answer so the offer never repeats.
+// Declining is remembered too: `edx skills install` stays the way back in.
+func markSkillsOfferAnswered(accepted bool) {
+	dir, err := config.StateDir()
+	if err != nil {
+		return
+	}
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return
+	}
+	data, err := json.Marshal(struct {
+		AnsweredAt time.Time `json:"answered_at"`
+		Accepted   bool      `json:"accepted"`
+	}{time.Now().UTC(), accepted})
+	if err != nil {
+		return
+	}
+	_ = os.WriteFile(filepath.Join(dir, skillsOfferFile), data, 0o600)
 }
 
 // selectSkillNames returns the skills to install, honoring --name.
