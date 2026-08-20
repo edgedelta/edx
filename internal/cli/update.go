@@ -564,7 +564,7 @@ func syncSkillsIfStale() {
 			total += written
 		}
 		if total >= 0 {
-			fmt.Fprintf(os.Stderr, "%s refreshed stale %s skills: %d file(s) -> %s\n", okMark(), p.Name, total, root)
+			fmt.Fprintf(os.Stderr, "%s refreshed %d stale %s skill(s) (%d files) -> %s\n", okMark(), len(names), p.Name, total, root)
 		}
 	}
 }
