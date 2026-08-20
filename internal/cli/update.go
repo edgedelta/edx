@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"os/exec"
@@ -21,6 +22,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/edgedelta/edx/internal/config"
+	"github.com/edgedelta/edx/internal/skills"
 )
 
 const (
@@ -56,14 +58,20 @@ type ghRelease struct {
 func newUpdateCmd() *cobra.Command {
 	var checkOnly bool
 	cmd := &cobra.Command{
-		Use:   "update",
-		Short: "Update edx to the latest release",
+		Use:     "update",
+		Aliases: []string{"upgrade"},
+		Short:   "Update edx to the latest release",
 		Long: `Update edx to the latest published release.
 
 edx checks GitHub for the newest release and, if you are behind, replaces the
 running binary in place after verifying the download against the release
 checksums. Homebrew installs are upgraded with "brew upgrade" instead, so the
 package manager stays in charge of its own files.
+
+Skills previously installed with "edx skills install" are embedded in the
+binary, so after a successful update they are refreshed automatically to match
+the new version (user-global installs only; --project installs are left
+alone). Locations edx never installed into are never touched.
 
 Use --check to only report whether an update is available, without installing.`,
 		Args: cobra.NoArgs,
@@ -89,6 +97,12 @@ func runUpdate(ctx context.Context, checkOnly bool) error {
 	}
 	if !isNewer(rel.TagName, Version) {
 		fmt.Fprintf(os.Stderr, "%s edx is up to date (%s)\n", okMark(), Version)
+		// The binary is current, so its embedded skills are too: repair any
+		// installed copies that fell behind (e.g. after a direct `brew upgrade
+		// edx`, which never refreshes them).
+		if !checkOnly {
+			syncSkillsIfStale()
+		}
 		return nil
 	}
 
@@ -102,13 +116,24 @@ func runUpdate(ctx context.Context, checkOnly bool) error {
 	// Homebrew installs must go through brew, not have their symlinked binary
 	// swapped out from under the package manager.
 	if _, ok := homebrewInstall(); ok {
-		return updateViaHomebrew(ctx)
+		upgraded, err := updateViaHomebrew(ctx)
+		if err != nil {
+			return err
+		}
+		if upgraded {
+			refreshSkillsAfterUpdate(ctx)
+		}
+		return nil
 	}
 
 	if !confirm(fmt.Sprintf("Update edx to %s now?", newVer)) {
 		return fmt.Errorf("update cancelled")
 	}
-	return selfReplace(ctx, rel)
+	if err := selfReplace(ctx, rel); err != nil {
+		return err
+	}
+	refreshSkillsAfterUpdate(ctx)
+	return nil
 }
 
 // maybeNotifyUpdate prints a one-line "update available" hint to stderr when a
@@ -298,25 +323,28 @@ func homebrewInstall() (string, bool) {
 	return "", false
 }
 
-func updateViaHomebrew(ctx context.Context) error {
+// updateViaHomebrew upgrades edx through brew. upgraded reports whether the
+// binary was actually replaced (false when brew is missing and only
+// instructions were printed).
+func updateViaHomebrew(ctx context.Context) (upgraded bool, err error) {
 	brew, err := exec.LookPath("brew")
 	if err != nil {
 		notef("this is a Homebrew install; upgrade it with:")
 		fmt.Fprintln(os.Stderr, "  brew update && brew upgrade edx")
-		return nil
+		return false, nil
 	}
 	if !confirm("Run `brew upgrade edx` now?") {
-		return fmt.Errorf("update cancelled")
+		return false, fmt.Errorf("update cancelled")
 	}
 	for _, args := range [][]string{{"update"}, {"upgrade", "edx"}} {
 		c := exec.CommandContext(ctx, brew, args...)
 		c.Stdout, c.Stderr, c.Stdin = os.Stderr, os.Stderr, os.Stdin
 		if err := c.Run(); err != nil {
-			return fmt.Errorf("brew %s failed: %w", strings.Join(args, " "), err)
+			return false, fmt.Errorf("brew %s failed: %w", strings.Join(args, " "), err)
 		}
 	}
 	fmt.Fprintf(os.Stderr, "%s edx upgraded via Homebrew\n", okMark())
-	return nil
+	return true, nil
 }
 
 // --- self-replacement -------------------------------------------------------
@@ -446,6 +474,120 @@ func checksumFor(sums, name string) string {
 		}
 	}
 	return ""
+}
+
+// --- skills refresh ----------------------------------------------------------
+
+// The skills edx installs (`edx skills install`) are embedded in the binary,
+// so a binary update leaves previously installed copies stale. After an
+// update, the platforms a previous install wrote to are refreshed; platforms
+// the user never installed into are never touched. Only user-global installs
+// are tracked — project-level installs (--project) live in arbitrary
+// directories edx cannot find again.
+
+// skillsRefreshTargets returns the platforms whose user-global skills
+// directory contains at least one embedded skill, i.e. the places a previous
+// `edx skills install` wrote to. dirExists is injected for tests.
+func skillsRefreshTargets(home string, dirExists func(string) bool) []skills.Platform {
+	names, err := skills.Names(skills.Embedded())
+	if err != nil {
+		return nil
+	}
+	var out []skills.Platform
+	for _, p := range skills.Platforms {
+		root := p.SkillsRoot(home, false)
+		for _, n := range names {
+			if dirExists(filepath.Join(root, n)) {
+				out = append(out, p)
+				break
+			}
+		}
+	}
+	return out
+}
+
+// refreshSkillsAfterUpdate re-installs previously installed skills after the
+// binary has been replaced. The running process still embeds the OLD skills,
+// so it re-execs the freshly installed binary to write the new ones.
+// Best-effort: the binary update already succeeded, so failures only warn.
+func refreshSkillsAfterUpdate(ctx context.Context) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	targets := skillsRefreshTargets(home, dirExists)
+	if len(targets) == 0 {
+		return
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		warnf("installed skills were not refreshed (%v) — run `edx skills update`", err)
+		return
+	}
+	notef("refreshing installed skills to match the new version")
+	for _, p := range targets {
+		c := exec.CommandContext(ctx, exe, "skills", "update", p.Name, "--yes")
+		c.Stdout, c.Stderr = os.Stderr, os.Stderr
+		if err := c.Run(); err != nil {
+			warnf("failed to refresh %s skills (%v) — run `edx skills update %s`", p.Name, err, p.Name)
+		}
+	}
+}
+
+// syncSkillsIfStale repairs installed skills that no longer match this
+// (already current) binary — e.g. after a direct `brew upgrade edx`, which
+// never refreshes them. Unlike refreshSkillsAfterUpdate this runs in-process:
+// the running binary embeds the correct skills.
+func syncSkillsIfStale() {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return
+	}
+	fsys := skills.Embedded()
+	names, err := skills.Names(fsys)
+	if err != nil {
+		return
+	}
+	for _, p := range skillsRefreshTargets(home, dirExists) {
+		root := p.SkillsRoot(home, false)
+		if !skillsStale(fsys, root, names) {
+			continue
+		}
+		total := 0
+		for _, n := range names {
+			written, err := skills.Install(fsys, n, root)
+			if err != nil {
+				warnf("failed to refresh %s skills (%v) — run `edx skills update %s`", p.Name, err, p.Name)
+				total = -1
+				break
+			}
+			total += written
+		}
+		if total >= 0 {
+			fmt.Fprintf(os.Stderr, "%s refreshed stale %s skills: %d file(s) -> %s\n", okMark(), p.Name, total, root)
+		}
+	}
+}
+
+// skillsStale reports whether any embedded skill installed under root differs
+// from this binary's copy, by comparing SKILL.md contents. Skills that are not
+// installed at all are not evidence of staleness — the user may have removed
+// them on purpose.
+func skillsStale(fsys fs.FS, root string, names []string) bool {
+	for _, n := range names {
+		installed, err := os.ReadFile(filepath.Join(root, n, "SKILL.md"))
+		if err != nil {
+			continue
+		}
+		embedded, err := fs.ReadFile(fsys, n+"/SKILL.md")
+		if err != nil {
+			continue
+		}
+		if !bytes.Equal(installed, embedded) {
+			return true
+		}
+	}
+	return false
 }
 
 // extractBinary returns the file named name from a gzipped tarball.
