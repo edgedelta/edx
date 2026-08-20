@@ -1,19 +1,20 @@
 ---
 name: ed-ai-teammate
-description: AI Teammate - manage connectors (PagerDuty, Slack, GitHub, ...), update teammates (agents), view teammate activity and query the knowledge graph.
+description: AI Teammate - manage connectors (PagerDuty, Slack, GitHub, ...), update teammates (agents), view teammate activity, query the knowledge graph and inspect/run AI workflows.
 metadata:
   version: "1.0.0"
   author: edgedelta
   repository: https://github.com/edgedelta/agent-skills
-  tags: edgedelta,ai,teammate,connectors
+  tags: edgedelta,ai,teammate,connectors,workflows
   alwaysApply: "false"
 ---
 
 # Edge Delta AI Teammate
 
 The AI Teammate ingests signals from connected tools (PagerDuty, Slack,
-GitHub, ...) and acts on them. This skill manages those **connectors** and
-inspects teammate **activity**.
+GitHub, ...) and acts on them. This skill manages those **connectors**,
+inspects teammate **activity** and **workflows**, and queries the
+**knowledge graph**.
 
 ## Prerequisites
 
@@ -115,6 +116,34 @@ Caveat: `criticality` returns `"basis": "degree"` when the org has few
 dependency edges; blast-radius quality grows with the graph's DEPENDS_ON /
 RUNS_ON / USES coverage.
 
+## Workflows (read + run)
+
+AI Team workflows are node graphs (Start, Task, Action, If/Else, Transform,
+Wait) built in the web app under AI Team > Workflows. edx can inspect them,
+read their run history and trigger manual runs; editing the graph
+(create/update/delete, revisions, deploy) stays in the web app.
+
+```bash
+edx ai workflows list --output table --columns workflowId,displayName,status
+edx ai workflows get <workflow-id>          # node graph is a JSON string in "content"
+edx ai workflows runs list <workflow-id>    # run history, newest first
+edx ai workflows runs get <workflow-id> <execution-id>
+edx ai workflows runs steps <workflow-id> <execution-id>   # per-node step records
+edx ai workflows run <workflow-id> --input '{"alert":"cpu high"}'
+```
+
+- `run` triggers a manual run and streams progress as one JSON line per event
+  until the run finishes; it exits non-zero when the run reports an error.
+  Runs can take minutes — Ctrl-C stops watching, the run itself keeps going
+  server-side.
+- **A run executes the workflow's real actions** (emails, channel messages,
+  Jira/PagerDuty updates). Confirm with the user before triggering one.
+- `--input` takes inline JSON, a plain string, or `@file` / `@-` (stdin);
+  default `{}`. Nodes reference it as `data` in their templates.
+- Run stats shown in the web app (total runs, success rate, avg runtime) are
+  metrics, not an API: query `ed.oncall.ai.workflow_execution.count` and
+  `ed.oncall.ai.workflow_execution.duration` with `edx metrics query`.
+
 ## Add or Update a Connector
 
 1. Find the connector type and its required fields:
@@ -150,3 +179,4 @@ edx ai connectors delete --file connector.json --yes
 | Unknown required fields | `edx ai connectors specs` is the source of truth |
 | Credential errors | Re-apply with `edx ai connectors update --file` and fresh secrets |
 | Teammate update rejected (4xx) | Re-fetch with `edx ai agents get <id>`, edit only the `data` fields, re-apply |
+| Workflow run fails with "Workflow not active" | The workflow's status is `inactive`; activate it in the web app |
