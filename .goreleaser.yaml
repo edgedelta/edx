@@ -85,6 +85,10 @@ brews:
         edx auth login      # sign in (opens your browser)
         edx --help          # explore commands
 
+      On first run, edx offers to install agent skills for the coding
+      assistants on this machine. Or install them any time:
+        edx skills install
+
       Docs: https://github.com/edgedelta/edx
 
 release:

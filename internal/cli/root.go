@@ -98,10 +98,12 @@ EXAMPLES
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		// Runs before every subcommand: prints an unobtrusive "update available"
-		// hint on an interactive terminal. It never prompts and returns silently
-		// for non-TTY (AI/CI/piped) callers, so it can never block automation.
+		// hint on an interactive terminal, and makes the one-time first-run
+		// offer to install agent skills. Both return silently for non-TTY
+		// (AI/CI/piped) callers, so they can never block automation.
 		PersistentPreRun: func(cmd *cobra.Command, args []string) {
 			maybeNotifyUpdate(cmd)
+			maybeOfferSkillsInstall(cmd)
 		},
 	}
 
@@ -215,6 +217,27 @@ func confirm(prompt string) bool {
 	line, _ := reader.ReadString('\n')
 	line = strings.ToLower(strings.TrimSpace(line))
 	return line == "y" || line == "yes"
+}
+
+// confirmDefaultYes is confirm with an affirmative default: pressing Enter
+// accepts. For low-stakes offers where declining is the explicit choice.
+func confirmDefaultYes(prompt string) bool {
+	if flagYes {
+		return true
+	}
+	fmt.Fprintf(os.Stderr, "%s [Y/n]: ", prompt)
+	reader := bufio.NewReader(os.Stdin)
+	line, err := reader.ReadString('\n')
+	if err != nil && strings.TrimSpace(line) == "" {
+		// EOF or read error without an actual answer: silence is not consent.
+		// Only a real Enter keypress may take the affirmative default.
+		return false
+	}
+	switch strings.ToLower(strings.TrimSpace(line)) {
+	case "", "y", "yes":
+		return true
+	}
+	return false
 }
 
 // readFileOrStdin reads path, treating "-" as stdin.
