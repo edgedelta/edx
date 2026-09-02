@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"net/url"
 	"strconv"
 
@@ -89,16 +90,31 @@ func newAIKnowledgeTopologyCmd() *cobra.Command {
 }
 
 func newAIKnowledgeSearchCmd() *cobra.Command {
-	var types, source, namespaces, cursor string
+	var query, types, source, namespaces, cursor string
 	var minConfidence float64
 	var limit int
 	cmd := &cobra.Command{
 		Use:   "search <query>",
 		Short: "Search entities by name or alias",
-		Args:  cobra.ExactArgs(1),
+		Long: `Search knowledge graph entities by name or alias.
+
+The query is the positional argument; --query/-q is accepted as an
+equivalent spelling (matching logs/events/patterns search).`,
+		Example: `  edx ai knowledge search "payment service"
+  edx ai knowledge search --query "payment service" --types Service,Repo`,
+		Args: cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if len(args) == 1 {
+				if query != "" && query != args[0] {
+					return fmt.Errorf("query given twice (positional %q and --query %q); pass it once", args[0], query)
+				}
+				query = args[0]
+			}
+			if query == "" {
+				return fmt.Errorf("missing query: edx ai knowledge search <query> (or --query <query>)")
+			}
 			q := url.Values{}
-			q.Set("q", args[0])
+			q.Set("q", query)
 			if types != "" {
 				q.Set("types", types)
 			}
@@ -120,6 +136,7 @@ func newAIKnowledgeSearchCmd() *cobra.Command {
 			return kgGet(cmd, "/search", q)
 		},
 	}
+	cmd.Flags().StringVarP(&query, "query", "q", "", "search query (equivalent to the positional argument)")
 	cmd.Flags().StringVar(&types, "types", "", "comma-separated node types (Org, Integration, Service, Repo, Channel, JiraProject, PagerDutyService, AwsResource, Team, Person, Incident, Document)")
 	cmd.Flags().Float64Var(&minConfidence, "min-confidence", 0, "minimum confidence score (0..1)")
 	cmd.Flags().StringVar(&source, "source", "", "filter by provenance source")
