@@ -14,12 +14,10 @@ import (
 )
 
 // Cursor pagination is one convention across the API's list/search endpoints:
-// the response carries an array (under a per-endpoint key: items, states,
-// monitors, rehydrations) plus "next_cursor" — non-empty means more results
-// exist, "" means the result set is complete. runPaged is the shared tail for
-// every command on such an endpoint: a single page by default, with a
-// more-results hint on stderr so a lower-bound count is never silent, or a
-// complete sweep with --all.
+// an array under a per-endpoint key plus a cursor that is non-empty while more
+// results exist. pagedRequest is the shared tail for every such command: a
+// single page by default (with a more-results hint on stderr), or a complete
+// sweep with --all.
 
 // registerAllFlag adds the --all sweep flag to a cursor-paginated command.
 func registerAllFlag(cmd *cobra.Command, all *bool) {

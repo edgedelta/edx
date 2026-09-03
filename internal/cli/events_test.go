@@ -189,7 +189,7 @@ func TestEventsSearchAllMidSweepErrorEmitsNothing(t *testing.T) {
 }
 
 // A page that fails transiently (one 500) must be retried, not abort the
-// sweep: this is what a live 107-page staging sweep dies on otherwise.
+// sweep and throw away every page fetched so far.
 func TestEventsSearchAllRetriesTransientPageFailure(t *testing.T) {
 	quickRetries(t)
 	var hits int32
@@ -198,7 +198,7 @@ func TestEventsSearchAllRetriesTransientPageFailure(t *testing.T) {
 		switch {
 		case r.URL.Query().Get("cursor") == "":
 			_, _ = w.Write([]byte(`{"query_id":"x","items":[` + eventItems("a") + `],"next_cursor":"c1"}`))
-		case n == 2: // first attempt at page 2 fails like staging under load
+		case n == 2: // first attempt at page 2 fails
 			w.WriteHeader(http.StatusInternalServerError)
 			_, _ = w.Write([]byte(`{"Error":"Failed to query event search"}`))
 		default:
