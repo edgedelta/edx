@@ -20,11 +20,15 @@ The `edx` CLI must be installed and authenticated. See the **ed-edx** skill.
 ## Inspect
 
 ```bash
-edx monitors list --output table
+edx monitors list --all --output table # ALL monitors (plain list caps at the server's 50)
 edx monitors get <monitor-id>          # full definition: query, thresholds, notifications
-edx monitors states                    # current triggered/resolved states
+edx monitors states --all              # triggered/resolved states, complete
 edx monitors states -q 'monitor.status:"alert"'
 ```
+
+`monitors list` and `monitors states` are cursor-paginated like every list
+command (**ed-edx** > Pagination): without `--all`, the bare list returns one
+page of the server default 50, so a larger estate silently undercounts.
 
 ## Create / Update
 
@@ -93,11 +97,23 @@ edx monitors delete <monitor-id> --yes
 When an alert fires:
 
 1. `edx monitors get <id>` - what condition fired? what query?
-2. `edx events search -q 'event.domain:"Monitor Alerts"' --lookback 2h` -
+2. `edx events search -q 'event.domain:("Monitor" OR "Monitor Alerts")' --lookback 2h` -
    correlated alerts around the same time?
 3. Run the monitor's underlying query yourself with a wider window to see
    the trend (`edx logs graph` / `edx metrics query`).
 4. Pivot to the **ed-investigate** skill for full root-cause analysis.
+
+To see which monitors fire most, sweep monitor events over a wide window
+(**ed-events**) and count per monitor. Monitor identity in event records is
+under `resource`; `attributes` carries the evaluation detail
+(`ed.monitor.evaluated.value`, `ed.monitor.query`, ...):
+
+```bash
+edx events search -q 'event.domain:("Monitor" OR "Monitor Alerts")' \
+  --lookback 720h --all --output-file alerts-30d.json
+jq -r '.items[].resource | .["ed.monitor.id"] + "  " + .["event.name"]' \
+  alerts-30d.json | sort | uniq -c | sort -rn | head -20
+```
 
 ## Good Practices
 

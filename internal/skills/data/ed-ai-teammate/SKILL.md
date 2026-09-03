@@ -31,6 +31,11 @@ edx ai agents list                 # AI Teammates (agents); alias: edx ai teamma
 edx ai agents get <agent-id>       # a single teammate's full definition
 ```
 
+AI-service lists (`issues list/threads`, `channels list/messages`,
+`threads list/messages`, `workflows list`, `workflows runs list`) are
+cursor-paginated with a top-level `nextCursor`; all take `--cursor` and
+`--all` (**ed-edx** > Pagination).
+
 ## Update a Teammate (Agent)
 
 `edx ai agents update` prompts for confirmation unless `--yes`.
@@ -83,6 +88,7 @@ into logs and metrics.
 edx ai knowledge stats                    # node/edge counts by type + source, last sync
 edx ai knowledge topology --limit 500     # graph slice: nodes, edges, stats
 edx ai knowledge search "payment" --types Service   # find entities by name/alias
+edx ai knowledge search --query "payment" --types Service   # same thing
 edx ai knowledge get <entity-id>          # one entity + neighbors + edges
 edx ai knowledge subgraph <entity-id> --hops 2      # N-hop neighborhood
 edx ai knowledge blast-radius <entity-id> # downstream impact if it fails
@@ -93,8 +99,15 @@ edx ai knowledge criticality --limit 20   # most-depended-on entities
   `search` first; quote them (they contain `::` and may contain `/`).
 - Node types: Org, Integration, Service, Repo, Channel, JiraProject,
   PagerDutyService, AwsResource, Team, Person, Incident, Document.
+- `search` takes the query either positionally or as `--query`/`-q` — the two
+  are equivalent (requires `edx` >= 0.20.0; older builds are positional-only
+  and reject `--query` with `unknown flag`). Giving both is an error.
 - Filter flags: `--types` (csv), `--min-confidence` (0..1), `--source`,
-  `--namespaces topology,learned`. Search is cursor-paginated (`--cursor`).
+  `--namespaces topology,learned`. Search is cursor-paginated (`nextCursor`
+  inside `data`): pass it back as `--cursor`, or sweep with `--all`
+  (**ed-edx** > Pagination).
+- `topology` on a large org returns megabytes — use `--output-file` and parse
+  the file rather than stdout (see **ed-edx** > Large outputs).
 - All commands are read-only; graph writes happen via connector sync, not edx.
 
 Workflow examples:
@@ -102,7 +115,7 @@ Workflow examples:
 ```bash
 # What should this org monitor? Rank by dependency, then check coverage.
 edx ai knowledge criticality --limit 20
-edx monitors list
+edx monitors list --all
 
 # Who owns a service and where is it discussed?
 edx ai knowledge search "ingestion" --types Service

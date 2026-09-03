@@ -29,7 +29,7 @@ The `edx` CLI must be installed and authenticated. See the **ed-edx** skill.
 
 ```bash
 edx events search --from <start> --to <end> --output table
-edx events search -q 'event.domain:"Monitor"' --lookback 2h
+edx events search -q 'event.domain:("Monitor" OR "Monitor Alerts")' --lookback 2h
 ```
 
 Note affected services and event types. Monitor alerts carry the monitor ID:
