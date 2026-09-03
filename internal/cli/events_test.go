@@ -6,10 +6,13 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/edgedelta/edx/internal/config"
 )
 
 // eventsAPIServer serves /events/search, capturing each request's query and
@@ -238,5 +241,134 @@ func TestEventsSearchSinglePagePassesCursorThrough(t *testing.T) {
 	}
 	if v := got[0].Get("cursor"); v != "resume" {
 		t.Errorf("cursor = %q, want %q", v, "resume")
+	}
+}
+
+// The pagination convention is shared across the API with per-endpoint array
+// keys; --all must sweep those envelopes too, not just events' "items".
+func TestMonitorsStatesAllSweepsStatesEnvelope(t *testing.T) {
+	var got []url.Values
+	srv := eventsAPIServer(t, &got, map[string]string{
+		"":   `{"states":[{"id":"s1"},{"id":"s2"}],"next_cursor":"c1","previous_cursor":""}`,
+		"c1": `{"states":[{"id":"s3"}],"next_cursor":"","previous_cursor":"c0"}`,
+	})
+	defer srv.Close()
+	useAPIEnv(t, srv.URL)
+
+	stdout := captureStdout(t, func() {
+		if err := runEdx(t, "monitors", "states", "--all"); err != nil {
+			t.Errorf("monitors states --all: %v", err)
+		}
+	})
+	var merged struct {
+		States     []map[string]any `json:"states"`
+		Pages      int              `json:"pages"`
+		TotalItems int              `json:"total_items"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &merged); err != nil {
+		t.Fatalf("merged output is not valid JSON: %v\n%s", err, stdout)
+	}
+	if merged.Pages != 2 || merged.TotalItems != 3 || len(merged.States) != 3 {
+		t.Errorf("merged = %d pages / %d total / %d states, want 2/3/3",
+			merged.Pages, merged.TotalItems, len(merged.States))
+	}
+}
+
+func TestLogsSearchAllFollowsCursor(t *testing.T) {
+	var got []url.Values
+	srv := eventsAPIServer(t, &got, map[string]string{
+		"":   `{"query_id":"x","items":[` + eventItems("a") + `],"next_cursor":"c1"}`,
+		"c1": `{"query_id":"x","items":[` + eventItems("b") + `],"next_cursor":""}`,
+	})
+	defer srv.Close()
+	useAPIEnv(t, srv.URL)
+
+	if err := runEdx(t, "logs", "search", "-q", "error", "--all"); err != nil {
+		t.Fatalf("logs search --all: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("requests = %d, want 2", len(got))
+	}
+	if v := got[0].Get("limit"); v != "1000" {
+		t.Errorf("page 1 limit = %q, want 1000 under --all", v)
+	}
+	if v := got[1].Get("cursor"); v != "c1" {
+		t.Errorf("page 2 cursor = %q, want c1", v)
+	}
+}
+
+// useChatEnv points edx at the given chat host with token auth.
+func useChatEnv(t *testing.T, chatURL string) {
+	t.Helper()
+	t.Setenv("EDX_CONFIG", filepath.Join(t.TempDir(), "config.yaml"))
+	clearEnv(t)
+	t.Setenv(config.EnvAPIToken, "tok-test")
+	t.Setenv(config.EnvOrgID, testOrg)
+	t.Setenv(config.EnvChatURL, chatURL)
+}
+
+// AI chat/workflow lists use a flat envelope: the array in top-level "data"
+// with a camelCase nextCursor. --all must sweep that family too.
+func TestAIIssuesListAllSweepsFlatEnvelope(t *testing.T) {
+	var got []url.Values
+	srv := eventsAPIServer(t, &got, map[string]string{
+		"":   `{"status":200,"data":[{"id":"i1"},{"id":"i2"}],"nextCursor":"c1","size":2,"success":true}`,
+		"c1": `{"status":200,"data":[{"id":"i3"}],"nextCursor":null,"size":1,"success":true}`,
+	})
+	defer srv.Close()
+	useChatEnv(t, srv.URL)
+
+	stdout := captureStdout(t, func() {
+		if err := runEdx(t, "ai", "issues", "list", "--all"); err != nil {
+			t.Errorf("ai issues list --all: %v", err)
+		}
+	})
+	var merged struct {
+		Data       []map[string]any `json:"data"`
+		Pages      int              `json:"pages"`
+		TotalItems int              `json:"total_items"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &merged); err != nil {
+		t.Fatalf("merged output is not valid JSON: %v\n%s", err, stdout)
+	}
+	if merged.Pages != 2 || merged.TotalItems != 3 || len(merged.Data) != 3 {
+		t.Errorf("merged = %d pages / %d total / %d issues, want 2/3/3",
+			merged.Pages, merged.TotalItems, len(merged.Data))
+	}
+	if v := got[1].Get("cursor"); v != "c1" {
+		t.Errorf("page 2 cursor = %q, want c1", v)
+	}
+}
+
+// Knowledge-graph search nests the array and camelCase cursor inside "data".
+func TestAIKnowledgeSearchAllSweepsNestedEnvelope(t *testing.T) {
+	var got []url.Values
+	srv := eventsAPIServer(t, &got, map[string]string{
+		"":   `{"status":200,"data":{"matches":[{"id":"m1"}],"nextCursor":"c1"},"success":true}`,
+		"c1": `{"status":200,"data":{"matches":[{"id":"m2"}],"nextCursor":""},"success":true}`,
+	})
+	defer srv.Close()
+	useAgentEnv(t, srv.URL)
+
+	stdout := captureStdout(t, func() {
+		if err := runEdx(t, "ai", "knowledge", "search", "payment", "--all"); err != nil {
+			t.Errorf("knowledge search --all: %v", err)
+		}
+	})
+	var merged struct {
+		Matches    []map[string]any `json:"matches"`
+		Pages      int              `json:"pages"`
+		TotalItems int              `json:"total_items"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &merged); err != nil {
+		t.Fatalf("merged output is not valid JSON: %v\n%s", err, stdout)
+	}
+	if merged.Pages != 2 || merged.TotalItems != 2 || len(merged.Matches) != 2 {
+		t.Errorf("merged = %d pages / %d total / %d matches, want 2/2/2",
+			merged.Pages, merged.TotalItems, len(merged.Matches))
+	}
+	// --all raises the page size to the server max when --limit is unset.
+	if v := got[0].Get("limit"); v != "200" {
+		t.Errorf("page 1 limit = %q, want 200 under --all", v)
 	}
 }

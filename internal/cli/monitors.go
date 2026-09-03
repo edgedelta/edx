@@ -6,6 +6,8 @@ import (
 	"net/url"
 
 	"github.com/spf13/cobra"
+
+	"github.com/edgedelta/edx/internal/api"
 )
 
 func newMonitorsCmd() *cobra.Command {
@@ -29,29 +31,30 @@ func newMonitorsCmd() *cobra.Command {
 
 func newMonitorsListCmd() *cobra.Command {
 	var query string
+	var all bool
 	var pg pageFlags
 	cmd := &cobra.Command{
 		Use:     "list",
 		Short:   "List monitors",
 		Example: `  edx monitors list --output table --columns id,name,type,enabled`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := newClient()
-			if err != nil {
-				return err
-			}
-			q := url.Values{}
-			if query != "" {
-				q.Set("query", query)
-			}
-			pg.apply(q)
-			data, err := c.Get(cmdContext(cmd), "/monitors", q)
-			if err != nil {
-				return err
-			}
-			return printResult(data)
+			return pagedRequest{
+				svc: api.ServiceAPI, path: "/monitors", itemsKey: "monitors",
+				all: all, cursor: pg.cursor,
+				allLimit: func() { pg.limit = 1000 },
+				query: func() url.Values {
+					q := url.Values{}
+					if query != "" {
+						q.Set("query", query)
+					}
+					pg.apply(q)
+					return q
+				},
+			}.run(cmd)
 		},
 	}
 	cmd.Flags().StringVarP(&query, "query", "q", "", "CQL filter expression")
+	registerAllFlag(cmd, &all)
 	pg.register(cmd, 0)
 	return cmd
 }
@@ -157,6 +160,7 @@ func newMonitorsDeleteCmd() *cobra.Command {
 
 func newMonitorsStatesCmd() *cobra.Command {
 	var query string
+	var all bool
 	var pg pageFlags
 	cmd := &cobra.Command{
 		Use:   "states",
@@ -164,23 +168,23 @@ func newMonitorsStatesCmd() *cobra.Command {
 		Example: `  edx monitors states --output table
   edx monitors states --query 'monitor.status:"alert"'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := newClient()
-			if err != nil {
-				return err
-			}
-			q := url.Values{}
-			if query != "" {
-				q.Set("query", query)
-			}
-			pg.apply(q)
-			data, err := c.Get(cmdContext(cmd), "/monitor_states", q)
-			if err != nil {
-				return err
-			}
-			return printResult(data)
+			return pagedRequest{
+				svc: api.ServiceAPI, path: "/monitor_states", itemsKey: "states",
+				all: all, cursor: pg.cursor,
+				allLimit: func() { pg.limit = 1000 },
+				query: func() url.Values {
+					q := url.Values{}
+					if query != "" {
+						q.Set("query", query)
+					}
+					pg.apply(q)
+					return q
+				},
+			}.run(cmd)
 		},
 	}
 	cmd.Flags().StringVarP(&query, "query", "q", "", "CQL filter expression")
+	registerAllFlag(cmd, &all)
 	pg.register(cmd, 100)
 	return cmd
 }

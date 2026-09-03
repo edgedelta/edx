@@ -93,6 +93,7 @@ func newAIKnowledgeSearchCmd() *cobra.Command {
 	var query, types, source, namespaces, cursor string
 	var minConfidence float64
 	var limit int
+	var all bool
 	cmd := &cobra.Command{
 		Use:   "search <query>",
 		Short: "Search entities by name or alias",
@@ -113,27 +114,34 @@ equivalent spelling (matching logs/events/patterns search).`,
 			if query == "" {
 				return fmt.Errorf("missing query: edx ai knowledge search <query> (or --query <query>)")
 			}
-			q := url.Values{}
-			q.Set("q", query)
-			if types != "" {
-				q.Set("types", types)
-			}
-			if cmd.Flags().Changed("min-confidence") {
-				q.Set("minConfidence", strconv.FormatFloat(minConfidence, 'f', -1, 64))
-			}
-			if source != "" {
-				q.Set("source", source)
-			}
-			if namespaces != "" {
-				q.Set("namespaces", namespaces)
-			}
-			if limit > 0 {
-				q.Set("limit", strconv.Itoa(limit))
-			}
-			if cursor != "" {
-				q.Set("cursor", cursor)
-			}
-			return kgGet(cmd, "/search", q)
+			return pagedRequest{
+				svc: api.ServiceAgent, path: "/knowledge-graph/search", itemsKey: "matches",
+				all: all, cursor: cursor,
+				allLimit: func() { limit = 200 }, // the server's max page size
+				query: func() url.Values {
+					q := url.Values{}
+					q.Set("q", query)
+					if types != "" {
+						q.Set("types", types)
+					}
+					if cmd.Flags().Changed("min-confidence") {
+						q.Set("minConfidence", strconv.FormatFloat(minConfidence, 'f', -1, 64))
+					}
+					if source != "" {
+						q.Set("source", source)
+					}
+					if namespaces != "" {
+						q.Set("namespaces", namespaces)
+					}
+					if limit > 0 {
+						q.Set("limit", strconv.Itoa(limit))
+					}
+					if cursor != "" {
+						q.Set("cursor", cursor)
+					}
+					return q
+				},
+			}.run(cmd)
 		},
 	}
 	cmd.Flags().StringVarP(&query, "query", "q", "", "search query (equivalent to the positional argument)")
@@ -143,6 +151,7 @@ equivalent spelling (matching logs/events/patterns search).`,
 	cmd.Flags().StringVar(&namespaces, "namespaces", "", "comma-separated namespaces: topology, learned")
 	cmd.Flags().IntVar(&limit, "limit", 0, "maximum matches to return (server default 25, max 200)")
 	cmd.Flags().StringVar(&cursor, "cursor", "", "pagination cursor (nextCursor from a previous response)")
+	registerAllFlag(cmd, &all)
 	return cmd
 }
 

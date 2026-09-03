@@ -69,6 +69,23 @@ func (p *aiPageFlags) apply(q url.Values) {
 	}
 }
 
+// runPaged executes an AI-service list with the shared cursor-pagination
+// behavior (single page with a more-results hint, or a --all sweep). The AI
+// envelopes carry the array in top-level "data" with a camelCase nextCursor.
+func (p *aiPageFlags) runPaged(cmd *cobra.Command, svc api.Service, path string, all bool, extra func(url.Values)) error {
+	return pagedRequest{
+		svc: svc, path: path, itemsKey: "data", all: all, cursor: p.cursor,
+		query: func() url.Values {
+			q := url.Values{}
+			p.apply(q)
+			if extra != nil {
+				extra(q)
+			}
+			return q
+		},
+	}.run(cmd)
+}
+
 // --- Issues (chat service) ---
 
 func newAIIssuesCmd() *cobra.Command {
@@ -92,33 +109,25 @@ Served by the chat service (chat.ai.edgedelta.com).`,
 }
 
 func newAIIssuesListCmd() *cobra.Command {
-	var withThreads, includeClosed bool
+	var withThreads, includeClosed, all bool
 	var page aiPageFlags
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List issues for the organization (open issues by default)",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := newClient()
-			if err != nil {
-				return err
-			}
-			q := url.Values{}
-			page.apply(q)
-			if withThreads {
-				q.Set("withThreads", "true")
-			}
-			if includeClosed {
-				q.Set("onlyOpenIssues", "false")
-			}
-			data, err := c.GetFrom(cmdContext(cmd), api.ServiceChat, "/issues", q)
-			if err != nil {
-				return err
-			}
-			return printResult(data)
+			return page.runPaged(cmd, api.ServiceChat, "/issues", all, func(q url.Values) {
+				if withThreads {
+					q.Set("withThreads", "true")
+				}
+				if includeClosed {
+					q.Set("onlyOpenIssues", "false")
+				}
+			})
 		},
 	}
 	cmd.Flags().BoolVar(&withThreads, "with-threads", false, "include the threads attached to each issue")
 	cmd.Flags().BoolVar(&includeClosed, "include-closed", false, "include closed issues (default: open only)")
+	registerAllFlag(cmd, &all)
 	page.register(cmd)
 	return cmd
 }
@@ -150,25 +159,17 @@ func newAIIssuesGetCmd() *cobra.Command {
 }
 
 func newAIIssuesThreadsCmd() *cobra.Command {
+	var all bool
 	var page aiPageFlags
 	cmd := &cobra.Command{
 		Use:   "threads <issue-id>",
 		Short: "List the threads attached to an issue",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := newClient()
-			if err != nil {
-				return err
-			}
-			q := url.Values{}
-			page.apply(q)
-			data, err := c.GetFrom(cmdContext(cmd), api.ServiceChat, "/issues/"+url.PathEscape(args[0])+"/threads", q)
-			if err != nil {
-				return err
-			}
-			return printResult(data)
+			return page.runPaged(cmd, api.ServiceChat, "/issues/"+url.PathEscape(args[0])+"/threads", all, nil)
 		},
 	}
+	registerAllFlag(cmd, &all)
 	page.register(cmd)
 	return cmd
 }
@@ -294,24 +295,16 @@ func newAIChannelsCmd() *cobra.Command {
 }
 
 func newAIChannelsListCmd() *cobra.Command {
+	var all bool
 	var page aiPageFlags
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List channels for the organization",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := newClient()
-			if err != nil {
-				return err
-			}
-			q := url.Values{}
-			page.apply(q)
-			data, err := c.GetFrom(cmdContext(cmd), api.ServiceChat, "/channels", q)
-			if err != nil {
-				return err
-			}
-			return printResult(data)
+			return page.runPaged(cmd, api.ServiceChat, "/channels", all, nil)
 		},
 	}
+	registerAllFlag(cmd, &all)
 	page.register(cmd)
 	return cmd
 }
@@ -336,25 +329,17 @@ func newAIChannelsGetCmd() *cobra.Command {
 }
 
 func newAIChannelsMessagesCmd() *cobra.Command {
+	var all bool
 	var page aiPageFlags
 	cmd := &cobra.Command{
 		Use:   "messages <channel-id>",
 		Short: "List messages in a channel",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := newClient()
-			if err != nil {
-				return err
-			}
-			q := url.Values{}
-			page.apply(q)
-			data, err := c.GetFrom(cmdContext(cmd), api.ServiceChat, "/channels/"+url.PathEscape(args[0])+"/messages", q)
-			if err != nil {
-				return err
-			}
-			return printResult(data)
+			return page.runPaged(cmd, api.ServiceChat, "/channels/"+url.PathEscape(args[0])+"/messages", all, nil)
 		},
 	}
+	registerAllFlag(cmd, &all)
 	page.register(cmd)
 	return cmd
 }
@@ -379,33 +364,26 @@ func threadsBase(channelID string) string {
 func newAIThreadsListCmd() *cobra.Command {
 	var channel, participant string
 	var messageLimit int
+	var all bool
 	var page aiPageFlags
 	cmd := &cobra.Command{
 		Use:   "list --channel <channel-id>",
 		Short: "List threads in a channel",
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := newClient()
-			if err != nil {
-				return err
-			}
-			q := url.Values{}
-			page.apply(q)
-			if messageLimit > 0 {
-				q.Set("messageLimit", strconv.Itoa(messageLimit))
-			}
-			if participant != "" {
-				q.Set("participant", participant)
-			}
-			data, err := c.GetFrom(cmdContext(cmd), api.ServiceChat, threadsBase(channel), q)
-			if err != nil {
-				return err
-			}
-			return printResult(data)
+			return page.runPaged(cmd, api.ServiceChat, threadsBase(channel), all, func(q url.Values) {
+				if messageLimit > 0 {
+					q.Set("messageLimit", strconv.Itoa(messageLimit))
+				}
+				if participant != "" {
+					q.Set("participant", participant)
+				}
+			})
 		},
 	}
 	cmd.Flags().StringVar(&channel, "channel", "", "channel ID (required)")
 	cmd.Flags().StringVar(&participant, "participant", "", "filter to threads with this participant")
 	cmd.Flags().IntVar(&messageLimit, "message-limit", 0, "include up to N recent messages per thread")
+	registerAllFlag(cmd, &all)
 	page.register(cmd)
 	_ = cmd.MarkFlagRequired("channel")
 	return cmd
@@ -442,26 +420,18 @@ func newAIThreadsGetCmd() *cobra.Command {
 
 func newAIThreadsMessagesCmd() *cobra.Command {
 	var channel string
+	var all bool
 	var page aiPageFlags
 	cmd := &cobra.Command{
 		Use:   "messages --channel <channel-id> <thread-id>",
 		Short: "List messages in a thread",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := newClient()
-			if err != nil {
-				return err
-			}
-			q := url.Values{}
-			page.apply(q)
-			data, err := c.GetFrom(cmdContext(cmd), api.ServiceChat, threadsBase(channel)+"/"+url.PathEscape(args[0])+"/messages", q)
-			if err != nil {
-				return err
-			}
-			return printResult(data)
+			return page.runPaged(cmd, api.ServiceChat, threadsBase(channel)+"/"+url.PathEscape(args[0])+"/messages", all, nil)
 		},
 	}
 	cmd.Flags().StringVar(&channel, "channel", "", "channel ID (required)")
+	registerAllFlag(cmd, &all)
 	page.register(cmd)
 	_ = cmd.MarkFlagRequired("channel")
 	return cmd

@@ -7,6 +7,8 @@ import (
 	"strings"
 
 	"github.com/spf13/cobra"
+
+	"github.com/edgedelta/edx/internal/api"
 )
 
 func newLogsCmd() *cobra.Command {
@@ -31,6 +33,7 @@ Regular expressions are NOT supported. Verify field names with
 
 func newLogsSearchCmd() *cobra.Command {
 	var query string
+	var all bool
 	var tf timeFlags
 	var pg pageFlags
 	cmd := &cobra.Command{
@@ -40,24 +43,24 @@ func newLogsSearchCmd() *cobra.Command {
   edx logs search --query 'service.name:"api" AND error' --from 2026-06-12T00:00:00.000Z --to 2026-06-12T01:00:00.000Z
   edx logs search --query 'k8s.namespace.name:"prod"' --limit 100 --output table --columns timestamp,severity_text,body`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := newClient()
-			if err != nil {
-				return err
-			}
-			q := url.Values{}
-			if query != "" {
-				q.Set("query", query)
-			}
-			tf.apply(q)
-			pg.apply(q)
-			data, err := c.Get(cmdContext(cmd), "/logs/log_search/search", q)
-			if err != nil {
-				return err
-			}
-			return printResult(data)
+			return pagedRequest{
+				svc: api.ServiceAPI, path: "/logs/log_search/search", itemsKey: "items",
+				all: all, cursor: pg.cursor,
+				allLimit: func() { pg.limit = 1000 },
+				query: func() url.Values {
+					q := url.Values{}
+					if query != "" {
+						q.Set("query", query)
+					}
+					tf.apply(q)
+					pg.apply(q)
+					return q
+				},
+			}.run(cmd)
 		},
 	}
 	cmd.Flags().StringVarP(&query, "query", "q", "", "CQL query (empty matches all logs)")
+	registerAllFlag(cmd, &all)
 	tf.register(cmd, "1h")
 	pg.register(cmd, 20)
 	return cmd

@@ -57,17 +57,17 @@ func wfGet(cmd *cobra.Command, path string, q url.Values) error {
 }
 
 func newAIWorkflowsListCmd() *cobra.Command {
+	var all bool
 	var page aiPageFlags
 	cmd := &cobra.Command{
 		Use:   "list",
 		Short: "List workflows for the organization",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			q := url.Values{}
-			page.apply(q)
-			return wfGet(cmd, "/workflows", q)
+			return page.runPaged(cmd, api.ServiceWorkflow, "/workflows", all, nil)
 		},
 	}
+	registerAllFlag(cmd, &all)
 	page.register(cmd)
 	return cmd
 }
@@ -100,17 +100,17 @@ func newAIWorkflowsRunsCmd() *cobra.Command {
 }
 
 func newAIWorkflowsRunsListCmd() *cobra.Command {
+	var all bool
 	var page aiPageFlags
 	cmd := &cobra.Command{
 		Use:   "list <workflow-id>",
 		Short: "List runs of a workflow, newest first",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			q := url.Values{}
-			page.apply(q)
-			return wfGet(cmd, "/workflows/"+url.PathEscape(args[0])+"/executions", q)
+			return page.runPaged(cmd, api.ServiceWorkflow, "/workflows/"+url.PathEscape(args[0])+"/executions", all, nil)
 		},
 	}
+	registerAllFlag(cmd, &all)
 	page.register(cmd)
 	return cmd
 }

@@ -4,6 +4,8 @@ import (
 	"net/url"
 
 	"github.com/spf13/cobra"
+
+	"github.com/edgedelta/edx/internal/api"
 )
 
 func newTracesCmd() *cobra.Command {
@@ -21,7 +23,7 @@ Common fields: service.name, status.code, span.kind, trace_id, ed.tag`,
 
 func newTracesSearchCmd() *cobra.Command {
 	var query string
-	var includeChildren bool
+	var includeChildren, all bool
 	var tf timeFlags
 	var pg pageFlags
 	cmd := &cobra.Command{
@@ -31,28 +33,28 @@ func newTracesSearchCmd() *cobra.Command {
   edx traces search --query 'service.name:"checkout" AND span.kind:"server"' --include-children
   edx traces search --query 'trace_id:"abc123"'`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := newClient()
-			if err != nil {
-				return err
-			}
-			q := url.Values{}
-			if query != "" {
-				q.Set("query", query)
-			}
-			tf.apply(q)
-			pg.apply(q)
-			if includeChildren {
-				q.Set("include_child_spans", "true")
-			}
-			data, err := c.Get(cmdContext(cmd), "/traces", q)
-			if err != nil {
-				return err
-			}
-			return printResult(data)
+			return pagedRequest{
+				svc: api.ServiceAPI, path: "/traces", itemsKey: "items",
+				all: all, cursor: pg.cursor,
+				allLimit: func() { pg.limit = 1000 },
+				query: func() url.Values {
+					q := url.Values{}
+					if query != "" {
+						q.Set("query", query)
+					}
+					tf.apply(q)
+					pg.apply(q)
+					if includeChildren {
+						q.Set("include_child_spans", "true")
+					}
+					return q
+				},
+			}.run(cmd)
 		},
 	}
 	cmd.Flags().StringVarP(&query, "query", "q", "", `CQL filter (field:"value" syntax required)`)
 	cmd.Flags().BoolVar(&includeChildren, "include-children", false, "include child spans of matched spans for full trace context")
+	registerAllFlag(cmd, &all)
 	tf.register(cmd, "1h")
 	pg.register(cmd, 20)
 	return cmd
