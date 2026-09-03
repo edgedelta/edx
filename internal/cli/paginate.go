@@ -8,9 +8,9 @@ import (
 	"net/url"
 	"time"
 
-	"github.com/spf13/cobra"
-
 	"github.com/edgedelta/edx/internal/api"
+
+	"github.com/spf13/cobra"
 )
 
 // Cursor pagination is one convention across the API's list/search endpoints:

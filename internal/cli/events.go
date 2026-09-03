@@ -3,9 +3,9 @@ package cli
 import (
 	"net/url"
 
-	"github.com/spf13/cobra"
-
 	"github.com/edgedelta/edx/internal/api"
+
+	"github.com/spf13/cobra"
 )
 
 func newEventsCmd() *cobra.Command {

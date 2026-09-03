@@ -8,9 +8,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/spf13/cobra"
-
 	"github.com/edgedelta/edx/internal/api"
+
+	"github.com/spf13/cobra"
 )
 
 // rehydrationTimeFormat is the timestamp format the rehydration API expects

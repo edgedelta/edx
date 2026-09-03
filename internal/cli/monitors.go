@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net/url"
 
-	"github.com/spf13/cobra"
-
 	"github.com/edgedelta/edx/internal/api"
+
+	"github.com/spf13/cobra"
 )
 
 func newMonitorsCmd() *cobra.Command {
