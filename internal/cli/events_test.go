@@ -6,7 +6,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
+	"sync/atomic"
 	"testing"
+	"time"
 )
 
 // eventsAPIServer serves /events/search, capturing each request's query and
@@ -149,7 +152,16 @@ func TestEventsSearchAllAbortsOnRepeatedCursor(t *testing.T) {
 	}
 }
 
+// quickRetries shrinks the --all retry backoff so failure tests stay fast.
+func quickRetries(t *testing.T) {
+	t.Helper()
+	old := allRetryBaseDelay
+	allRetryBaseDelay = time.Millisecond
+	t.Cleanup(func() { allRetryBaseDelay = old })
+}
+
 func TestEventsSearchAllMidSweepErrorEmitsNothing(t *testing.T) {
+	quickRetries(t)
 	var got []url.Values
 	srv := eventsAPIServer(t, &got, map[string]string{
 		"": `{"query_id":"x","items":[` + eventItems("a") + `],"next_cursor":"gone"}`,
@@ -159,14 +171,57 @@ func TestEventsSearchAllMidSweepErrorEmitsNothing(t *testing.T) {
 	useAPIEnv(t, srv.URL)
 
 	stdout := captureStdout(t, func() {
-		if err := runEdx(t, "events", "search", "--all"); err == nil {
+		err := runEdx(t, "events", "search", "--all")
+		if err == nil {
 			t.Error("expected an error when a later page fails")
+		} else if !strings.Contains(err.Error(), "--all --cursor 'gone'") {
+			t.Errorf("error does not name the resume cursor: %v", err)
 		}
 	})
 	// A partial sweep must never be printed: broken-looking-complete JSON is
 	// exactly the failure mode --all exists to prevent.
 	if stdout != "" {
 		t.Errorf("stdout not empty after mid-sweep failure: %q", stdout)
+	}
+}
+
+// A page that fails transiently (one 500) must be retried, not abort the
+// sweep: this is what a live 107-page staging sweep dies on otherwise.
+func TestEventsSearchAllRetriesTransientPageFailure(t *testing.T) {
+	quickRetries(t)
+	var hits int32
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		n := atomic.AddInt32(&hits, 1)
+		switch {
+		case r.URL.Query().Get("cursor") == "":
+			_, _ = w.Write([]byte(`{"query_id":"x","items":[` + eventItems("a") + `],"next_cursor":"c1"}`))
+		case n == 2: // first attempt at page 2 fails like staging under load
+			w.WriteHeader(http.StatusInternalServerError)
+			_, _ = w.Write([]byte(`{"Error":"Failed to query event search"}`))
+		default:
+			_, _ = w.Write([]byte(`{"query_id":"x","items":[` + eventItems("b") + `],"next_cursor":""}`))
+		}
+	}))
+	defer srv.Close()
+	useAPIEnv(t, srv.URL)
+
+	stdout := captureStdout(t, func() {
+		if err := runEdx(t, "events", "search", "--all"); err != nil {
+			t.Errorf("search --all with one transient 500: %v", err)
+		}
+	})
+	var merged struct {
+		TotalItems int `json:"total_items"`
+		Pages      int `json:"pages"`
+	}
+	if err := json.Unmarshal([]byte(stdout), &merged); err != nil {
+		t.Fatalf("merged output is not valid JSON: %v", err)
+	}
+	if merged.Pages != 2 || merged.TotalItems != 2 {
+		t.Errorf("merged = %d pages / %d items, want 2/2", merged.Pages, merged.TotalItems)
+	}
+	if hits != 3 {
+		t.Errorf("requests = %d, want 3 (page1, failed page2, retried page2)", hits)
 	}
 }
 

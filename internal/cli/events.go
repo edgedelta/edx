@@ -3,8 +3,10 @@ package cli
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/url"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -22,8 +24,11 @@ Common queries:
   event.type:"pattern_anomaly"     log anomaly detections
   event.type:"metric_threshold"    metric alert triggers
   event.type:"log_threshold"       log alert triggers
-  event.domain:"Monitor Alerts"    all monitor-triggered events
-  event.domain:"K8s"               Kubernetes events`,
+  event.domain:("Monitor" OR "Monitor Alerts")   all monitor-triggered events
+  event.domain:"K8s"               Kubernetes events
+
+Domain values vary by org and environment; list the live set with
+"edx facets options --scope event --facet event.domain".`,
 	}
 	cmd.AddCommand(newEventsSearchCmd())
 	return cmd
@@ -59,9 +64,9 @@ PAGINATION
   then sets the page size and defaults to 1000 (the server's own default)
   instead of 20. Combine with --output-file for large sweeps.`,
 		Example: `  edx events search --query 'event.type:"pattern_anomaly"' --lookback 6h
-  edx events search --query 'event.domain:"Monitor Alerts"' --output table
+  edx events search --query 'event.domain:("Monitor" OR "Monitor Alerts")' --output table
   edx events search --query 'service.name:"api" AND event.type:"pattern_anomaly"'
-  edx events search --query 'event.domain:"Monitor Alerts"' --lookback 720h --all --output-file events.json`,
+  edx events search --query 'event.domain:("Monitor" OR "Monitor Alerts")' --lookback 720h --all --output-file events.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := newClient()
 			if err != nil {
@@ -111,17 +116,30 @@ PAGINATION
 	return cmd
 }
 
+// allPageAttempts is how many times --all tries one page before giving up.
+// The client already retries transport errors and 429/5xx-gateway codes; this
+// covers plain 500s, which the event search endpoint returns transiently under
+// load and which would otherwise throw away every page fetched so far.
+const allPageAttempts = 4
+
+// allRetryBaseDelay is the first retry backoff for a failed --all page
+// (doubles per attempt). A variable so tests can shrink it.
+var allRetryBaseDelay = time.Second
+
 // fetchAllEventPages follows next_cursor until the server reports the result
 // set complete, returning a single combined envelope. It fails atomically: any
 // mid-sweep error aborts with no output, so a partial sweep can never be
-// mistaken for a complete one.
+// mistaken for a complete one; the error names the cursor to resume from.
 func fetchAllEventPages(ctx context.Context, c *api.Client, buildQuery func(cursor string) url.Values, cursor string) ([]byte, error) {
 	var items []json.RawMessage
 	pages := 0
 	for {
-		data, err := c.Get(ctx, "/events/search", buildQuery(cursor))
+		data, err := fetchEventPage(ctx, c, buildQuery(cursor), pages+1)
 		if err != nil {
-			return nil, fmt.Errorf("page %d: %w", pages+1, err)
+			if cursor != "" {
+				return nil, fmt.Errorf("%w (items fetched so far were discarded; resume from this point with --all --cursor '%s')", err, cursor)
+			}
+			return nil, err
 		}
 		var page eventPage
 		if err := json.Unmarshal(data, &page); err != nil {
@@ -147,4 +165,32 @@ func fetchAllEventPages(ctx context.Context, c *api.Client, buildQuery func(curs
 		TotalItems int               `json:"total_items"`
 		NextCursor string            `json:"next_cursor"`
 	}{Items: items, Pages: pages, TotalItems: len(items), NextCursor: ""})
+}
+
+// fetchEventPage gets one page, retrying transient failures with backoff. The
+// request is an idempotent GET, so retrying is always safe.
+func fetchEventPage(ctx context.Context, c *api.Client, q url.Values, page int) ([]byte, error) {
+	var lastErr error
+	for attempt := 1; attempt <= allPageAttempts; attempt++ {
+		if attempt > 1 {
+			delay := allRetryBaseDelay << uint(attempt-2)
+			warnf("page %d attempt %d/%d failed (%v); retrying in %s", page, attempt-1, allPageAttempts, lastErr, delay)
+			select {
+			case <-time.After(delay):
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+		data, err := c.Get(ctx, "/events/search", q)
+		if err == nil {
+			return data, nil
+		}
+		lastErr = err
+		// A 4xx is deterministic (bad cursor, bad query): retrying cannot help.
+		var apiErr *api.Error
+		if errors.As(err, &apiErr) && apiErr.Status >= 400 && apiErr.Status < 500 {
+			return nil, fmt.Errorf("page %d: %w", page, err)
+		}
+	}
+	return nil, fmt.Errorf("page %d failed after %d attempts: %w", page, allPageAttempts, lastErr)
 }
