@@ -20,14 +20,15 @@ import (
 )
 
 var (
-	flagProfile string
-	flagEnv     string
-	flagOrg     string
-	flagToken   string
-	flagOutput  string
-	flagColumns []string
-	flagTimeout time.Duration
-	flagYes     bool
+	flagProfile    string
+	flagEnv        string
+	flagOrg        string
+	flagToken      string
+	flagOutput     string
+	flagOutputFile string
+	flagColumns    []string
+	flagTimeout    time.Duration
+	flagYes        bool
 )
 
 // Exit codes. Anything that simply failed uses 1; a code above that marks an outcome a
@@ -86,7 +87,10 @@ AUTHENTICATION
 
 OUTPUT
   Responses print as pretty JSON by default. Use --output table|csv|yaml|raw,
-  and --columns to pick table/csv columns by dot-path.
+  and --columns to pick table/csv columns by dot-path. For responses too large
+  to read from a terminal or an AI tool's capped stdout, add
+  --output-file <path>: the full response is written to the file (never
+  truncated) and a byte-count confirmation goes to stderr.
 
 EXAMPLES
   edx logs search --query 'service.name:"api" AND severity_text:"ERROR"' --lookback 1h
@@ -113,6 +117,7 @@ EXAMPLES
 	pf.StringVar(&flagOrg, "org", "", "Edge Delta organization ID (overrides profile and ED_ORG_ID)")
 	pf.StringVar(&flagToken, "token", "", "API token (overrides profile and ED_API_TOKEN)")
 	pf.StringVarP(&flagOutput, "output", "o", "json", "output format: json, yaml, table, csv, raw")
+	pf.StringVar(&flagOutputFile, "output-file", "", "write the response to this file instead of stdout (avoids terminal/harness truncation of large outputs)")
 	pf.StringSliceVar(&flagColumns, "columns", nil, "columns (dot-paths) for table/csv output")
 	pf.DurationVar(&flagTimeout, "timeout", 60*time.Second, "HTTP request timeout")
 	pf.BoolVarP(&flagYes, "yes", "y", false, "skip confirmation prompts")
@@ -202,9 +207,33 @@ func hostOf(rawURL string) string {
 	return u.Host
 }
 
-// printResult renders raw response bytes using the global output flags.
+// printResult renders raw response bytes using the global output flags. With
+// --output-file the rendered output goes to that file instead of stdout, so a
+// large response can never be clipped by a terminal or an AI/CI harness's
+// stdout capture limit; a one-line confirmation goes to stderr.
 func printResult(data []byte) error {
-	return output.Print(os.Stdout, data, output.Options{Format: flagOutput, Columns: flagColumns})
+	opts := output.Options{Format: flagOutput, Columns: flagColumns}
+	if flagOutputFile == "" {
+		return output.Print(os.Stdout, data, opts)
+	}
+	f, err := os.OpenFile(flagOutputFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
+	if err != nil {
+		return err
+	}
+	if err := output.Print(f, data, opts); err != nil {
+		f.Close()
+		return err
+	}
+	// Close errors matter here: a short write (full disk) would otherwise leave
+	// a silently truncated file, the exact failure mode --output-file exists to
+	// prevent.
+	if err := f.Close(); err != nil {
+		return fmt.Errorf("writing %s: %w", flagOutputFile, err)
+	}
+	if fi, err := os.Stat(flagOutputFile); err == nil {
+		warnf("wrote %s (%d bytes)", flagOutputFile, fi.Size())
+	}
+	return nil
 }
 
 // confirm prompts unless --yes was given. Returns true when the user accepts.

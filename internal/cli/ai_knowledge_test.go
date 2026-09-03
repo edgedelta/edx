@@ -121,6 +121,65 @@ func TestAIKnowledgeSearch(t *testing.T) {
 	}
 }
 
+// The query can equivalently be passed via --query/-q, matching the other
+// search commands (logs, events, patterns); AI callers reach for the flag
+// spelling constantly.
+func TestAIKnowledgeSearchQueryFlag(t *testing.T) {
+	var got kgCapture
+	srv := kgTestServer(t, &got, http.StatusOK, `{"matches":[]}`)
+	defer srv.Close()
+	useAgentEnv(t, srv.URL)
+
+	if err := runEdx(t, "ai", "knowledge", "search", "--query", "payment service"); err != nil {
+		t.Fatalf("search --query: %v", err)
+	}
+	if v := got.query.Get("q"); v != "payment service" {
+		t.Errorf("query[q] = %q, want %q", v, "payment service")
+	}
+}
+
+func TestAIKnowledgeSearchShorthandQueryFlag(t *testing.T) {
+	var got kgCapture
+	srv := kgTestServer(t, &got, http.StatusOK, `{"matches":[]}`)
+	defer srv.Close()
+	useAgentEnv(t, srv.URL)
+
+	if err := runEdx(t, "ai", "knowledge", "search", "-q", "payment"); err != nil {
+		t.Fatalf("search -q: %v", err)
+	}
+	if v := got.query.Get("q"); v != "payment" {
+		t.Errorf("query[q] = %q, want %q", v, "payment")
+	}
+}
+
+func TestAIKnowledgeSearchConflictingQueries(t *testing.T) {
+	var got kgCapture
+	srv := kgTestServer(t, &got, http.StatusOK, `{"matches":[]}`)
+	defer srv.Close()
+	useAgentEnv(t, srv.URL)
+
+	if err := runEdx(t, "ai", "knowledge", "search", "payment", "--query", "billing"); err == nil {
+		t.Fatal("expected error when positional and --query disagree")
+	}
+	if got.hits != 0 {
+		t.Errorf("request was sent despite conflicting queries (hits = %d)", got.hits)
+	}
+}
+
+func TestAIKnowledgeSearchMissingQuery(t *testing.T) {
+	var got kgCapture
+	srv := kgTestServer(t, &got, http.StatusOK, `{"matches":[]}`)
+	defer srv.Close()
+	useAgentEnv(t, srv.URL)
+
+	if err := runEdx(t, "ai", "knowledge", "search"); err == nil {
+		t.Fatal("expected error when no query is given")
+	}
+	if got.hits != 0 {
+		t.Errorf("request was sent despite missing query (hits = %d)", got.hits)
+	}
+}
+
 func TestAIKnowledgeGetEscapesEntityID(t *testing.T) {
 	var got kgCapture
 	srv := kgTestServer(t, &got, http.StatusOK, `{"node":{}}`)

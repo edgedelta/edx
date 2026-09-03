@@ -42,7 +42,7 @@ func notef(format string, args ...any) {
 	fmt.Fprintln(os.Stderr, dim(fmt.Sprintf(format, args...)))
 }
 
-// shortID abbreviates a UUID/ULID for display, e.g. "0481a213…".
+// shortID abbreviates a UUID/ULID for display, e.g. "1a2b3c4d…".
 func shortID(id string) string {
 	if len(id) <= 10 {
 		return id

@@ -89,10 +89,13 @@ edx logs graph -q 'service.name:"api"' --lookback 24h
 
 ## Pagination
 
-Responses include cursors. Continue a search:
+Responses include cursors; a page is a lower bound until `next_cursor` comes
+back empty (contract: **ed-edx** > Pagination). Continue a search, or sweep
+the whole window:
 
 ```bash
 edx logs search -q 'error' --limit 100 --cursor "<next_cursor from previous response>"
+edx logs search -q 'error' --lookback 1h --all --output-file errors-1h.json
 ```
 
 ## Empty Results Checklist

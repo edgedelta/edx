@@ -8,6 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/edgedelta/edx/internal/api"
+
 	"github.com/spf13/cobra"
 )
 
@@ -41,6 +43,7 @@ are submitted as a batch.`,
 
 func newRehydrationsListCmd() *cobra.Command {
 	var query string
+	var all bool
 	var tf timeFlags
 	var pg pageFlags
 	cmd := &cobra.Command{
@@ -49,24 +52,24 @@ func newRehydrationsListCmd() *cobra.Command {
 		Example: `  edx rehydrations list --output table --columns rehydration_id,status,percentage,from,to
   edx rehydrations list --query 'rehydration.status:"in-progress"' --lookback 24h`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			c, err := newClient()
-			if err != nil {
-				return err
-			}
-			q := url.Values{}
-			if query != "" {
-				q.Set("query", query)
-			}
-			tf.apply(q)
-			pg.apply(q)
-			data, err := c.Get(cmdContext(cmd), "/rehydration_v2", q)
-			if err != nil {
-				return err
-			}
-			return printResult(data)
+			return pagedRequest{
+				svc: api.ServiceAPI, path: "/rehydration_v2", itemsKey: "rehydrations",
+				all: all, cursor: pg.cursor,
+				allLimit: func() { pg.limit = 1000 },
+				query: func() url.Values {
+					q := url.Values{}
+					if query != "" {
+						q.Set("query", query)
+					}
+					tf.apply(q)
+					pg.apply(q)
+					return q
+				},
+			}.run(cmd)
 		},
 	}
 	cmd.Flags().StringVarP(&query, "query", "q", "", "CQL filter expression over rehydration facets")
+	registerAllFlag(cmd, &all)
 	tf.register(cmd, "")
 	pg.register(cmd, 20)
 	return cmd
