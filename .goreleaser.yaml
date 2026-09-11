@@ -22,12 +22,17 @@ builds:
     goos:
       - darwin
       - linux
+      - windows
     goarch:
       - amd64
       - arm64
 
 archives:
   - id: edx
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
     # Produces the Datadog/Homebrew naming convention:
     #   edx_<version>_Darwin_arm64.tar.gz, edx_<version>_Linux_x86_64.tar.gz, ...
     name_template: >-
@@ -90,6 +95,34 @@ brews:
         edx skills install
 
       Docs: https://github.com/edgedelta/edx
+
+winget:
+  - name: edx
+    package_identifier: EdgeDelta.edx
+    publisher: Edge Delta
+    short_description: Edge Delta command-line interface
+    license: Apache-2.0
+    license_url: https://github.com/edgedelta/edx/blob/main/LICENSE
+    homepage: https://github.com/edgedelta/edx
+    publisher_url: https://edgedelta.com
+    publisher_support_url: https://github.com/edgedelta/edx/issues
+    release_notes_url: "https://github.com/edgedelta/edx/releases/tag/{{ .Tag }}"
+    path: "manifests/e/EdgeDelta/edx/{{ .Version }}"
+    tags: [cli, observability, logs, metrics, traces]
+    # Generate manifests even before the fork/token is configured. Skip
+    # community publication for prereleases as well.
+    skip_upload: '{{ if not .Env.WINGET_GITHUB_TOKEN }}true{{ else }}auto{{ end }}'
+    repository:
+      owner: edgedelta
+      name: winget-pkgs
+      branch: "edx-{{ .Version }}"
+      token: "{{ .Env.WINGET_GITHUB_TOKEN }}"
+      pull_request:
+        enabled: true
+        base:
+          owner: microsoft
+          name: winget-pkgs
+          branch: master
 
 release:
   github:

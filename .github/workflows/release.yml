@@ -11,7 +11,11 @@ permissions:
   contents: write
 
 jobs:
+  windows:
+    uses: ./.github/workflows/windows.yml
+
   goreleaser:
+    needs: windows
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -37,3 +41,12 @@ jobs:
           # Must be a token with contents:write on the tap repo — the default
           # GITHUB_TOKEN cannot write to another repository.
           HOMEBREW_TAP_GITHUB_TOKEN: ${{ secrets.HOMEBREW_TAP_GITHUB_TOKEN }}
+          # See docs/releases.md for the fork and token setup.
+          WINGET_GITHUB_TOKEN: ${{ secrets.WINGET_GITHUB_TOKEN }}
+
+      - name: Preserve WinGet manifests
+        uses: actions/upload-artifact@v4
+        with:
+          name: winget-manifests
+          path: dist/winget/**
+          if-no-files-found: error

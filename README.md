@@ -44,6 +44,31 @@ brew tap edgedelta/tap
 brew install edx
 ```
 
+Windows (WinGet, available after the first package submission is accepted):
+
+```powershell
+winget install --id EdgeDelta.edx --exact
+# Upgrade an existing WinGet installation:
+winget upgrade --id EdgeDelta.edx --exact
+```
+
+Windows (ZIP download):
+
+1. Open [GitHub Releases](https://github.com/edgedelta/edx/releases/latest) and
+   download `edx_<version>_Windows_x86_64.zip` for Intel/AMD PCs, or
+   `edx_<version>_Windows_arm64.zip` for ARM PCs.
+2. Download `checksums.txt` from the same release. Use
+   `Get-FileHash .\edx_<version>_Windows_x86_64.zip -Algorithm SHA256` (substitute
+   your filename) and compare it with the matching entry before extracting.
+3. Extract the ZIP to a permanent folder such as `%LOCALAPPDATA%\Programs\edx`.
+   Add that folder to your **user Path** through Windows Environment Variables,
+   then open a new terminal and run `edx version`.
+
+On Windows, `edx update` reports available updates and prints instructions.
+For ZIP upgrades, close running edx commands and replace the extracted files
+with the new release. After either upgrade method, run `edx skills update` to
+refresh installed agent skills.
+
 Go toolchain:
 
 ```bash
