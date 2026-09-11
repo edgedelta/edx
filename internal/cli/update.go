@@ -68,6 +68,10 @@ running binary in place after verifying the download against the release
 checksums. Homebrew installs are upgraded with "brew upgrade" instead, so the
 package manager stays in charge of its own files.
 
+On Windows, edx prints upgrade instructions for WinGet and ZIP installs;
+it does not replace the running executable. Run "edx skills update" after
+upgrading to refresh installed skills.
+
 Skills previously installed with "edx skills install" are embedded in the
 binary, so after a successful update they are refreshed automatically to match
 the new version (user-global installs only; --project installs are left
@@ -110,6 +114,13 @@ func runUpdate(ctx context.Context, checkOnly bool) error {
 	fmt.Fprintf(os.Stderr, "A new version is available: %s (you have %s)\n", newVer, Version)
 	if checkOnly {
 		notef("run `edx update` to install it")
+		return nil
+	}
+
+	if runtime.GOOS == "windows" {
+		notef("for WinGet installs, run `winget upgrade --id EdgeDelta.edx --exact`")
+		notef("for ZIP installs, download the Windows ZIP from https://github.com/edgedelta/edx/releases/latest and replace edx.exe after this command exits")
+		notef("after upgrading, run `edx skills update` to refresh installed skills")
 		return nil
 	}
 
