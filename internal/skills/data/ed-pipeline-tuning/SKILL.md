@@ -59,6 +59,20 @@ edx capture start <pipeline-id> --duration 10m --nodes <node>
 edx capture results <pipeline-id> --follow --param nodes=<node>
 ```
 
+## Pipeline structure and display names
+
+Follow **ed-pipelines** for attached multiprocessors: use `type: sequence` nodes named
+exactly `<source>_multiprocessor` immediately after application sources and
+`<destination>_multiprocessor` immediately before destinations, including empty
+attachments. Standalone intermediate sequences do not replace them. Preserve direct
+agent self-telemetry/internal-statistics routing and existing processing semantics.
+
+Name every nested processor by its purpose, including Custom OTTL. Store its display
+name in JSON-encoded `metadata`, for example
+`metadata: '{"name":"Mask authorization header"}'`, preserving other metadata keys.
+Do not leave the name blank or "Custom"; nested YAML `name`/`user_description` fields
+do not control this label. Review names alongside transform correctness before saving.
+
 ## Processor toolbox
 
 Processors live in a `sequence` multiprocessor node (`processors:` list) or, for
@@ -144,7 +158,8 @@ input ──▶ [PRE: per-source MP] ──▶ (rare middle) ──▶ [POST: pr
   `log_to_pattern`. Also clean up the fields *this parser* created (e.g.
   `delete_key(attributes, "log_ts")` right after using it to set `timestamp`).
 
-- **POST — the multiprocessor just before the output** (all sources converge).
+- **POST — the destination-attached multiprocessor** (`<destination>_multiprocessor`,
+  immediately before its output; destination-bound sources converge).
   Only things **common to every source**: destination tagging (e.g. everything
   bound for Splunk gets a `resource` tag), org-wide PII masking, a severity
   fallback. This is the "output node" stage.

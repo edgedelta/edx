@@ -27,6 +27,21 @@ The `edx` CLI must be installed and authenticated. See the **ed-edx** skill.
   rolls a version out to the fleet. Deploying an older version is the
   supported rollback.
 
+## First-time onboarding
+
+Use **ed-onboard** to discover customer resources, choose a direct collection path,
+install agents and verify source telemetry. For a new edge pipeline:
+
+```bash
+edx pipelines create --file pipeline.yaml --tag my-service --environment Docker
+```
+
+The initial configuration is deployed, but no agent is installed. Resolve installation
+with `edx pipelines deploy-command <conf-id>`. Kubernetes requires
+`--environment Kubernetes --fleet-subtype Edge` (or Gateway/Coordinator).
+After uninstalling agents, `edx pipelines delete <conf-id> --yes` removes the config.
+These commands require an edx build exposing `create/delete`; inspect `--help`.
+
 ## Fleet Visibility
 
 ```bash
@@ -92,43 +107,59 @@ Point the sender (e.g. an OpenTelemetry SDK/collector, or Claude Code with
 > immediately; if the agent was already up, it must be restarted to bind the new
 > port. Pick a free, non-ephemeral port (below the OS ephemeral range, ~49152+).
 
-## Structuring Processors: Attach Per Source
+## Attached multiprocessors and processor names
 
-Prefer a **per-source multiprocessor wired directly off each source** for
-source-specific parsing/enrichment/PII, and reserve a shared multiprocessor for
-genuinely common, cross-source logic. This is the pattern to reach for by
-default - it keeps each source's transforms next to the source (the Visual
-Builder renders a source's dedicated multiprocessor attached to it) instead of
-funnelling everything through one node in the middle.
+Include an attached multiprocessor for every application source and destination,
+even when it has no processors. Use a separate `type: sequence` node named exactly
+`<source-or-destination-node-name>_multiprocessor`. Link the source immediately to
+its multiprocessor and the destination multiprocessor immediately to its destination.
+The Visual Builder recognizes attachment by this exact name and adjacency; a
+standalone sequence in the middle does not replace either attachment. Empty attached
+sequences may omit `processors` (as the default pipelines do) or use `processors: []`.
+Preserve default direct routing of agent self-telemetry and internal statistics.
+
+Place source-specific parsing/enrichment in the source attachment and destination-wide
+processing in the destination attachment. Add intermediate stages only when needed.
+When editing an existing pipeline, preserve its routing and processing semantics;
+do not duplicate or bypass existing transforms when introducing attachments.
+
+Every processor needs a concise display name describing its purpose, including Custom
+OTTL processors. For nested sequence processors, set `name` inside the JSON-encoded
+`metadata` string, preserving other metadata keys. A nested YAML `name` or
+`user_description` does not set this display name. Never leave it blank or as "Custom".
+For top-level nodes, use descriptive node names and `user_description` for display.
 
 ```yaml
 links:
 - from: my_otlp
-  to: my_otlp_multiprocessor      # source-specific: attached to the source
+  to: my_otlp_multiprocessor
 - from: my_otlp_multiprocessor
-  to: common_multiprocessor       # shared cross-source logic (optional)
-- from: common_multiprocessor
+  to: edgedelta_multiprocessor
+- from: edgedelta_multiprocessor
   to: edgedelta
 
 nodes:
+- name: my_otlp
+  type: otlp_input
+  port: 4317
+  protocol: grpc
 - name: my_otlp_multiprocessor
   type: sequence
   processors:
   - type: ottl_transform
-    data_types: [log, metric]     # OTTL runs on metrics too, not just logs
+    metadata: '{"name":"Set telemetry source"}'
+    data_types: [log, metric]
     statements: |-
       set(resource["telemetry.source"], "my_app")
+- name: edgedelta_multiprocessor
+  type: sequence
+- name: edgedelta
+  type: ed_output
+  user_description: Edge Delta
 ```
 
-**Name it exactly `<source-node-name>_multiprocessor`** and link it 1:1 off the
-source. The name must be the source's full node name plus the `_multiprocessor`
-suffix - that exact match is what makes the Visual Builder render it *attached*
-to the source (a compact box) rather than a standalone node in the Processors
-lane. For example, a source named `claude_code_otlp` needs
-`claude_code_otlp_multiprocessor`; `claude_code_multiprocessor` still works
-functionally (the agent attaches a source's first downstream node by topology)
-but the UI won't draw it attached. The `processors` list lives on the `sequence`
-node, not the source node.
+Before validation/save, check exact attachment names and link direction, retained
+self-telemetry routing, and meaningful `metadata.name` values for nested processors.
 
 ## Redacting PII (OTTL recipes)
 
@@ -138,11 +169,13 @@ and keep body regexes as defense-in-depth:
 
 ```yaml
 - type: ottl_transform
+  metadata: '{"name":"Redact identity fields"}'
   data_types: [log, metric]
   statements: |-
     delete_key(attributes, "user.email")
     set(resource["host.ip"], "[REDACTED_IP]") where EDXCoalesce(resource["host.ip"],"")!=""
 - type: ottl_transform
+  metadata: '{"name":"Mask email addresses in log body"}'
   data_types: [log]
   statements: |-
     replace_pattern(body, "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}", "[REDACTED_EMAIL]")
