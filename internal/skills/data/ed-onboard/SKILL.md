@@ -28,12 +28,12 @@ context separate from the Edge Delta organization/profile.
 - Prefer Edge Delta agents over another collector. Add an intermediary or collector
   only for a verified requirement, explaining its operational and cost implications.
   Existing use of a provider's logging service does not make it the preferred path.
-- Guide toward full coverage. Ask which signals to onboard as a multi-select question
+- Guide toward full coverage. Ask which signals to onboard as a multi-select choice
   whose first option is "All signals (Recommended)" (logs, metrics, traces and, for
   Kubernetes, events), followed by Logs, Metrics and Traces so customers who want fewer
-  can combine them. Kubernetes events ride with All; mention that in its description,
-  since the question tool allows only four options. Show signals a resource cannot
-  provide as gaps in the target table.
+  can combine them. Kubernetes events ride with All; say so in its description, which
+  also keeps the choice within tools that allow only four options. Show signals a
+  resource cannot provide as gaps in the target table.
 - Decide per signal. Application/client telemetry does not establish host, service or
   database-server coverage. An agent does not manufacture application traces or gain
   access to a managed service's private filesystem.
@@ -59,6 +59,15 @@ available paths. No new edx command hierarchy or backend onboarding state is req
    kubectl, Vercel CLI and DigitalOcean doctl; this is not an exhaustive provider list.
    Use available connectors, APIs or existing environment information too. An installed
    tool is only a clue, not proof of authentication, available resources or authorization.
+   Check the Edge Delta side with `edx auth status`. If no profile authenticates, ask
+   (in the first selection question round) whether the customer is new to Edge Delta
+   or already has an account. Then tell them plainly, in your reply rather than inside
+   another question, to run the matching interactive command themselves: `edx signup`
+   for new customers, `edx auth login` for existing ones (`--env staging` for
+   staging), in a terminal on the same machine or through the assistant's own way of
+   running a user command, if it has one. Read-only discovery may continue meanwhile,
+   but re-check `edx auth status` and use the new profile as the destination before
+   planning. Never create an account or log in on the customer's behalf.
 2. **Choose discovery scope.** Present the identified environments and let the customer
    select some or all, with account/project/subscription, region, cluster, hosts or
    datacenter boundaries as applicable. Ask which signals to onboard alongside scope,

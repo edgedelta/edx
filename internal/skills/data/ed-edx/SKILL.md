@@ -27,17 +27,24 @@ edx version                          # verify
 
 ## Auth
 
-Two methods — pick one:
+New to Edge Delta? `edx signup` creates the account and logs in. Already have one?
+`edx auth login`. Signup and OAuth login are interactive, so the user runs them.
 
 ```bash
+# New account: confirms your email, emails a sign-in link, then confirm the code shown:
+edx signup                                             # --profile <name> --env staging for staging
+
+# OAuth (default; interactive browser login, org read from the token, auto-refreshed):
+edx auth login                                         # --device when there is no local browser
+
 # Token auth (good for CI/automation):
 edx auth login --token <api-token> --org-id <org-id>   # saved to ~/.config/edx/config.yaml
 
-# OAuth (interactive browser login; org is read from the token, refreshed automatically):
-edx auth login --oauth
-
 edx auth status                                        # verifies credentials against the API
 ```
+
+With no saved profile, `edx auth status` prints "No profiles yet"; offer `edx signup`
+for a new user and `edx auth login` for an existing one.
 
 Environment variables override the config file: `ED_API_TOKEN`, `ED_ORG_ID`,
 `ED_ENV` (`prod` (default), `staging` or `local` — selects the API and AI
@@ -45,7 +52,7 @@ service hosts together). Multiple orgs/envs: `edx auth login --profile <name> ..
 then `edx --profile <name> ...`.
 
 If commands fail with 401, the credentials are invalid or do not match the org.
-Re-run `edx auth login` (token from Admin > API Tokens, or `--oauth`).
+Re-run `edx auth login` (OAuth by default, or `--token` from Admin > API Tokens).
 
 ## Command Map
 

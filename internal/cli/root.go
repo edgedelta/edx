@@ -185,7 +185,7 @@ func clientFromResolved(r *config.Resolved) (*api.Client, error) {
 		return api.New(r.APIURL, r.ChatURL, r.AgentURL, r.WorkflowURL, r.OrgID, auth, flagTimeout), nil
 	}
 	if r.APIToken == "" && !r.UsesOAuth() {
-		return nil, fmt.Errorf("no credentials configured: run `edx auth login --token <token> --org-id <org>` (or `--oauth`), or set %s", config.EnvAPIToken)
+		return nil, fmt.Errorf("no credentials configured: run `edx auth login` (or `edx signup` to create an Edge Delta account), or set %s and %s", config.EnvAPIToken, config.EnvOrgID)
 	}
 	if r.OrgID == "" {
 		return nil, fmt.Errorf("no organization ID configured: run `edx auth login` with --org-id, set %s, or pass --org", config.EnvOrgID)

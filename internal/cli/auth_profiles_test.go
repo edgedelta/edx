@@ -13,6 +13,9 @@ func TestFormatProfileList_Empty(t *testing.T) {
 	if !strings.Contains(out, "No profiles") {
 		t.Errorf("empty list should mention no profiles, got %q", out)
 	}
+	if !strings.Contains(out, "edx signup") {
+		t.Errorf("empty list should point new users at edx signup, got %q", out)
+	}
 }
 
 func TestFormatProfileList_MarksDefaultAndColumns(t *testing.T) {
