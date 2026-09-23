@@ -118,7 +118,7 @@ type Profile struct {
 	// endpoints that do not yet accept OAuth — see api.oauthUnsupported).
 	APIToken string `yaml:"api_token,omitempty"`
 
-	// OAuth* fields hold the credentials minted by `edx auth login --oauth`.
+	// OAuth* fields hold the credentials minted by `edx auth login` (OAuth).
 	// The access token is refreshed automatically using the refresh token.
 	OAuthClientID     string `yaml:"oauth_client_id,omitempty"`
 	OAuthAccessToken  string `yaml:"oauth_access_token,omitempty"`

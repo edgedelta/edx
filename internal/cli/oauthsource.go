@@ -48,12 +48,12 @@ func (s *oauthTokenSource) Token(ctx context.Context) (string, error) {
 		return s.access, nil
 	}
 	if s.refresh == "" {
-		return "", fmt.Errorf("access token expired and no refresh token available; run `edx auth login --oauth` again")
+		return "", fmt.Errorf("access token expired and no refresh token available; run `edx auth login` again")
 	}
 
 	t, err := oauth.Refresh(ctx, s.apiBase, s.clientID, s.refresh, nil)
 	if err != nil {
-		return "", fmt.Errorf("token refresh failed (run `edx auth login --oauth` again): %w", err)
+		return "", fmt.Errorf("token refresh failed (run `edx auth login` again): %w", err)
 	}
 	s.access = t.AccessToken
 	if t.RefreshToken != "" {

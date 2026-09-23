@@ -59,6 +59,15 @@ available paths. No new edx command hierarchy or backend onboarding state is req
    kubectl, Vercel CLI and DigitalOcean doctl; this is not an exhaustive provider list.
    Use available connectors, APIs or existing environment information too. An installed
    tool is only a clue, not proof of authentication, available resources or authorization.
+   Check the Edge Delta side with `edx auth status`. If no profile authenticates, ask
+   (in the first selection question round) whether the customer is new to Edge Delta
+   or already has an account. Then tell them plainly, in your reply rather than inside
+   another question, to run the matching interactive command themselves: `edx signup`
+   for new customers, `edx auth login` for existing ones (`--env staging` for
+   staging); in Claude Code, typing `! edx signup` runs it in the session. Read-only
+   discovery may continue meanwhile, but re-check `edx auth status` and use the new
+   profile as the destination before planning. Never create an account or log in on
+   the customer's behalf.
 2. **Choose discovery scope.** Present the identified environments and let the customer
    select some or all, with account/project/subscription, region, cluster, hosts or
    datacenter boundaries as applicable. Ask which signals to onboard alongside scope,

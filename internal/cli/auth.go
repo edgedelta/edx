@@ -331,7 +331,7 @@ func formatProfileList(f *config.File) string {
 // tabwriter's alignment of the columns before it.
 func formatProfileEntries(entries []profileListEntry) string {
 	if len(entries) == 0 {
-		return "No profiles yet. Run `edx auth login` to create one.\n"
+		return "No profiles yet. Run `edx auth login` to log in, or `edx signup` to create an Edge Delta account.\n"
 	}
 	var sb strings.Builder
 	tw := tabwriter.NewWriter(&sb, 0, 0, 2, ' ', 0)
