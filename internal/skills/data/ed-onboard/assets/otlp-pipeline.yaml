@@ -1,0 +1,26 @@
+version: v3
+settings:
+  tag: onboarding
+nodes:
+- name: application_otlp
+  type: otlp_input
+  protocol: http
+  port: 4318
+- name: application_otlp_multiprocessor
+  type: sequence
+- name: agent_health
+  type: ed_self_telemetry_input
+  enable_health_metrics: true
+- name: edgedelta_multiprocessor
+  type: sequence
+- name: edgedelta
+  type: ed_output
+links:
+- from: application_otlp
+  to: application_otlp_multiprocessor
+- from: application_otlp_multiprocessor
+  to: edgedelta_multiprocessor
+- from: agent_health
+  to: edgedelta
+- from: edgedelta_multiprocessor
+  to: edgedelta

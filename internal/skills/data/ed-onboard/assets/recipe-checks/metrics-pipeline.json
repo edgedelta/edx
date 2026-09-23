@@ -1,0 +1,176 @@
+{
+  "version": "v3",
+  "settings": {
+    "tag": "example-rds-rds-metrics",
+    "archive_flush_interval": "30s",
+    "archive_max_byte_limit": "1MB"
+  },
+  "nodes": [
+    {
+      "name": "rds_metric_stream",
+      "type": "s3_input",
+      "sqs_url": "https://sqs.us-west-2.amazonaws.com/111122223333/example-rds-rds-metrics",
+      "region": "us-west-2",
+      "compression": "gzip",
+      "poll_interval": "10s"
+    },
+    {
+      "name": "rds_metric_stream_multiprocessor",
+      "type": "sequence",
+      "processors": [
+        {
+          "type": "ottl_transform",
+          "metadata": "{\"name\": \"Parse AWS RDS metric stream records\"}",
+          "data_types": [
+            "log"
+          ],
+          "statements": "merge_maps(attributes, ParseJSON(body), \"upsert\")"
+        },
+        {
+          "type": "ottl_filter",
+          "metadata": "{\"name\": \"Keep only the selected RDS instance metrics\"}",
+          "filter_mode": "include",
+          "condition": "attributes[\"namespace\"] == \"AWS/RDS\" and attributes[\"dimensions\"][\"DBInstanceIdentifier\"] == \"example-rds\""
+        },
+        {
+          "type": "ottl_transform",
+          "metadata": "{\"name\": \"Preserve database identity and CloudWatch measurement time\"}",
+          "data_types": [
+            "log"
+          ],
+          "statements": "set(timestamp, Int(attributes[\"timestamp\"]) )\nset(resource[\"service.name\"], \"example-rds-rds-engine\")\nset(resource[\"aws.rds.db_instance_identifier\"], attributes[\"dimensions\"][\"DBInstanceIdentifier\"])\nset(resource[\"cloud.provider\"], \"aws\")\nset(resource[\"cloud.region\"], attributes[\"region\"])"
+        },
+        {
+          "type": "extract_metric",
+          "metadata": "{\"name\": \"Extract native RDS gauges from CloudWatch statistics\"}",
+          "keep_item": false,
+          "extract_metric_rules": [
+            {
+              "name": "aws.rds.cpu_utilization",
+              "unit": "1",
+              "conditions": [
+                "(attributes[\"namespace\"] == \"AWS/RDS\") and (attributes[\"dimensions\"][\"DBInstanceIdentifier\"] == \"example-rds\") and (attributes[\"metric_name\"] == \"CPUUtilization\") and (Double(attributes[\"value\"][\"count\"]) > 0)"
+              ],
+              "gauge": {
+                "value": "Double(attributes[\"value\"][\"sum\"]) / Double(attributes[\"value\"][\"count\"])"
+              },
+              "description": "RDS CPU utilization percent, gauge in range 0 to 100"
+            },
+            {
+              "name": "aws.rds.database_connections",
+              "unit": "1",
+              "conditions": [
+                "(attributes[\"namespace\"] == \"AWS/RDS\") and (attributes[\"dimensions\"][\"DBInstanceIdentifier\"] == \"example-rds\") and (attributes[\"metric_name\"] == \"DatabaseConnections\") and (Double(attributes[\"value\"][\"count\"]) > 0)"
+              ],
+              "gauge": {
+                "value": "Double(attributes[\"value\"][\"sum\"]) / Double(attributes[\"value\"][\"count\"])"
+              }
+            },
+            {
+              "name": "aws.rds.freeable_memory_bytes",
+              "unit": "b",
+              "conditions": [
+                "(attributes[\"namespace\"] == \"AWS/RDS\") and (attributes[\"dimensions\"][\"DBInstanceIdentifier\"] == \"example-rds\") and (attributes[\"metric_name\"] == \"FreeableMemory\") and (Double(attributes[\"value\"][\"count\"]) > 0)"
+              ],
+              "gauge": {
+                "value": "Double(attributes[\"value\"][\"sum\"]) / Double(attributes[\"value\"][\"count\"])"
+              }
+            },
+            {
+              "name": "aws.rds.free_storage_space_bytes",
+              "unit": "b",
+              "conditions": [
+                "(attributes[\"namespace\"] == \"AWS/RDS\") and (attributes[\"dimensions\"][\"DBInstanceIdentifier\"] == \"example-rds\") and (attributes[\"metric_name\"] == \"FreeStorageSpace\") and (Double(attributes[\"value\"][\"count\"]) > 0)"
+              ],
+              "gauge": {
+                "value": "Double(attributes[\"value\"][\"sum\"]) / Double(attributes[\"value\"][\"count\"])"
+              }
+            },
+            {
+              "name": "aws.rds.read_iops",
+              "unit": "1",
+              "conditions": [
+                "(attributes[\"namespace\"] == \"AWS/RDS\") and (attributes[\"dimensions\"][\"DBInstanceIdentifier\"] == \"example-rds\") and (attributes[\"metric_name\"] == \"ReadIOPS\") and (Double(attributes[\"value\"][\"count\"]) > 0)"
+              ],
+              "gauge": {
+                "value": "Double(attributes[\"value\"][\"sum\"]) / Double(attributes[\"value\"][\"count\"])"
+              },
+              "description": "RDS I/O operations per second, rate gauge"
+            },
+            {
+              "name": "aws.rds.write_iops",
+              "unit": "1",
+              "conditions": [
+                "(attributes[\"namespace\"] == \"AWS/RDS\") and (attributes[\"dimensions\"][\"DBInstanceIdentifier\"] == \"example-rds\") and (attributes[\"metric_name\"] == \"WriteIOPS\") and (Double(attributes[\"value\"][\"count\"]) > 0)"
+              ],
+              "gauge": {
+                "value": "Double(attributes[\"value\"][\"sum\"]) / Double(attributes[\"value\"][\"count\"])"
+              },
+              "description": "RDS I/O operations per second, rate gauge"
+            },
+            {
+              "name": "aws.rds.read_latency_seconds",
+              "unit": "1",
+              "conditions": [
+                "(attributes[\"namespace\"] == \"AWS/RDS\") and (attributes[\"dimensions\"][\"DBInstanceIdentifier\"] == \"example-rds\") and (attributes[\"metric_name\"] == \"ReadLatency\") and (Double(attributes[\"value\"][\"count\"]) > 0)"
+              ],
+              "gauge": {
+                "value": "Double(attributes[\"value\"][\"sum\"]) / Double(attributes[\"value\"][\"count\"])"
+              },
+              "description": "Average latency in seconds reported by AWS/RDS"
+            },
+            {
+              "name": "aws.rds.write_latency_seconds",
+              "unit": "1",
+              "conditions": [
+                "(attributes[\"namespace\"] == \"AWS/RDS\") and (attributes[\"dimensions\"][\"DBInstanceIdentifier\"] == \"example-rds\") and (attributes[\"metric_name\"] == \"WriteLatency\") and (Double(attributes[\"value\"][\"count\"]) > 0)"
+              ],
+              "gauge": {
+                "value": "Double(attributes[\"value\"][\"sum\"]) / Double(attributes[\"value\"][\"count\"])"
+              },
+              "description": "Average latency in seconds reported by AWS/RDS"
+            }
+          ]
+        },
+        {
+          "type": "ottl_filter",
+          "metadata": "{\"name\": \"Emit only successfully extracted RDS metrics\"}",
+          "filter_mode": "include",
+          "condition": "EDXDataType() == \"metric\""
+        }
+      ]
+    },
+    {
+      "name": "edgedelta_multiprocessor",
+      "type": "sequence"
+    },
+    {
+      "name": "edgedelta",
+      "type": "ed_output"
+    },
+    {
+      "name": "health",
+      "type": "ed_self_telemetry_input",
+      "enable_health_metrics": true,
+      "enable_agent_stats_metrics": true
+    }
+  ],
+  "links": [
+    {
+      "from": "rds_metric_stream",
+      "to": "rds_metric_stream_multiprocessor"
+    },
+    {
+      "from": "rds_metric_stream_multiprocessor",
+      "to": "edgedelta_multiprocessor"
+    },
+    {
+      "from": "edgedelta_multiprocessor",
+      "to": "edgedelta"
+    },
+    {
+      "from": "health",
+      "to": "edgedelta"
+    }
+  ]
+}

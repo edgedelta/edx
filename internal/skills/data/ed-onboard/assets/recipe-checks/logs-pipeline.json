@@ -1,0 +1,100 @@
+{
+  "version": "v3",
+  "settings": {
+    "tag": "example-rds-rds-engine-logs",
+    "log": {
+      "level": "info"
+    },
+    "archive_flush_interval": "30s",
+    "archive_max_byte_limit": "16MB"
+  },
+  "links": [
+    {
+      "from": "ed_self_telemetry_input",
+      "to": "edgedelta"
+    },
+    {
+      "from": "http_input",
+      "to": "http_input_multiprocessor"
+    },
+    {
+      "from": "http_input_multiprocessor",
+      "to": "edgedelta_multiprocessor"
+    },
+    {
+      "from": "otlp_input",
+      "to": "otlp_input_multiprocessor"
+    },
+    {
+      "from": "otlp_input_multiprocessor",
+      "to": "edgedelta_multiprocessor"
+    },
+    {
+      "from": "edgedelta_multiprocessor",
+      "to": "edgedelta"
+    }
+  ],
+  "nodes": [
+    {
+      "name": "ed_self_telemetry_input",
+      "type": "ed_self_telemetry_input",
+      "enable_health_metrics": true,
+      "enable_agent_stats_metrics": true
+    },
+    {
+      "name": "edgedelta_multiprocessor",
+      "type": "sequence"
+    },
+    {
+      "name": "edgedelta",
+      "type": "ed_output",
+      "user_description": "Edge Delta"
+    },
+    {
+      "name": "http_input",
+      "type": "http_input",
+      "user_description": "HTTP Source",
+      "port": 80,
+      "read_timeout": "1m0s"
+    },
+    {
+      "name": "http_input_multiprocessor",
+      "type": "sequence",
+      "processors": [
+        {
+          "type": "json_unroll",
+          "metadata": "{\"name\": \"Expand CloudWatch engine log events\"}",
+          "json_field_path": "logEvents",
+          "error_mode": "strict"
+        },
+        {
+          "type": "ottl_transform",
+          "metadata": "{\"name\": \"Parse forwarded PostgreSQL engine event\"}",
+          "data_types": [
+            "log"
+          ],
+          "statements": "merge_maps(attributes, ParseJSON(body), \"upsert\")"
+        },
+        {
+          "type": "ottl_transform",
+          "metadata": "{\"name\": \"Preserve PostgreSQL engine event and AWS source identity\"}",
+          "data_types": [
+            "log"
+          ],
+          "statements": "set(body, attributes[\"logEvents\"][\"message\"])\nset(timestamp, Int(attributes[\"logEvents\"][\"timestamp\"]) )\nset(resource[\"service.name\"], \"example-rds-rds-engine\")\nset(resource[\"aws.rds.db_instance_identifier\"], \"example-rds\")\nset(resource[\"cloud.provider\"], \"aws\")\nset(resource[\"cloud.region\"], \"us-west-2\")\nset(attributes[\"aws.log.group.name\"], attributes[\"aws\"][\"log.group.name\"])"
+        }
+      ]
+    },
+    {
+      "name": "otlp_input",
+      "type": "otlp_input",
+      "user_description": "OTLP Source",
+      "port": 4317,
+      "protocol": "grpc"
+    },
+    {
+      "name": "otlp_input_multiprocessor",
+      "type": "sequence"
+    }
+  ]
+}

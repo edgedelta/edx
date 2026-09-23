@@ -57,7 +57,7 @@ Re-run `edx auth login` (token from Admin > API Tokens, or `--oauth`).
 | Traces | `edx traces search`, `edx service-map` |
 | Events | `edx events search` |
 | Monitors | `edx monitors list/get/create/update/delete/states` |
-| Pipelines | `edx pipelines list/get/history/save/deploy/validate/agents/status` |
+| Pipelines | `edx pipelines list/get/create/delete/history/save/deploy/validate/agents/status` |
 | Rehydrations | `edx rehydrations list/get/validate/analyze/create/cancel/delete` |
 | Fleet | `edx fleet agents`, `edx fleet deployments` |
 | Live capture | `edx capture start/task/status/results` |

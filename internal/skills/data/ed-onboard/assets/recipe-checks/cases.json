@@ -1,0 +1,215 @@
+{
+  "recipes": {
+    "metrics": {
+      "pipeline": "metrics-pipeline.json",
+      "node": "rds_metric_stream_multiprocessor"
+    },
+    "logs": {
+      "pipeline": "logs-pipeline.json",
+      "node": "http_input_multiprocessor"
+    }
+  },
+  "cases": [
+    {
+      "id": "cpu-average",
+      "recipe": "metrics",
+      "input": {
+        "_type": "log",
+        "body": "{\"metric_stream_name\": \"example\", \"account_id\": \"111122223333\", \"region\": \"us-west-2\", \"namespace\": \"AWS/RDS\", \"metric_name\": \"CPUUtilization\", \"dimensions\": {\"DBInstanceIdentifier\": \"example-rds\"}, \"timestamp\": 1700000000000, \"value\": {\"sum\": 15, \"count\": 3}, \"unit\": \"None\"}",
+        "attributes": {},
+        "resource": {},
+        "timestamp": 1700000060000
+      },
+      "expected": [
+        {
+          "_type": "metric",
+          "name": "aws.rds.cpu_utilization",
+          "gauge": {
+            "value": 5
+          },
+          "unit": "1",
+          "timestamp": 1700000000000,
+          "resource": {
+            "aws.rds.db_instance_identifier": "example-rds",
+            "service.name": "example-rds-rds-engine"
+          }
+        }
+      ]
+    },
+    {
+      "id": "memory-bytes",
+      "recipe": "metrics",
+      "input": {
+        "_type": "log",
+        "body": "{\"metric_stream_name\": \"example\", \"account_id\": \"111122223333\", \"region\": \"us-west-2\", \"namespace\": \"AWS/RDS\", \"metric_name\": \"FreeableMemory\", \"dimensions\": {\"DBInstanceIdentifier\": \"example-rds\"}, \"timestamp\": 1700000000000, \"value\": {\"sum\": 2048, \"count\": 2}, \"unit\": \"None\"}",
+        "attributes": {},
+        "resource": {},
+        "timestamp": 1700000060000
+      },
+      "expected": [
+        {
+          "_type": "metric",
+          "name": "aws.rds.freeable_memory_bytes",
+          "gauge": {
+            "value": 1024
+          },
+          "unit": "b",
+          "timestamp": 1700000000000,
+          "resource": {
+            "aws.rds.db_instance_identifier": "example-rds",
+            "service.name": "example-rds-rds-engine"
+          }
+        }
+      ]
+    },
+    {
+      "id": "zero-is-valid",
+      "recipe": "metrics",
+      "input": {
+        "_type": "log",
+        "body": "{\"metric_stream_name\": \"example\", \"account_id\": \"111122223333\", \"region\": \"us-west-2\", \"namespace\": \"AWS/RDS\", \"metric_name\": \"ReadIOPS\", \"dimensions\": {\"DBInstanceIdentifier\": \"example-rds\"}, \"timestamp\": 1700000000000, \"value\": {\"sum\": 0, \"count\": 1}, \"unit\": \"None\"}",
+        "attributes": {},
+        "resource": {},
+        "timestamp": 1700000060000
+      },
+      "expected": [
+        {
+          "_type": "metric",
+          "name": "aws.rds.read_iops",
+          "gauge": {
+            "value": 0
+          },
+          "unit": "1",
+          "timestamp": 1700000000000,
+          "resource": {
+            "aws.rds.db_instance_identifier": "example-rds",
+            "service.name": "example-rds-rds-engine"
+          }
+        }
+      ]
+    },
+    {
+      "id": "latency-seconds",
+      "recipe": "metrics",
+      "input": {
+        "_type": "log",
+        "body": "{\"metric_stream_name\": \"example\", \"account_id\": \"111122223333\", \"region\": \"us-west-2\", \"namespace\": \"AWS/RDS\", \"metric_name\": \"WriteLatency\", \"dimensions\": {\"DBInstanceIdentifier\": \"example-rds\"}, \"timestamp\": 1700000000000, \"value\": {\"sum\": 0.008, \"count\": 2}, \"unit\": \"None\"}",
+        "attributes": {},
+        "resource": {},
+        "timestamp": 1700000060000
+      },
+      "expected": [
+        {
+          "_type": "metric",
+          "name": "aws.rds.write_latency_seconds",
+          "gauge": {
+            "value": 0.004
+          },
+          "unit": "1",
+          "timestamp": 1700000000000,
+          "resource": {
+            "aws.rds.db_instance_identifier": "example-rds",
+            "service.name": "example-rds-rds-engine"
+          }
+        }
+      ]
+    },
+    {
+      "id": "other-database",
+      "recipe": "metrics",
+      "input": {
+        "_type": "log",
+        "body": "{\"metric_stream_name\": \"example\", \"account_id\": \"111122223333\", \"region\": \"us-west-2\", \"namespace\": \"AWS/RDS\", \"metric_name\": \"CPUUtilization\", \"dimensions\": {\"DBInstanceIdentifier\": \"other-db\"}, \"timestamp\": 1700000000000, \"value\": {\"sum\": 5, \"count\": 1}, \"unit\": \"None\"}",
+        "attributes": {},
+        "resource": {},
+        "timestamp": 1700000060000
+      },
+      "expected": []
+    },
+    {
+      "id": "other-namespace",
+      "recipe": "metrics",
+      "input": {
+        "_type": "log",
+        "body": "{\"metric_stream_name\": \"example\", \"account_id\": \"111122223333\", \"region\": \"us-west-2\", \"namespace\": \"AWS/EC2\", \"metric_name\": \"CPUUtilization\", \"dimensions\": {\"DBInstanceIdentifier\": \"example-rds\"}, \"timestamp\": 1700000000000, \"value\": {\"sum\": 5, \"count\": 1}, \"unit\": \"None\"}",
+        "attributes": {},
+        "resource": {},
+        "timestamp": 1700000060000
+      },
+      "expected": []
+    },
+    {
+      "id": "zero-count",
+      "recipe": "metrics",
+      "input": {
+        "_type": "log",
+        "body": "{\"metric_stream_name\": \"example\", \"account_id\": \"111122223333\", \"region\": \"us-west-2\", \"namespace\": \"AWS/RDS\", \"metric_name\": \"CPUUtilization\", \"dimensions\": {\"DBInstanceIdentifier\": \"example-rds\"}, \"timestamp\": 1700000000000, \"value\": {\"sum\": 5, \"count\": 0}, \"unit\": \"None\"}",
+        "attributes": {},
+        "resource": {},
+        "timestamp": 1700000060000
+      },
+      "expected": []
+    },
+    {
+      "id": "unknown-metric",
+      "recipe": "metrics",
+      "input": {
+        "_type": "log",
+        "body": "{\"metric_stream_name\": \"example\", \"account_id\": \"111122223333\", \"region\": \"us-west-2\", \"namespace\": \"AWS/RDS\", \"metric_name\": \"UnknownMetric\", \"dimensions\": {\"DBInstanceIdentifier\": \"example-rds\"}, \"timestamp\": 1700000000000, \"value\": {\"sum\": 5, \"count\": 1}, \"unit\": \"None\"}",
+        "attributes": {},
+        "resource": {},
+        "timestamp": 1700000060000
+      },
+      "expected": []
+    },
+    {
+      "id": "aggregate-without-db",
+      "recipe": "metrics",
+      "input": {
+        "_type": "log",
+        "body": "{\"metric_stream_name\": \"example\", \"account_id\": \"111122223333\", \"region\": \"us-west-2\", \"namespace\": \"AWS/RDS\", \"metric_name\": \"CPUUtilization\", \"dimensions\": {}, \"timestamp\": 1700000000000, \"value\": {\"sum\": 5, \"count\": 1}, \"unit\": \"None\"}",
+        "attributes": {},
+        "resource": {},
+        "timestamp": 1700000060000
+      },
+      "expected": []
+    },
+    {
+      "id": "engine-batch",
+      "recipe": "logs",
+      "input": {
+        "_type": "log",
+        "body": "{\"aws\": {\"log.group.name\": \"/aws/rds/instance/example-rds/postgresql\"}, \"logEvents\": [{\"message\": \"engine event A\", \"timestamp\": 1700000000000, \"id\": \"a\"}, {\"message\": \"engine event B\", \"timestamp\": 1700000001000, \"id\": \"b\"}]}",
+        "resource": {},
+        "attributes": {},
+        "timestamp": 1700000060000
+      },
+      "expected": [
+        {
+          "_type": "log",
+          "body": "engine event A",
+          "timestamp": 1700000000000,
+          "resource": {
+            "aws.rds.db_instance_identifier": "example-rds",
+            "service.name": "example-rds-rds-engine"
+          },
+          "attributes": {
+            "aws.log.group.name": "/aws/rds/instance/example-rds/postgresql"
+          }
+        },
+        {
+          "_type": "log",
+          "body": "engine event B",
+          "timestamp": 1700000001000,
+          "resource": {
+            "aws.rds.db_instance_identifier": "example-rds",
+            "service.name": "example-rds-rds-engine"
+          },
+          "attributes": {
+            "aws.log.group.name": "/aws/rds/instance/example-rds/postgresql"
+          }
+        }
+      ]
+    }
+  ]
+}

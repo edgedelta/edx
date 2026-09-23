@@ -1,0 +1,35 @@
+links:
+- from: application_otlp
+  to: application_otlp_multiprocessor
+- from: application_otlp_multiprocessor
+  to: edgedelta_multiprocessor
+- from: agent_health
+  to: edgedelta
+- from: application_files
+  to: application_files_multiprocessor
+- from: application_files_multiprocessor
+  to: edgedelta_multiprocessor
+- from: edgedelta_multiprocessor
+  to: edgedelta
+nodes:
+- name: application_otlp
+  port: 4318
+  protocol: http
+  type: otlp_input
+- name: application_otlp_multiprocessor
+  type: sequence
+- enable_health_metrics: true
+  name: agent_health
+  type: ed_self_telemetry_input
+- name: edgedelta_multiprocessor
+  type: sequence
+- name: edgedelta
+  type: ed_output
+- name: application_files
+  path: /var/log/onboard/*.log
+  type: file_input
+- name: application_files_multiprocessor
+  type: sequence
+settings:
+  tag: onboarding
+version: v3
