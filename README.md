@@ -189,12 +189,14 @@ edx cql validate --type metric --file queries.txt   # one query per line
 
 # --- Pipeline / fleet management --------------------------------------------
 edx pipelines list --output table
+edx pipelines create --file pipeline.yaml --tag my-service --environment Docker
 edx pipelines get <conf-id>                         # includes config content
 edx pipelines history <conf-id>                     # version history
 edx pipelines validate --file pipeline.yaml
 edx pipelines save <conf-id> --file pipeline.yaml -d "add k8s source"
 edx pipelines deploy <conf-id> <version> --yes      # deploy or roll back
 edx pipelines agents <conf-id>
+edx pipelines delete <conf-id> --yes                # uninstall agents first
 edx pipelines status <conf-id>
 edx fleet agents
 edx fleet deployments

@@ -32,6 +32,8 @@ forward or back to any version.`,
 	}
 	cmd.AddCommand(
 		newPipelinesListCmd(),
+		newPipelinesCreateCmd(),
+		newPipelinesDeleteCmd(),
 		newPipelinesGetCmd(),
 		newPipelinesHistoryCmd(),
 		newPipelinesSaveCmd(),
