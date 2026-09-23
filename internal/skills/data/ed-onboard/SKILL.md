@@ -28,6 +28,12 @@ context separate from the Edge Delta organization/profile.
 - Prefer Edge Delta agents over another collector. Add an intermediary or collector
   only for a verified requirement, explaining its operational and cost implications.
   Existing use of a provider's logging service does not make it the preferred path.
+- Guide toward full coverage. Ask which signals to onboard as a multi-select question
+  whose first option is "All signals (Recommended)" (logs, metrics, traces and, for
+  Kubernetes, events), followed by Logs, Metrics and Traces so customers who want fewer
+  can combine them. Kubernetes events ride with All; mention that in its description,
+  since the question tool allows only four options. Show signals a resource cannot
+  provide as gaps in the target table.
 - Decide per signal. Application/client telemetry does not establish host, service or
   database-server coverage. An agent does not manufacture application traces or gain
   access to a managed service's private filesystem.
@@ -55,7 +61,8 @@ available paths. No new edx command hierarchy or backend onboarding state is req
    tool is only a clue, not proof of authentication, available resources or authorization.
 2. **Choose discovery scope.** Present the identified environments and let the customer
    select some or all, with account/project/subscription, region, cluster, hosts or
-   datacenter boundaries as applicable. If scope is already clear, use it. Read
+   datacenter boundaries as applicable. Ask which signals to onboard alongside scope,
+   with "All signals (Recommended)" first. If scope is already clear, use it. Read
    [discovery and selection](references/discovery.md) for inventory and selection details.
 3. **Discover read-only.** Within that scope, inventory resources, existing collection,
    agents, pipelines and deployment ownership. Identify available signals and candidate
