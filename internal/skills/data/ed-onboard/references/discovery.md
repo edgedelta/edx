@@ -42,10 +42,12 @@ Use a compact table or grouped list with stable resource IDs and readable names:
 |---|---|---|---|---|
 | Identified resource | Requested/available signals; already collected signals | Supported push or Edge Delta pull/agent path | Confirmed, needs investigation, or unsupported | Agent/config changes and necessary intermediaries |
 
-Let the customer choose all presented candidates, selected IDs/signals, or a clear
-constraint. Do not include resources found later in an earlier "all" selection without
-checking whether they fall within the user's stated scope. If only discovery was requested,
-stop with the inventory and candidates; no installation or collection changes follow.
+Default each row to all signals the resource can produce and recommend onboarding all
+of them; offer "all" first. Let the customer choose all presented candidates, selected
+IDs, signal opt-outs, or a clear constraint. Do not include resources found later in an
+earlier "all" selection without checking whether they fall within the user's stated
+scope. If only discovery was requested, stop with the inventory and candidates; no
+installation or collection changes follow.
 
 Carry selections, exclusions and unresolved choices into the plan. If an exception would
 violate a selection constraint, explain the gap rather than silently relaxing it. Before
