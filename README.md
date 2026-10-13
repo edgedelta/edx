@@ -166,6 +166,8 @@ edx logs search -q 'error' --output csv --columns timestamp,severity_text,body
 # --- Observability ----------------------------------------------------------
 edx logs search -q 'service.name:"api" AND severity_text:"ERROR"' --lookback 1h
 edx logs graph -q 'severity_text:"ERROR"' --group-by service.name --lookback 6h
+edx logs search --scope audit -q 'method:"DELETE"' --lookback 24h   # audit trail
+edx logs graph --scope audit --group-by user.email --lookback 24h
 edx patterns list --summary --lookback 1h          # clustered log signatures
 edx patterns list --negative --query 'service.name:"api"'
 edx metrics list --keyword cpu

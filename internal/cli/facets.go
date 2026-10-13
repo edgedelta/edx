@@ -6,7 +6,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const scopeHelp = "data scope: log, metric, trace, pattern or event"
+const scopeHelp = "data scope: log, metric, trace, pattern, event or audit"
 
 func newFacetsCmd() *cobra.Command {
 	cmd := &cobra.Command{
