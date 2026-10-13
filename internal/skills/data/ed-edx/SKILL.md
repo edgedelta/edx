@@ -59,6 +59,7 @@ Re-run `edx auth login` (OAuth by default, or `--token` from Admin > API Tokens)
 | Domain | Commands |
 |--------|----------|
 | Logs | `edx logs search`, `edx logs graph` |
+| Audit trail | `edx logs search/graph --scope audit` |
 | Patterns | `edx patterns list`, `edx patterns samples` |
 | Metrics | `edx metrics list`, `edx metrics query` |
 | Traces | `edx traces search`, `edx service-map` |
