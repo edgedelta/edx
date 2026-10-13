@@ -25,13 +25,7 @@ CQL SYNTAX
   numeric            @response.code > 400
 
 Regular expressions are NOT supported. Verify field names with
-"edx facets keys --scope log" and values with "edx facets options".
-
-AUDIT LOGS
-  --scope audit searches the org's audit trail instead: API requests
-  (method, path, status.code, user.email, auth.method) and AI teammate
-  activity (ed.audit.resource.type:"ai"). Discover its fields with
-  "edx facets keys --scope audit".`,
+"edx facets keys --scope log" and values with "edx facets options".`,
 	}
 	cmd.AddCommand(newLogsSearchCmd(), newLogsGraphCmd())
 	return cmd
