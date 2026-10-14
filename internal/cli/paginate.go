@@ -19,9 +19,16 @@ import (
 // single page by default (with a more-results hint on stderr), or a complete
 // sweep with --all.
 
-// registerAllFlag adds the --all sweep flag to a cursor-paginated command.
+// defaultAllMaxItems caps an --all sweep. Without a cap one broad query (a
+// full-text log search over 24h) pages through millions of rows, each page a
+// fresh search on the backend; a sweep that needs more must ask for it.
+const defaultAllMaxItems = 10000
+
+// registerAllFlag adds the --all sweep flag, and the --max-items cap that
+// bounds it, to a cursor-paginated command.
 func registerAllFlag(cmd *cobra.Command, all *bool) {
 	cmd.Flags().BoolVar(all, "all", false, "fetch every page (follow the response cursor until empty) and print one combined response")
+	cmd.Flags().Int("max-items", defaultAllMaxItems, "with --all, stop with an error once this many items are fetched and more remain")
 }
 
 // pagedRequest is one cursor-paginated list/search invocation.
@@ -33,6 +40,8 @@ type pagedRequest struct {
 	cursor   string            // starting cursor from the --cursor flag
 	allLimit func()            // optional: raise the page size for --all when the user did not set --limit
 	query    func() url.Values // command-specific params; may also set cursor (overridden while sweeping)
+	capHint  string            // optional: a cheaper alternative to suggest when --all hits --max-items
+	maxItems int               // set by run from --max-items
 }
 
 // run executes the request: a single page by default (with a more-results hint
@@ -43,8 +52,16 @@ func (r pagedRequest) run(cmd *cobra.Command) error {
 	if err != nil {
 		return err
 	}
-	if r.all && r.allLimit != nil && !cmd.Flags().Changed("limit") {
-		r.allLimit()
+	if r.all {
+		if r.maxItems, err = cmd.Flags().GetInt("max-items"); err != nil {
+			return err
+		}
+		if r.maxItems <= 0 {
+			return fmt.Errorf("--max-items must be positive, got %d", r.maxItems)
+		}
+		if r.allLimit != nil && !cmd.Flags().Changed("limit") {
+			r.allLimit()
+		}
 	}
 	buildQuery := func(cursor string) url.Values {
 		q := r.query()
@@ -137,8 +154,9 @@ var allRetryBaseDelay = time.Second
 
 // fetchAll follows the response cursor until the server reports the result
 // set complete, returning a single combined envelope. It fails atomically: any
-// mid-sweep error aborts with no output, so a partial sweep can never be
-// mistaken for a complete one; the error names the cursor to resume from.
+// mid-sweep error, including reaching r.maxItems with results remaining,
+// aborts with no output, so a partial sweep can never be mistaken for a
+// complete one; the error names the cursor to resume from.
 func (r pagedRequest) fetchAll(ctx context.Context, c *api.Client, buildQuery func(cursor string) url.Values) ([]byte, error) {
 	items := []json.RawMessage{}
 	pages := 0
@@ -163,6 +181,15 @@ func (r pagedRequest) fetchAll(ctx context.Context, c *api.Client, buildQuery fu
 		}
 		if next == cursor {
 			return nil, fmt.Errorf("page %d: server returned the same cursor twice; aborting to avoid an infinite loop", pages)
+		}
+		if len(items) >= r.maxItems {
+			hint := "narrow the query or time range"
+			if r.capHint != "" {
+				hint += ", " + r.capHint
+			}
+			return nil, fmt.Errorf("stopped after %d page(s), %d items: more results remain beyond --max-items %d. "+
+				"To get a smaller result set, %s. Raise --max-items only if you need every item "+
+				"(resume from this point with --all --cursor '%s')", pages, len(items), r.maxItems, hint, next)
 		}
 		cursor = next
 	}
