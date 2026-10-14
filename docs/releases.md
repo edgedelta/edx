@@ -5,6 +5,16 @@ macOS, Linux, and Windows binaries for amd64 and arm64. Windows assets are ZIPs;
 macOS/Linux assets remain tar.gz archives. All archives are covered by the
 release's `checksums.txt`.
 
+## Agent skills mirror
+
+After GoReleaser succeeds, the `mirror-skills` job copies `skills/` (minus
+`embed.go`) to [edgedelta/agent-skills](https://github.com/edgedelta/agent-skills)
+and pushes a "Sync skills from edx <tag>" commit, if anything changed. It needs
+the `AGENT_SKILLS_GITHUB_TOKEN` secret: a fine-grained token, or a GitHub App
+token, with contents:write on `edgedelta/agent-skills`. If the job fails, the
+binaries and Homebrew formula are already published. Fix the token and re-run
+just that job.
+
 ## Submit WinGet using your existing gh login
 
 No new token is required for this route. The release workflow generates the

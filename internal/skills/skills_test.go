@@ -115,7 +115,7 @@ func TestInstallRejectsPathTraversal(t *testing.T) {
 }
 
 func TestEmbeddedSkillsArePresent(t *testing.T) {
-	// Guards the vendored copy: `make sync-skills` must have run and the core
+	// Guards the embed pattern in the top-level skills package: the core
 	// skills must be embedded.
 	names, err := Names(Embedded())
 	if err != nil {
@@ -129,7 +129,7 @@ func TestEmbeddedSkillsArePresent(t *testing.T) {
 	}
 	for name, found := range want {
 		if !found {
-			t.Errorf("embedded skills missing %q (run `make sync-skills`); have %v", name, names)
+			t.Errorf("embedded skills missing %q; have %v", name, names)
 		}
 	}
 }

@@ -10,8 +10,8 @@ import (
 )
 
 // examplesDir holds the dashboard examples shipped with the ed-dashboards skill, vendored
-// from the agent-skills repo by `make sync-skills`.
-const examplesDir = "../skills/data/ed-dashboards/examples"
+// from the top-level skills directory.
+const examplesDir = "../../skills/ed-dashboards/examples"
 
 // Agents copy these examples as a starting point, so an example that does not validate is
 // worse than no example at all: it teaches a shape the product rejects. This is the guard
@@ -91,7 +91,7 @@ func TestSkillExamplesValidate(t *testing.T) {
 // `edx dashboards options` prints the same values from the same source, which is the fix
 // when this fails — copy them across.
 func TestSkillDocumentsEverySchemaOption(t *testing.T) {
-	raw, err := os.ReadFile("../skills/data/ed-dashboards/SKILL.md")
+	raw, err := os.ReadFile("../../skills/ed-dashboards/SKILL.md")
 	if err != nil {
 		t.Fatal(err)
 	}
