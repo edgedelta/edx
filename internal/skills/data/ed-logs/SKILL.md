@@ -87,6 +87,28 @@ edx logs graph -q 'severity_text:"ERROR"' --group-by service.name --lookback 6h
 edx logs graph -q 'service.name:"api"' --lookback 24h
 ```
 
+## Audit Logs
+
+`--scope audit` (on `logs search` and `logs graph`) queries the org's audit
+trail instead of its logs. It holds two kinds of records:
+
+- **API requests**: `method`, `path`, `status.code`, `user.email`,
+  `auth.method` - who changed what, and whether it succeeded.
+- **AI teammate activity**: `ed.audit.resource.type:"ai"` - LLM prompts, tool
+  calls and token usage. These records embed the full system prompt, so write
+  them to a file with `--output-file` rather than parsing stdout.
+
+Discover fields with `edx facets keys --scope audit`.
+
+```bash
+# Who deleted what in the last day
+edx logs search --scope audit -q 'method:"DELETE"' --lookback 24h \
+  --output table --columns timestamp,body
+
+# API activity per user
+edx logs graph --scope audit --group-by user.email --lookback 24h
+```
+
 ## Pagination
 
 Responses include cursors; a page is a lower bound until `next_cursor` comes
