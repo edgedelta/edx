@@ -372,3 +372,72 @@ func TestAIKnowledgeSearchAllSweepsNestedEnvelope(t *testing.T) {
 		t.Errorf("page 1 limit = %q, want 200 under --all", v)
 	}
 }
+
+func TestAllStopsAtMaxItemsWhenMoreRemain(t *testing.T) {
+	var got []url.Values
+	srv := eventsAPIServer(t, &got, map[string]string{
+		"":   `{"query_id":"x","items":[` + eventItems("a", "b") + `],"next_cursor":"c1"}`,
+		"c1": `{"query_id":"x","items":[` + eventItems("c", "d") + `],"next_cursor":"c2"}`,
+		"c2": `{"query_id":"x","items":[` + eventItems("e") + `],"next_cursor":""}`,
+	})
+	defer srv.Close()
+	useAPIEnv(t, srv.URL)
+
+	stdout := captureStdout(t, func() {
+		err := runEdx(t, "logs", "search", "--all", "--max-items", "3")
+		if err == nil {
+			t.Fatal("expected an error when --max-items is reached with results remaining")
+		}
+		for _, want := range []string{"--max-items 3", "--all --cursor 'c2'", "edx logs graph"} {
+			if !strings.Contains(err.Error(), want) {
+				t.Errorf("error missing %q: %v", want, err)
+			}
+		}
+	})
+	// The sweep stops at the first page that reaches the cap: page 3 is
+	// never requested, and the partial result is not printed.
+	if len(got) != 2 {
+		t.Errorf("requests = %d, want 2", len(got))
+	}
+	if stdout != "" {
+		t.Errorf("stdout not empty after hitting the cap: %q", stdout)
+	}
+}
+
+func TestAllCompletesWhenLastPageReachesMaxItems(t *testing.T) {
+	var got []url.Values
+	srv := eventsAPIServer(t, &got, map[string]string{
+		"":   `{"query_id":"x","items":[` + eventItems("a", "b") + `],"next_cursor":"c1"}`,
+		"c1": `{"query_id":"x","items":[` + eventItems("c") + `],"next_cursor":""}`,
+	})
+	defer srv.Close()
+	useAPIEnv(t, srv.URL)
+
+	// Reaching the cap on the final page is a complete sweep, not an error.
+	if err := runEdx(t, "events", "search", "--all", "--max-items", "3"); err != nil {
+		t.Fatalf("search --all: %v", err)
+	}
+}
+
+func TestAllMaxItemsDefaultAndValidation(t *testing.T) {
+	cmd := newEventsCmd()
+	search, _, err := cmd.Find([]string{"search"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if v := search.Flags().Lookup("max-items").DefValue; v != fmt.Sprint(defaultAllMaxItems) {
+		t.Errorf("--max-items default = %s, want %d", v, defaultAllMaxItems)
+	}
+
+	var got []url.Values
+	srv := eventsAPIServer(t, &got, map[string]string{"": `{"items":[],"next_cursor":""}`})
+	defer srv.Close()
+	useAPIEnv(t, srv.URL)
+	err = runEdx(t, "events", "search", "--all", "--max-items", "0")
+	if err == nil || !strings.Contains(err.Error(), "--max-items must be positive") {
+		t.Errorf("--max-items 0: err = %v, want validation error", err)
+	}
+	if len(got) != 0 {
+		t.Errorf("requests = %d, want 0 (validation happens before any request)", len(got))
+	}
+}

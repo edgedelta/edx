@@ -62,6 +62,7 @@ func newLogsSearchCmd() *cobra.Command {
 				svc: api.ServiceAPI, path: "/logs/log_search/search", itemsKey: "items",
 				all: all, cursor: pg.cursor,
 				allLimit: func() { pg.limit = 1000 },
+				capHint:  `or count matches in one query with "edx logs graph"`,
 				query: func() url.Values {
 					q := url.Values{}
 					q.Set("scope", scope)
