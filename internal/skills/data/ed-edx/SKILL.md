@@ -130,6 +130,14 @@ The contract:
   still fails, the command exits non-zero, prints **nothing** (a partial sweep
   never masquerades as a total), and names the cursor to resume from with
   `--all --cursor`.
+- **`--all` is capped at 10,000 items** (`--max-items`). Every page is a
+  fresh search on the backend, so a broad raw-log sweep (a full-text query
+  over 24h) can mean thousands of searches. When the cap is reached with
+  results remaining, the command stops, prints nothing, exits non-zero and
+  names the resume cursor. Don't raise the cap by reflex: to **count** or
+  **trend**, use one aggregate query (`logs graph`, `metrics query`); to
+  **summarize**, use `patterns list`; otherwise narrow the query or time
+  range. Raise `--max-items` only when the user needs every item.
 - Without `--all`, a page that leaves results behind prints a note on
   **stderr** (`more results exist: ...`). Keep stderr out of your jq pipe.
 - Under `--all`, `--limit` is the page size; leave it unset for a sensible
@@ -199,4 +207,5 @@ edx api GET /settings_v2/rehydration-settings
 | 500 / "Failed to query ..." | Server-side error, not your query. Retry the same command; if it persists, narrow the time range. Do NOT keep editing the query - widening `--lookback` will not fix a 5xx. |
 | Timeout on large queries | Narrow the time range or add `--timeout 120s` |
 | "Unterminated string" / truncated JSON when parsing output | Not an API error - your stdout capture is capped. Re-run with `--output-file <path>` and parse the file |
-| A count looks suspiciously round (20, 50, 1000) | You read one page. Check the cursor; re-run with `--all` for the complete set |
+| A count looks suspiciously round (20, 50, 1000) | You read one page. Check the cursor. For lists (monitors, events, rehydrations) re-run with `--all`; for log or trace **counts**, use `edx logs graph` instead of sweeping raw rows |
+| `--all` stopped at `--max-items` | The result set is too big to sweep. Narrow the query or time range, or aggregate (`logs graph`, `patterns list`); raise `--max-items` only if every item is truly needed |

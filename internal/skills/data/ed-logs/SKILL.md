@@ -113,12 +113,19 @@ edx logs graph --scope audit --group-by user.email --lookback 24h
 
 Responses include cursors; a page is a lower bound until `next_cursor` comes
 back empty (contract: **ed-edx** > Pagination). Continue a search, or sweep
-the whole window:
+a narrow window:
 
 ```bash
 edx logs search -q 'error' --limit 100 --cursor "<next_cursor from previous response>"
-edx logs search -q 'error' --lookback 1h --all --output-file errors-1h.json
+edx logs search -q 'service.name:"api" AND severity_text:"ERROR"' --lookback 1h \
+  --all --output-file api-errors-1h.json
 ```
+
+**Don't sweep raw logs to answer a count or a "what's happening" question.**
+Each page is a fresh backend search, and `--all` stops at 10,000 items
+(`--max-items`). Use `edx logs graph` to count or trend matches in one query,
+and `edx patterns list` to summarize them. Sweep with `--all` only when the
+user needs the individual records, and keep the query and window narrow.
 
 ## Empty Results Checklist
 
