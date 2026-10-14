@@ -66,9 +66,10 @@ jobs:
         with:
           repository: edgedelta/agent-skills
           path: agent-skills
-          # Must be a token with contents:write on edgedelta/agent-skills; the
-          # default GITHUB_TOKEN cannot write to another repository.
-          token: ${{ secrets.AGENT_SKILLS_GITHUB_TOKEN }}
+          # Private half of a read-write deploy key on edgedelta/agent-skills
+          # (titled "edx release: mirror-skills"); the default GITHUB_TOKEN
+          # cannot write to another repository.
+          ssh-key: ${{ secrets.AGENT_SKILLS_DEPLOY_KEY }}
 
       - name: Mirror skills
         run: make mirror-skills SKILLS_MIRROR=agent-skills

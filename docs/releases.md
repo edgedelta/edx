@@ -10,10 +10,17 @@ release's `checksums.txt`.
 After GoReleaser succeeds, the `mirror-skills` job copies `skills/` (minus
 `embed.go`) to [edgedelta/agent-skills](https://github.com/edgedelta/agent-skills)
 and pushes a "Sync skills from edx <tag>" commit, if anything changed. It needs
-the `AGENT_SKILLS_GITHUB_TOKEN` secret: a fine-grained token, or a GitHub App
-token, with contents:write on `edgedelta/agent-skills`. If the job fails, the
-binaries and Homebrew formula are already published. Fix the token and re-run
-just that job.
+the `AGENT_SKILLS_DEPLOY_KEY` secret: the private half of a read-write deploy
+key on `edgedelta/agent-skills` titled "edx release: mirror-skills". If the job
+fails, the binaries and Homebrew formula are already published. Fix the key and
+re-run just that job. To rotate the key:
+
+```sh
+ssh-keygen -t ed25519 -N "" -C "edx release mirror-skills" -f key
+gh repo deploy-key add key.pub -R edgedelta/agent-skills --allow-write --title "edx release: mirror-skills"
+gh secret set AGENT_SKILLS_DEPLOY_KEY -R edgedelta/edx < key
+rm key key.pub   # then delete the old deploy key in agent-skills settings
+```
 
 ## Submit WinGet using your existing gh login
 
