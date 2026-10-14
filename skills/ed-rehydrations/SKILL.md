@@ -50,8 +50,8 @@ Estimate replay volume the way the web UI's Analysis panel does — from the
 rehydration metrics:
 
 ```bash
-edx metrics query --name ed.rehydration.bytes --agg sum -q '<same cql>' --lookback 1h
-edx metrics query --name ed.rehydration.count --agg sum -q '<same cql>' --lookback 1h
+edx metrics query --name ed.rehydration.bytes --agg sum --filter '<same cql>' --lookback 1h
+edx metrics query --name ed.rehydration.count --agg sum --filter '<same cql>' --lookback 1h
 ```
 
 `edx rehydrations analyze` calls the server-side estimator instead, but that

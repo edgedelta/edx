@@ -1,15 +1,14 @@
 VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 LDFLAGS := -X github.com/edgedelta/edx/internal/cli.Version=$(VERSION)
 
-# Where the agent-skills source repo is checked out. The skills are vendored
-# into internal/skills/data (committed, so `go install` and plain clones work);
-# `make sync-skills` regenerates that copy. agent-skills stays the source of truth.
-SKILLS_SRC ?= ../agent-skills
-SKILLS_DST := internal/skills/data
+# The agent skills are authored in ./skills and mirrored to a checkout of the
+# public edgedelta/agent-skills repo (what `npx skills add` installs from). The
+# release workflow runs the mirror on every tag; see mirror-skills below.
+SKILLS_MIRROR ?= ../agent-skills
 
 # Where the edgedelta monorepo is checked out. The dashboard JSON Schema is generated
 # from the frontend's TypeScript types (the source of truth) and vendored into
-# internal/dashboards, committed for the same reason as the skills above.
+# internal/dashboards, committed so `go install` and plain clones work.
 MONOREPO_SRC ?= ../edgedelta
 SCHEMA_SRC := $(MONOREPO_SRC)/web/src/modules/dashboards/versions/v4/schema/dashboard-v4.schema.json
 SCHEMA_DST := internal/dashboards/dashboard-v4.schema.json
@@ -26,7 +25,7 @@ PARSER_DIRS := logparser metric/parser formula/parser
 # implementation is diffed against the frontend's actual output. This is that output.
 ORACLE_DST := internal/dashboards/testdata/resource-accesses.json
 
-.PHONY: build install test vet lint clean sync-skills sync-dashboard-schema sync-cql-parsers sync-resource-accesses-oracle
+.PHONY: build install test vet lint clean mirror-skills sync-dashboard-schema sync-cql-parsers sync-resource-accesses-oracle
 
 build:
 	go build -ldflags '$(LDFLAGS)' -o bin/edx .
@@ -43,15 +42,12 @@ vet:
 clean:
 	rm -rf bin
 
-# Regenerate the vendored copy of the agent skills embedded in the binary.
-# Run after skills change in $(SKILLS_SRC), then commit internal/skills/data.
-sync-skills:
-	@test -d "$(SKILLS_SRC)" || { echo "skills source not found at $(SKILLS_SRC); set SKILLS_SRC=/path/to/agent-skills"; exit 1; }
-	rm -rf $(SKILLS_DST)
-	mkdir -p $(SKILLS_DST)
-	cp -R $(SKILLS_SRC)/ed-* $(SKILLS_DST)/
-	@echo "synced skills from $(SKILLS_SRC) into $(SKILLS_DST):"
-	@ls -1 $(SKILLS_DST)
+# Make $(SKILLS_MIRROR) an exact copy of ./skills, minus the Go embed file.
+# The mirror's own .git and .github (its PR guard) are left alone. Committing
+# and pushing the result is the caller's job (the release workflow does both).
+mirror-skills:
+	@test -d "$(SKILLS_MIRROR)/.git" || { echo "no agent-skills checkout at $(SKILLS_MIRROR); set SKILLS_MIRROR=/path/to/agent-skills"; exit 1; }
+	rsync -a --delete --exclude=.git --exclude=.github --exclude='*.go' skills/ $(SKILLS_MIRROR)/
 
 # Refresh the embedded dashboard schema after the frontend types change. Run
 # `bun gen:dashboard-schema` in $(MONOREPO_SRC)/web first, then commit $(SCHEMA_DST).

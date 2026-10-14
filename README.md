@@ -284,9 +284,11 @@ edx. The platform is auto-detected from the environment, or pass it explicitly
 (`claude`, `cursor`, `codex`, `opencode`, or `all`); `--project` installs into
 the current repo instead of your home directory.
 
-The skills are authored in [edgedelta/agent-skills](https://github.com/edgedelta/agent-skills)
-and embedded in the binary, so an installed skill always matches the edx version
-that wrote it — no network access needed.
+The skills are authored in [`skills/`](skills) and embedded in the binary, so an
+installed skill always matches the edx version that wrote it — no network access
+needed. Each release also publishes them to
+[edgedelta/agent-skills](https://github.com/edgedelta/agent-skills) for
+`npx skills add`.
 
 ## Development
 
@@ -294,14 +296,14 @@ that wrote it — no network access needed.
 make build         # bin/edx
 make test
 make vet
-make sync-skills   # refresh the embedded skills from ../agent-skills, then commit
 ```
 
-The embedded skills live in `internal/skills/data` (a generated copy of the
-`agent-skills` repo). After skills change upstream, run `make sync-skills`
-(optionally `SKILLS_SRC=/path/to/agent-skills`) and commit the result.
+Agent skills live in [`skills/`](skills). Change a skill in the same PR as the
+CLI change it describes. Don't edit `edgedelta/agent-skills` directly: the
+release workflow overwrites it with `skills/` on every tag (`make
+mirror-skills`).
 
 ## Related
 
-- [edgedelta/agent-skills](https://github.com/edgedelta/agent-skills) — AI agent skills built on edx
+- [edgedelta/agent-skills](https://github.com/edgedelta/agent-skills) — published mirror of [`skills/`](skills)
 - [edgedelta/edgedelta-mcp-server](https://github.com/edgedelta/edgedelta-mcp-server) — MCP server for Edge Delta

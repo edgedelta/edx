@@ -50,3 +50,39 @@ jobs:
           name: winget-manifests
           path: dist/winget/**
           if-no-files-found: error
+
+  # Publish ./skills to edgedelta/agent-skills, where `npx skills add` installs
+  # from. Runs on the tag, after the release, so the public skills never
+  # describe a flag the released edx does not have yet.
+  mirror-skills:
+    needs: goreleaser
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout edx
+        uses: actions/checkout@v4
+
+      - name: Checkout agent-skills
+        uses: actions/checkout@v4
+        with:
+          repository: edgedelta/agent-skills
+          path: agent-skills
+          # Must be a token with contents:write on edgedelta/agent-skills; the
+          # default GITHUB_TOKEN cannot write to another repository.
+          token: ${{ secrets.AGENT_SKILLS_GITHUB_TOKEN }}
+
+      - name: Mirror skills
+        run: make mirror-skills SKILLS_MIRROR=agent-skills
+
+      - name: Commit and push
+        working-directory: agent-skills
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "agent-skills already matches ${GITHUB_REF_NAME}"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Sync skills from edx ${GITHUB_REF_NAME}" \
+            -m "Generated from https://github.com/edgedelta/edx/tree/${GITHUB_REF_NAME}/skills"
+          git push
