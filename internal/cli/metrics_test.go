@@ -626,3 +626,38 @@ func TestWriteCompactJSONRoundTrips(t *testing.T) {
 		t.Errorf("array of objects not one-per-line:\n%s", buf.String())
 	}
 }
+
+func TestMetricsListSendsTimeWindow(t *testing.T) {
+	facet := `{"options":[{"name":"qa_http.server.requests"},{"name":"system.cpu.usage"}]}`
+	cases := []struct {
+		args []string
+		want map[string]string
+	}{
+		{[]string{"metrics", "list"}, map[string]string{"lookback": "24h"}},
+		{[]string{"metrics", "list", "--lookback", "7h"}, map[string]string{"lookback": "7h"}},
+		{[]string{"metrics", "list", "--from", "2026-10-15T12:00:00.000Z", "--to", "2026-10-15T18:00:00.000Z"},
+			map[string]string{"from": "2026-10-15T12:00:00.000Z", "to": "2026-10-15T18:00:00.000Z", "lookback": ""}},
+	}
+	for _, tc := range cases {
+		api := &metricsAPI{routes: map[string]func(*http.Request, string) (int, string){
+			"/facet_options": fixed(200, facet),
+		}}
+		api.server(t)
+		out, _, err := runEdxCapture(t, append(tc.args, "--keyword", "qa_")...)
+		if err != nil {
+			t.Fatalf("%v: %v", tc.args, err)
+		}
+		if !strings.Contains(out, "qa_http.server.requests") || strings.Contains(out, "system.cpu.usage") {
+			t.Errorf("%v: keyword filter output = %s", tc.args, out)
+		}
+		if len(api.reqs) != 1 {
+			t.Fatalf("%v: %d requests", tc.args, len(api.reqs))
+		}
+		q := api.reqs[0].query
+		for k, v := range tc.want {
+			if got := q.Get(k); got != v {
+				t.Errorf("%v: %s = %q, want %q", tc.args, k, got, v)
+			}
+		}
+	}
+}

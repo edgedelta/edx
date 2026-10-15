@@ -39,11 +39,17 @@ Metric names must be EXACT (no wildcards). Agent workflow:
 func newMetricsListCmd() *cobra.Command {
 	var keyword string
 	var limit int
+	var tf timeFlags
 	cmd := &cobra.Command{
 		Use:   "list",
-		Short: "List available metric names",
+		Short: "List metric names that reported data in a time window",
+		Long: `List metric names that reported at least one sample in the time window
+(default: the last 24h). A metric that stopped reporting before the window
+starts is not listed, so widen --lookback or pass --from/--to when you
+investigate an older incident.`,
 		Example: `  edx metrics list
-  edx metrics list --keyword cpu`,
+  edx metrics list --keyword cpu
+  edx metrics list --keyword http --from 2026-10-15T12:00:00.000Z --to 2026-10-15T18:00:00.000Z`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			c, err := newClient()
 			if err != nil {
@@ -53,6 +59,7 @@ func newMetricsListCmd() *cobra.Command {
 			q.Set("scope", "metric")
 			q.Set("facet_path", "name")
 			q.Set("limit", itoa(limit))
+			tf.apply(q)
 			data, err := c.Get(cmdContext(cmd), "/facet_options", q)
 			if err != nil {
 				return err
@@ -87,6 +94,7 @@ func newMetricsListCmd() *cobra.Command {
 	}
 	cmd.Flags().StringVar(&keyword, "keyword", "", "case-insensitive substring filter on metric names")
 	cmd.Flags().IntVar(&limit, "limit", 1000, "maximum number of metric names to fetch")
+	tf.register(cmd, "24h")
 	return cmd
 }
 

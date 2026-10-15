@@ -19,7 +19,7 @@ The `edx` CLI must be installed and authenticated. See the **ed-edx** skill.
 
 ## Agent Workflow (token-efficient)
 
-1. **Find the exact name**: `edx metrics list --keyword <part>`.
+1. **Find the exact name**: `edx metrics list --keyword <part>`. It only lists metrics that reported in the window (default last 24h); for an older incident pass `--from/--to` around it.
 2. **Describe it first**: `edx metrics describe <name>` - one call returns kind,
    unit, temporality, labels with cardinality and sample values, staleness and
    ready-to-run example queries. Copy an example rather than guessing the
@@ -52,6 +52,7 @@ The `edx` CLI must be installed and authenticated. See the **ed-edx** skill.
 ```bash
 edx metrics list                    # all metric names
 edx metrics list --keyword cpu      # fuzzy filter
+edx metrics list --keyword http --lookback 7d   # widen the window for older incidents
 edx metrics describe http.server.request.duration
 edx metrics describe ed.pipeline.bytes --lookback 24h
 ```
