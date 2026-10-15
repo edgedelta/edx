@@ -61,7 +61,7 @@ Re-run `edx auth login` (OAuth by default, or `--token` from Admin > API Tokens)
 | Logs | `edx logs search`, `edx logs graph` |
 | Audit trail | `edx logs search/graph --scope audit` |
 | Patterns | `edx patterns list`, `edx patterns samples` |
-| Metrics | `edx metrics list`, `edx metrics query` |
+| Metrics | `edx metrics list`, `edx metrics describe <name>`, `edx metrics query` (`--summary`, `--baseline 1w`, `--top N`) |
 | Traces | `edx traces search`, `edx service-map` |
 | Events | `edx events search` |
 | Monitors | `edx monitors list/get/create/update/delete/states` |
@@ -94,6 +94,10 @@ Re-run `edx auth login` (OAuth by default, or `--token` from Admin > API Tokens)
 - **Confirmations**: destructive commands (`deploy`, `delete`) prompt; add
   `--yes` in non-interactive contexts.
 - **Limits**: default search limit is 20; raise with `--limit`.
+- **Metrics, cheapest first**: `edx metrics describe <name>` (kind, labels,
+  example queries) before querying; `edx metrics query ... --summary` (add
+  `--baseline 1w` for "is this abnormal?") for investigation; raw
+  `edx metrics query` points only when you need exact timestamps or a chart.
 - **Query fields use dot paths**: filter with `field.name:"value"` (e.g.
   `event.domain:"Monitor"`, `service.name:"api"`) even though the JSON response
   renders the same field with underscores (e.g. `event_domain`). Filter on the
@@ -135,7 +139,7 @@ The contract:
   over 24h) can mean thousands of searches. When the cap is reached with
   results remaining, the command stops, prints nothing, exits non-zero and
   names the resume cursor. Don't raise the cap by reflex: to **count** or
-  **trend**, use one aggregate query (`logs graph`, `metrics query`); to
+  **trend**, use one aggregate query (`logs graph`, `metrics query --summary`); to
   **summarize**, use `patterns list`; otherwise narrow the query or time
   range. Raise `--max-items` only when the user needs every item.
 - Without `--all`, a page that leaves results behind prints a note on

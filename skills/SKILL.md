@@ -18,7 +18,7 @@ Delta's SDKs.
 | **ed-edx** | Primary CLI - all edx commands, auth, setup |
 | **ed-logs** | Search logs with CQL, log volume graphs |
 | **ed-patterns** | Log patterns, anomaly and sentiment analysis |
-| **ed-metrics** | Discover and aggregate metrics |
+| **ed-metrics** | Discover, describe and summarize metrics |
 | **ed-traces** | Distributed traces and the service map |
 | **ed-events** | Events: anomalies, monitor alerts, K8s events |
 | **ed-monitors** | Create, manage and resolve monitors |
@@ -69,7 +69,8 @@ Use this order for scoped commands:
 |------|---------|
 | Search error logs | `edx logs search -q 'severity_text:"ERROR"' --lookback 1h` |
 | Top log patterns | `edx patterns list --summary --lookback 1h` |
-| Query a metric | `edx metrics query --name system.cpu.usage --agg avg` |
+| Describe a metric | `edx metrics describe system.cpu.usage` |
+| Query a metric | `edx metrics query --name system.cpu.usage --agg avg --summary` |
 | Find failed spans | `edx traces search -q 'status.code:"ERROR"' --lookback 1h` |
 | Recent anomalies | `edx events search -q 'event.type:"pattern_anomaly"'` |
 | List monitors | `edx monitors list --output table` |

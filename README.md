@@ -171,7 +171,9 @@ edx logs graph --scope audit --group-by user.email --lookback 24h
 edx patterns list --summary --lookback 1h          # clustered log signatures
 edx patterns list --negative --query 'service.name:"api"'
 edx metrics list --keyword cpu
+edx metrics describe http.request.duration          # kind, labels, example queries
 edx metrics query --name http.request.duration --agg avg --group-by service.name
+edx metrics query --name http.request.duration --agg p95 --group-by service.name --summary --baseline 1w
 edx traces search -q 'status.code:"ERROR"' --include-children
 edx events search -q 'event.type:"pattern_anomaly"' --lookback 6h
 edx monitors list --output table
