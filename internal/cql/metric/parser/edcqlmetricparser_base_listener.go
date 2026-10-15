@@ -57,6 +57,12 @@ func (s *BaseEDCqlMetricParserListener) EnterAggregationMethod(ctx *AggregationM
 // ExitAggregationMethod is called when production aggregationMethod is exited.
 func (s *BaseEDCqlMetricParserListener) ExitAggregationMethod(ctx *AggregationMethodContext) {}
 
+// EnterOperatorColon is called when production operatorColon is entered.
+func (s *BaseEDCqlMetricParserListener) EnterOperatorColon(ctx *OperatorColonContext) {}
+
+// ExitOperatorColon is called when production operatorColon is exited.
+func (s *BaseEDCqlMetricParserListener) ExitOperatorColon(ctx *OperatorColonContext) {}
+
 // EnterGroupByFields is called when production groupByFields is entered.
 func (s *BaseEDCqlMetricParserListener) EnterGroupByFields(ctx *GroupByFieldsContext) {}
 
@@ -176,9 +182,3 @@ func (s *BaseEDCqlMetricParserListener) EnterQuotedTerm(ctx *QuotedTermContext) 
 
 // ExitQuotedTerm is called when production quotedTerm is exited.
 func (s *BaseEDCqlMetricParserListener) ExitQuotedTerm(ctx *QuotedTermContext) {}
-
-// EnterOperatorColon is called when production operatorColon is entered.
-func (s *BaseEDCqlMetricParserListener) EnterOperatorColon(ctx *OperatorColonContext) {}
-
-// ExitOperatorColon is called when production operatorColon is exited.
-func (s *BaseEDCqlMetricParserListener) ExitOperatorColon(ctx *OperatorColonContext) {}

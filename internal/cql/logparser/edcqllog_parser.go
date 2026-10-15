@@ -32,14 +32,15 @@ var EDCqlLogParserParserStaticData struct {
 func edcqllogparserParserInit() {
 	staticData := &EDCqlLogParserParserStaticData
 	staticData.LiteralNames = []string{
-		"", "", "", "", "'{'", "'}'", "'('", "')'", "", "", "'*'", "", "'.rollup'",
+		"", "", "", "", "'{'", "'}'", "'('", "')'", "", "", "", "'*'", "", "'.rollup'",
 		"", "'count_unique'", "'.fill'", "'last'",
 	}
 	staticData.SymbolicNames = []string{
 		"", "AND", "OR", "NOT", "LBRACE", "RBRACE", "LPAREN", "RPAREN", "OP_COLON",
-		"OPERATOR", "MATCH_ALL", "COMMA", "ROLLUP_START", "BY", "COUNT_UNIQUE",
-		"FILL_START", "COMMON_OPERATOR", "FILL_OPERATOR", "AGGREGATION_OPERATOR",
-		"QUOTED", "NUMBER", "TERM", "DEFAULT_SKIP", "UNKNOWN",
+		"OPERATOR", "REGEX_OPERATOR", "MATCH_ALL", "COMMA", "ROLLUP_START",
+		"BY", "COUNT_UNIQUE", "FILL_START", "COMMON_OPERATOR", "FILL_OPERATOR",
+		"AGGREGATION_OPERATOR", "COUNTER_OPERATOR", "QUOTED", "NUMBER", "TERM",
+		"DEFAULT_SKIP", "UNKNOWN",
 	}
 	staticData.RuleNames = []string{
 		"finalQuery", "topLevelQuery", "rollupMethod", "rollupField", "rollupSection",
@@ -49,7 +50,7 @@ func edcqllogparserParserInit() {
 	}
 	staticData.PredictionContextCache = antlr.NewPredictionContextCache()
 	staticData.serializedATN = []int32{
-		4, 1, 23, 173, 2, 0, 7, 0, 2, 1, 7, 1, 2, 2, 7, 2, 2, 3, 7, 3, 2, 4, 7,
+		4, 1, 25, 174, 2, 0, 7, 0, 2, 1, 7, 1, 2, 2, 7, 2, 2, 3, 7, 3, 2, 4, 7,
 		4, 2, 5, 7, 5, 2, 6, 7, 6, 2, 7, 7, 7, 2, 8, 7, 8, 2, 9, 7, 9, 2, 10, 7,
 		10, 2, 11, 7, 11, 2, 12, 7, 12, 2, 13, 7, 13, 2, 14, 7, 14, 2, 15, 7, 15,
 		2, 16, 7, 16, 2, 17, 7, 17, 2, 18, 7, 18, 2, 19, 7, 19, 2, 20, 7, 20, 1,
@@ -64,64 +65,65 @@ func edcqllogparserParserInit() {
 		11, 1, 12, 1, 12, 3, 12, 127, 8, 12, 1, 12, 5, 12, 130, 8, 12, 10, 12,
 		12, 12, 133, 9, 12, 1, 13, 3, 13, 136, 8, 13, 1, 13, 1, 13, 1, 14, 1, 14,
 		1, 15, 1, 15, 1, 15, 3, 15, 145, 8, 15, 1, 15, 1, 15, 3, 15, 149, 8, 15,
-		1, 16, 1, 16, 1, 16, 1, 16, 1, 16, 1, 16, 1, 16, 1, 16, 1, 16, 1, 16, 3,
-		16, 161, 8, 16, 1, 17, 1, 17, 1, 17, 1, 17, 1, 18, 1, 18, 1, 19, 1, 19,
-		1, 20, 1, 20, 1, 20, 0, 0, 21, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22,
-		24, 26, 28, 30, 32, 34, 36, 38, 40, 0, 2, 2, 0, 16, 16, 18, 18, 1, 0, 8,
-		9, 178, 0, 42, 1, 0, 0, 0, 2, 48, 1, 0, 0, 0, 4, 50, 1, 0, 0, 0, 6, 52,
-		1, 0, 0, 0, 8, 54, 1, 0, 0, 0, 10, 61, 1, 0, 0, 0, 12, 69, 1, 0, 0, 0,
-		14, 77, 1, 0, 0, 0, 16, 82, 1, 0, 0, 0, 18, 93, 1, 0, 0, 0, 20, 112, 1,
-		0, 0, 0, 22, 116, 1, 0, 0, 0, 24, 124, 1, 0, 0, 0, 26, 135, 1, 0, 0, 0,
-		28, 139, 1, 0, 0, 0, 30, 144, 1, 0, 0, 0, 32, 160, 1, 0, 0, 0, 34, 162,
-		1, 0, 0, 0, 36, 166, 1, 0, 0, 0, 38, 168, 1, 0, 0, 0, 40, 170, 1, 0, 0,
-		0, 42, 43, 3, 2, 1, 0, 43, 1, 1, 0, 0, 0, 44, 45, 3, 18, 9, 0, 45, 46,
-		5, 0, 0, 1, 46, 49, 1, 0, 0, 0, 47, 49, 5, 0, 0, 1, 48, 44, 1, 0, 0, 0,
-		48, 47, 1, 0, 0, 0, 49, 3, 1, 0, 0, 0, 50, 51, 7, 0, 0, 0, 51, 5, 1, 0,
-		0, 0, 52, 53, 5, 21, 0, 0, 53, 7, 1, 0, 0, 0, 54, 55, 5, 12, 0, 0, 55,
-		56, 5, 6, 0, 0, 56, 57, 3, 4, 2, 0, 57, 58, 5, 11, 0, 0, 58, 59, 3, 6,
-		3, 0, 59, 60, 5, 7, 0, 0, 60, 9, 1, 0, 0, 0, 61, 66, 5, 21, 0, 0, 62, 63,
-		5, 11, 0, 0, 63, 65, 5, 21, 0, 0, 64, 62, 1, 0, 0, 0, 65, 68, 1, 0, 0,
-		0, 66, 64, 1, 0, 0, 0, 66, 67, 1, 0, 0, 0, 67, 11, 1, 0, 0, 0, 68, 66,
-		1, 0, 0, 0, 69, 74, 5, 21, 0, 0, 70, 71, 5, 11, 0, 0, 71, 73, 5, 21, 0,
-		0, 72, 70, 1, 0, 0, 0, 73, 76, 1, 0, 0, 0, 74, 72, 1, 0, 0, 0, 74, 75,
-		1, 0, 0, 0, 75, 13, 1, 0, 0, 0, 76, 74, 1, 0, 0, 0, 77, 78, 5, 13, 0, 0,
-		78, 79, 5, 4, 0, 0, 79, 80, 3, 12, 6, 0, 80, 81, 5, 5, 0, 0, 81, 15, 1,
-		0, 0, 0, 82, 88, 5, 14, 0, 0, 83, 85, 5, 6, 0, 0, 84, 86, 3, 10, 5, 0,
-		85, 84, 1, 0, 0, 0, 85, 86, 1, 0, 0, 0, 86, 87, 1, 0, 0, 0, 87, 89, 5,
-		7, 0, 0, 88, 83, 1, 0, 0, 0, 88, 89, 1, 0, 0, 0, 89, 17, 1, 0, 0, 0, 90,
-		91, 3, 16, 8, 0, 91, 92, 5, 8, 0, 0, 92, 94, 1, 0, 0, 0, 93, 90, 1, 0,
-		0, 0, 93, 94, 1, 0, 0, 0, 94, 103, 1, 0, 0, 0, 95, 98, 5, 4, 0, 0, 96,
-		99, 3, 20, 10, 0, 97, 99, 5, 10, 0, 0, 98, 96, 1, 0, 0, 0, 98, 97, 1, 0,
-		0, 0, 99, 100, 1, 0, 0, 0, 100, 104, 5, 5, 0, 0, 101, 104, 3, 20, 10, 0,
-		102, 104, 5, 10, 0, 0, 103, 95, 1, 0, 0, 0, 103, 101, 1, 0, 0, 0, 103,
-		102, 1, 0, 0, 0, 104, 106, 1, 0, 0, 0, 105, 107, 3, 14, 7, 0, 106, 105,
-		1, 0, 0, 0, 106, 107, 1, 0, 0, 0, 107, 109, 1, 0, 0, 0, 108, 110, 3, 8,
-		4, 0, 109, 108, 1, 0, 0, 0, 109, 110, 1, 0, 0, 0, 110, 19, 1, 0, 0, 0,
-		111, 113, 3, 22, 11, 0, 112, 111, 1, 0, 0, 0, 113, 114, 1, 0, 0, 0, 114,
-		112, 1, 0, 0, 0, 114, 115, 1, 0, 0, 0, 115, 21, 1, 0, 0, 0, 116, 121, 3,
-		24, 12, 0, 117, 118, 5, 2, 0, 0, 118, 120, 3, 24, 12, 0, 119, 117, 1, 0,
-		0, 0, 120, 123, 1, 0, 0, 0, 121, 119, 1, 0, 0, 0, 121, 122, 1, 0, 0, 0,
-		122, 23, 1, 0, 0, 0, 123, 121, 1, 0, 0, 0, 124, 131, 3, 26, 13, 0, 125,
-		127, 5, 1, 0, 0, 126, 125, 1, 0, 0, 0, 126, 127, 1, 0, 0, 0, 127, 128,
-		1, 0, 0, 0, 128, 130, 3, 26, 13, 0, 129, 126, 1, 0, 0, 0, 130, 133, 1,
-		0, 0, 0, 131, 129, 1, 0, 0, 0, 131, 132, 1, 0, 0, 0, 132, 25, 1, 0, 0,
-		0, 133, 131, 1, 0, 0, 0, 134, 136, 3, 28, 14, 0, 135, 134, 1, 0, 0, 0,
-		135, 136, 1, 0, 0, 0, 136, 137, 1, 0, 0, 0, 137, 138, 3, 30, 15, 0, 138,
-		27, 1, 0, 0, 0, 139, 140, 5, 3, 0, 0, 140, 29, 1, 0, 0, 0, 141, 142, 3,
-		36, 18, 0, 142, 143, 3, 40, 20, 0, 143, 145, 1, 0, 0, 0, 144, 141, 1, 0,
-		0, 0, 144, 145, 1, 0, 0, 0, 145, 148, 1, 0, 0, 0, 146, 149, 3, 32, 16,
-		0, 147, 149, 3, 34, 17, 0, 148, 146, 1, 0, 0, 0, 148, 147, 1, 0, 0, 0,
-		149, 31, 1, 0, 0, 0, 150, 161, 3, 38, 19, 0, 151, 161, 5, 18, 0, 0, 152,
-		161, 5, 16, 0, 0, 153, 161, 5, 17, 0, 0, 154, 161, 5, 14, 0, 0, 155, 161,
-		5, 12, 0, 0, 156, 161, 5, 15, 0, 0, 157, 161, 5, 13, 0, 0, 158, 161, 5,
-		20, 0, 0, 159, 161, 5, 21, 0, 0, 160, 150, 1, 0, 0, 0, 160, 151, 1, 0,
-		0, 0, 160, 152, 1, 0, 0, 0, 160, 153, 1, 0, 0, 0, 160, 154, 1, 0, 0, 0,
-		160, 155, 1, 0, 0, 0, 160, 156, 1, 0, 0, 0, 160, 157, 1, 0, 0, 0, 160,
-		158, 1, 0, 0, 0, 160, 159, 1, 0, 0, 0, 161, 33, 1, 0, 0, 0, 162, 163, 5,
-		6, 0, 0, 163, 164, 3, 20, 10, 0, 164, 165, 5, 7, 0, 0, 165, 35, 1, 0, 0,
-		0, 166, 167, 5, 21, 0, 0, 167, 37, 1, 0, 0, 0, 168, 169, 5, 19, 0, 0, 169,
-		39, 1, 0, 0, 0, 170, 171, 7, 1, 0, 0, 171, 41, 1, 0, 0, 0, 18, 48, 66,
-		74, 85, 88, 93, 98, 103, 106, 109, 114, 121, 126, 131, 135, 144, 148, 160,
+		1, 16, 1, 16, 1, 16, 1, 16, 1, 16, 1, 16, 1, 16, 1, 16, 1, 16, 1, 16, 1,
+		16, 3, 16, 162, 8, 16, 1, 17, 1, 17, 1, 17, 1, 17, 1, 18, 1, 18, 1, 19,
+		1, 19, 1, 20, 1, 20, 1, 20, 0, 0, 21, 0, 2, 4, 6, 8, 10, 12, 14, 16, 18,
+		20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 0, 3, 2, 0, 17, 17, 19, 19,
+		2, 0, 20, 20, 23, 23, 1, 0, 8, 9, 180, 0, 42, 1, 0, 0, 0, 2, 48, 1, 0,
+		0, 0, 4, 50, 1, 0, 0, 0, 6, 52, 1, 0, 0, 0, 8, 54, 1, 0, 0, 0, 10, 61,
+		1, 0, 0, 0, 12, 69, 1, 0, 0, 0, 14, 77, 1, 0, 0, 0, 16, 82, 1, 0, 0, 0,
+		18, 93, 1, 0, 0, 0, 20, 112, 1, 0, 0, 0, 22, 116, 1, 0, 0, 0, 24, 124,
+		1, 0, 0, 0, 26, 135, 1, 0, 0, 0, 28, 139, 1, 0, 0, 0, 30, 144, 1, 0, 0,
+		0, 32, 161, 1, 0, 0, 0, 34, 163, 1, 0, 0, 0, 36, 167, 1, 0, 0, 0, 38, 169,
+		1, 0, 0, 0, 40, 171, 1, 0, 0, 0, 42, 43, 3, 2, 1, 0, 43, 1, 1, 0, 0, 0,
+		44, 45, 3, 18, 9, 0, 45, 46, 5, 0, 0, 1, 46, 49, 1, 0, 0, 0, 47, 49, 5,
+		0, 0, 1, 48, 44, 1, 0, 0, 0, 48, 47, 1, 0, 0, 0, 49, 3, 1, 0, 0, 0, 50,
+		51, 7, 0, 0, 0, 51, 5, 1, 0, 0, 0, 52, 53, 7, 1, 0, 0, 53, 7, 1, 0, 0,
+		0, 54, 55, 5, 13, 0, 0, 55, 56, 5, 6, 0, 0, 56, 57, 3, 4, 2, 0, 57, 58,
+		5, 12, 0, 0, 58, 59, 3, 6, 3, 0, 59, 60, 5, 7, 0, 0, 60, 9, 1, 0, 0, 0,
+		61, 66, 7, 1, 0, 0, 62, 63, 5, 12, 0, 0, 63, 65, 7, 1, 0, 0, 64, 62, 1,
+		0, 0, 0, 65, 68, 1, 0, 0, 0, 66, 64, 1, 0, 0, 0, 66, 67, 1, 0, 0, 0, 67,
+		11, 1, 0, 0, 0, 68, 66, 1, 0, 0, 0, 69, 74, 7, 1, 0, 0, 70, 71, 5, 12,
+		0, 0, 71, 73, 7, 1, 0, 0, 72, 70, 1, 0, 0, 0, 73, 76, 1, 0, 0, 0, 74, 72,
+		1, 0, 0, 0, 74, 75, 1, 0, 0, 0, 75, 13, 1, 0, 0, 0, 76, 74, 1, 0, 0, 0,
+		77, 78, 5, 14, 0, 0, 78, 79, 5, 4, 0, 0, 79, 80, 3, 12, 6, 0, 80, 81, 5,
+		5, 0, 0, 81, 15, 1, 0, 0, 0, 82, 88, 5, 15, 0, 0, 83, 85, 5, 6, 0, 0, 84,
+		86, 3, 10, 5, 0, 85, 84, 1, 0, 0, 0, 85, 86, 1, 0, 0, 0, 86, 87, 1, 0,
+		0, 0, 87, 89, 5, 7, 0, 0, 88, 83, 1, 0, 0, 0, 88, 89, 1, 0, 0, 0, 89, 17,
+		1, 0, 0, 0, 90, 91, 3, 16, 8, 0, 91, 92, 5, 8, 0, 0, 92, 94, 1, 0, 0, 0,
+		93, 90, 1, 0, 0, 0, 93, 94, 1, 0, 0, 0, 94, 103, 1, 0, 0, 0, 95, 98, 5,
+		4, 0, 0, 96, 99, 3, 20, 10, 0, 97, 99, 5, 11, 0, 0, 98, 96, 1, 0, 0, 0,
+		98, 97, 1, 0, 0, 0, 99, 100, 1, 0, 0, 0, 100, 104, 5, 5, 0, 0, 101, 104,
+		3, 20, 10, 0, 102, 104, 5, 11, 0, 0, 103, 95, 1, 0, 0, 0, 103, 101, 1,
+		0, 0, 0, 103, 102, 1, 0, 0, 0, 104, 106, 1, 0, 0, 0, 105, 107, 3, 14, 7,
+		0, 106, 105, 1, 0, 0, 0, 106, 107, 1, 0, 0, 0, 107, 109, 1, 0, 0, 0, 108,
+		110, 3, 8, 4, 0, 109, 108, 1, 0, 0, 0, 109, 110, 1, 0, 0, 0, 110, 19, 1,
+		0, 0, 0, 111, 113, 3, 22, 11, 0, 112, 111, 1, 0, 0, 0, 113, 114, 1, 0,
+		0, 0, 114, 112, 1, 0, 0, 0, 114, 115, 1, 0, 0, 0, 115, 21, 1, 0, 0, 0,
+		116, 121, 3, 24, 12, 0, 117, 118, 5, 2, 0, 0, 118, 120, 3, 24, 12, 0, 119,
+		117, 1, 0, 0, 0, 120, 123, 1, 0, 0, 0, 121, 119, 1, 0, 0, 0, 121, 122,
+		1, 0, 0, 0, 122, 23, 1, 0, 0, 0, 123, 121, 1, 0, 0, 0, 124, 131, 3, 26,
+		13, 0, 125, 127, 5, 1, 0, 0, 126, 125, 1, 0, 0, 0, 126, 127, 1, 0, 0, 0,
+		127, 128, 1, 0, 0, 0, 128, 130, 3, 26, 13, 0, 129, 126, 1, 0, 0, 0, 130,
+		133, 1, 0, 0, 0, 131, 129, 1, 0, 0, 0, 131, 132, 1, 0, 0, 0, 132, 25, 1,
+		0, 0, 0, 133, 131, 1, 0, 0, 0, 134, 136, 3, 28, 14, 0, 135, 134, 1, 0,
+		0, 0, 135, 136, 1, 0, 0, 0, 136, 137, 1, 0, 0, 0, 137, 138, 3, 30, 15,
+		0, 138, 27, 1, 0, 0, 0, 139, 140, 5, 3, 0, 0, 140, 29, 1, 0, 0, 0, 141,
+		142, 3, 36, 18, 0, 142, 143, 3, 40, 20, 0, 143, 145, 1, 0, 0, 0, 144, 141,
+		1, 0, 0, 0, 144, 145, 1, 0, 0, 0, 145, 148, 1, 0, 0, 0, 146, 149, 3, 32,
+		16, 0, 147, 149, 3, 34, 17, 0, 148, 146, 1, 0, 0, 0, 148, 147, 1, 0, 0,
+		0, 149, 31, 1, 0, 0, 0, 150, 162, 3, 38, 19, 0, 151, 162, 5, 19, 0, 0,
+		152, 162, 5, 20, 0, 0, 153, 162, 5, 17, 0, 0, 154, 162, 5, 18, 0, 0, 155,
+		162, 5, 15, 0, 0, 156, 162, 5, 13, 0, 0, 157, 162, 5, 16, 0, 0, 158, 162,
+		5, 14, 0, 0, 159, 162, 5, 22, 0, 0, 160, 162, 5, 23, 0, 0, 161, 150, 1,
+		0, 0, 0, 161, 151, 1, 0, 0, 0, 161, 152, 1, 0, 0, 0, 161, 153, 1, 0, 0,
+		0, 161, 154, 1, 0, 0, 0, 161, 155, 1, 0, 0, 0, 161, 156, 1, 0, 0, 0, 161,
+		157, 1, 0, 0, 0, 161, 158, 1, 0, 0, 0, 161, 159, 1, 0, 0, 0, 161, 160,
+		1, 0, 0, 0, 162, 33, 1, 0, 0, 0, 163, 164, 5, 6, 0, 0, 164, 165, 3, 20,
+		10, 0, 165, 166, 5, 7, 0, 0, 166, 35, 1, 0, 0, 0, 167, 168, 7, 1, 0, 0,
+		168, 37, 1, 0, 0, 0, 169, 170, 5, 21, 0, 0, 170, 39, 1, 0, 0, 0, 171, 172,
+		7, 2, 0, 0, 172, 41, 1, 0, 0, 0, 18, 48, 66, 74, 85, 88, 93, 98, 103, 106,
+		109, 114, 121, 126, 131, 135, 144, 148, 161,
 	}
 	deserializer := antlr.NewATNDeserializer(nil)
 	staticData.atn = deserializer.Deserialize(staticData.serializedATN)
@@ -169,20 +171,22 @@ const (
 	EDCqlLogParserRPAREN               = 7
 	EDCqlLogParserOP_COLON             = 8
 	EDCqlLogParserOPERATOR             = 9
-	EDCqlLogParserMATCH_ALL            = 10
-	EDCqlLogParserCOMMA                = 11
-	EDCqlLogParserROLLUP_START         = 12
-	EDCqlLogParserBY                   = 13
-	EDCqlLogParserCOUNT_UNIQUE         = 14
-	EDCqlLogParserFILL_START           = 15
-	EDCqlLogParserCOMMON_OPERATOR      = 16
-	EDCqlLogParserFILL_OPERATOR        = 17
-	EDCqlLogParserAGGREGATION_OPERATOR = 18
-	EDCqlLogParserQUOTED               = 19
-	EDCqlLogParserNUMBER               = 20
-	EDCqlLogParserTERM                 = 21
-	EDCqlLogParserDEFAULT_SKIP         = 22
-	EDCqlLogParserUNKNOWN              = 23
+	EDCqlLogParserREGEX_OPERATOR       = 10
+	EDCqlLogParserMATCH_ALL            = 11
+	EDCqlLogParserCOMMA                = 12
+	EDCqlLogParserROLLUP_START         = 13
+	EDCqlLogParserBY                   = 14
+	EDCqlLogParserCOUNT_UNIQUE         = 15
+	EDCqlLogParserFILL_START           = 16
+	EDCqlLogParserCOMMON_OPERATOR      = 17
+	EDCqlLogParserFILL_OPERATOR        = 18
+	EDCqlLogParserAGGREGATION_OPERATOR = 19
+	EDCqlLogParserCOUNTER_OPERATOR     = 20
+	EDCqlLogParserQUOTED               = 21
+	EDCqlLogParserNUMBER               = 22
+	EDCqlLogParserTERM                 = 23
+	EDCqlLogParserDEFAULT_SKIP         = 24
+	EDCqlLogParserUNKNOWN              = 25
 )
 
 // EDCqlLogParser rules.
@@ -431,7 +435,7 @@ func (p *EDCqlLogParser) TopLevelQuery() (localctx ITopLevelQueryContext) {
 	}
 
 	switch p.GetTokenStream().LA(1) {
-	case EDCqlLogParserNOT, EDCqlLogParserLBRACE, EDCqlLogParserLPAREN, EDCqlLogParserMATCH_ALL, EDCqlLogParserROLLUP_START, EDCqlLogParserBY, EDCqlLogParserCOUNT_UNIQUE, EDCqlLogParserFILL_START, EDCqlLogParserCOMMON_OPERATOR, EDCqlLogParserFILL_OPERATOR, EDCqlLogParserAGGREGATION_OPERATOR, EDCqlLogParserQUOTED, EDCqlLogParserNUMBER, EDCqlLogParserTERM:
+	case EDCqlLogParserNOT, EDCqlLogParserLBRACE, EDCqlLogParserLPAREN, EDCqlLogParserMATCH_ALL, EDCqlLogParserROLLUP_START, EDCqlLogParserBY, EDCqlLogParserCOUNT_UNIQUE, EDCqlLogParserFILL_START, EDCqlLogParserCOMMON_OPERATOR, EDCqlLogParserFILL_OPERATOR, EDCqlLogParserAGGREGATION_OPERATOR, EDCqlLogParserCOUNTER_OPERATOR, EDCqlLogParserQUOTED, EDCqlLogParserNUMBER, EDCqlLogParserTERM:
 		p.EnterOuterAlt(localctx, 1)
 		{
 			p.SetState(44)
@@ -600,6 +604,7 @@ type IRollupFieldContext interface {
 
 	// Getter signatures
 	TERM() antlr.TerminalNode
+	COUNTER_OPERATOR() antlr.TerminalNode
 
 	// IsRollupFieldContext differentiates from other interfaces.
 	IsRollupFieldContext()
@@ -641,6 +646,10 @@ func (s *RollupFieldContext) TERM() antlr.TerminalNode {
 	return s.GetToken(EDCqlLogParserTERM, 0)
 }
 
+func (s *RollupFieldContext) COUNTER_OPERATOR() antlr.TerminalNode {
+	return s.GetToken(EDCqlLogParserCOUNTER_OPERATOR, 0)
+}
+
 func (s *RollupFieldContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
@@ -674,13 +683,18 @@ func (s *RollupFieldContext) Accept(visitor antlr.ParseTreeVisitor) interface{} 
 func (p *EDCqlLogParser) RollupField() (localctx IRollupFieldContext) {
 	localctx = NewRollupFieldContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 6, EDCqlLogParserRULE_rollupField)
+	var _la int
+
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(52)
-		p.Match(EDCqlLogParserTERM)
-		if p.HasError() {
-			// Recognition error - abort rule
-			goto errorExit
+		_la = p.GetTokenStream().LA(1)
+
+		if !(_la == EDCqlLogParserCOUNTER_OPERATOR || _la == EDCqlLogParserTERM) {
+			p.GetErrorHandler().RecoverInline(p)
+		} else {
+			p.GetErrorHandler().ReportMatch(p)
+			p.Consume()
 		}
 	}
 
@@ -894,6 +908,8 @@ type ICountUniqueFieldsContext interface {
 	// Getter signatures
 	AllTERM() []antlr.TerminalNode
 	TERM(i int) antlr.TerminalNode
+	AllCOUNTER_OPERATOR() []antlr.TerminalNode
+	COUNTER_OPERATOR(i int) antlr.TerminalNode
 	AllCOMMA() []antlr.TerminalNode
 	COMMA(i int) antlr.TerminalNode
 
@@ -939,6 +955,14 @@ func (s *CountUniqueFieldsContext) AllTERM() []antlr.TerminalNode {
 
 func (s *CountUniqueFieldsContext) TERM(i int) antlr.TerminalNode {
 	return s.GetToken(EDCqlLogParserTERM, i)
+}
+
+func (s *CountUniqueFieldsContext) AllCOUNTER_OPERATOR() []antlr.TerminalNode {
+	return s.GetTokens(EDCqlLogParserCOUNTER_OPERATOR)
+}
+
+func (s *CountUniqueFieldsContext) COUNTER_OPERATOR(i int) antlr.TerminalNode {
+	return s.GetToken(EDCqlLogParserCOUNTER_OPERATOR, i)
 }
 
 func (s *CountUniqueFieldsContext) AllCOMMA() []antlr.TerminalNode {
@@ -987,10 +1011,13 @@ func (p *EDCqlLogParser) CountUniqueFields() (localctx ICountUniqueFieldsContext
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(61)
-		p.Match(EDCqlLogParserTERM)
-		if p.HasError() {
-			// Recognition error - abort rule
-			goto errorExit
+		_la = p.GetTokenStream().LA(1)
+
+		if !(_la == EDCqlLogParserCOUNTER_OPERATOR || _la == EDCqlLogParserTERM) {
+			p.GetErrorHandler().RecoverInline(p)
+		} else {
+			p.GetErrorHandler().ReportMatch(p)
+			p.Consume()
 		}
 	}
 	p.SetState(66)
@@ -1011,10 +1038,13 @@ func (p *EDCqlLogParser) CountUniqueFields() (localctx ICountUniqueFieldsContext
 		}
 		{
 			p.SetState(63)
-			p.Match(EDCqlLogParserTERM)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
+			_la = p.GetTokenStream().LA(1)
+
+			if !(_la == EDCqlLogParserCOUNTER_OPERATOR || _la == EDCqlLogParserTERM) {
+				p.GetErrorHandler().RecoverInline(p)
+			} else {
+				p.GetErrorHandler().ReportMatch(p)
+				p.Consume()
 			}
 		}
 
@@ -1049,6 +1079,8 @@ type IGroupByFieldsContext interface {
 	// Getter signatures
 	AllTERM() []antlr.TerminalNode
 	TERM(i int) antlr.TerminalNode
+	AllCOUNTER_OPERATOR() []antlr.TerminalNode
+	COUNTER_OPERATOR(i int) antlr.TerminalNode
 	AllCOMMA() []antlr.TerminalNode
 	COMMA(i int) antlr.TerminalNode
 
@@ -1094,6 +1126,14 @@ func (s *GroupByFieldsContext) AllTERM() []antlr.TerminalNode {
 
 func (s *GroupByFieldsContext) TERM(i int) antlr.TerminalNode {
 	return s.GetToken(EDCqlLogParserTERM, i)
+}
+
+func (s *GroupByFieldsContext) AllCOUNTER_OPERATOR() []antlr.TerminalNode {
+	return s.GetTokens(EDCqlLogParserCOUNTER_OPERATOR)
+}
+
+func (s *GroupByFieldsContext) COUNTER_OPERATOR(i int) antlr.TerminalNode {
+	return s.GetToken(EDCqlLogParserCOUNTER_OPERATOR, i)
 }
 
 func (s *GroupByFieldsContext) AllCOMMA() []antlr.TerminalNode {
@@ -1142,10 +1182,13 @@ func (p *EDCqlLogParser) GroupByFields() (localctx IGroupByFieldsContext) {
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(69)
-		p.Match(EDCqlLogParserTERM)
-		if p.HasError() {
-			// Recognition error - abort rule
-			goto errorExit
+		_la = p.GetTokenStream().LA(1)
+
+		if !(_la == EDCqlLogParserCOUNTER_OPERATOR || _la == EDCqlLogParserTERM) {
+			p.GetErrorHandler().RecoverInline(p)
+		} else {
+			p.GetErrorHandler().ReportMatch(p)
+			p.Consume()
 		}
 	}
 	p.SetState(74)
@@ -1166,10 +1209,13 @@ func (p *EDCqlLogParser) GroupByFields() (localctx IGroupByFieldsContext) {
 		}
 		{
 			p.SetState(71)
-			p.Match(EDCqlLogParserTERM)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
+			_la = p.GetTokenStream().LA(1)
+
+			if !(_la == EDCqlLogParserCOUNTER_OPERATOR || _la == EDCqlLogParserTERM) {
+				p.GetErrorHandler().RecoverInline(p)
+			} else {
+				p.GetErrorHandler().ReportMatch(p)
+				p.Consume()
 			}
 		}
 
@@ -1491,7 +1537,7 @@ func (p *EDCqlLogParser) CountUniqueSection() (localctx ICountUniqueSectionConte
 		}
 		_la = p.GetTokenStream().LA(1)
 
-		if _la == EDCqlLogParserTERM {
+		if _la == EDCqlLogParserCOUNTER_OPERATOR || _la == EDCqlLogParserTERM {
 			{
 				p.SetState(84)
 				p.CountUniqueFields()
@@ -1734,7 +1780,7 @@ func (p *EDCqlLogParser) QueryOperation() (localctx IQueryOperationContext) {
 		}
 
 		switch p.GetTokenStream().LA(1) {
-		case EDCqlLogParserNOT, EDCqlLogParserLPAREN, EDCqlLogParserROLLUP_START, EDCqlLogParserBY, EDCqlLogParserCOUNT_UNIQUE, EDCqlLogParserFILL_START, EDCqlLogParserCOMMON_OPERATOR, EDCqlLogParserFILL_OPERATOR, EDCqlLogParserAGGREGATION_OPERATOR, EDCqlLogParserQUOTED, EDCqlLogParserNUMBER, EDCqlLogParserTERM:
+		case EDCqlLogParserNOT, EDCqlLogParserLPAREN, EDCqlLogParserROLLUP_START, EDCqlLogParserBY, EDCqlLogParserCOUNT_UNIQUE, EDCqlLogParserFILL_START, EDCqlLogParserCOMMON_OPERATOR, EDCqlLogParserFILL_OPERATOR, EDCqlLogParserAGGREGATION_OPERATOR, EDCqlLogParserCOUNTER_OPERATOR, EDCqlLogParserQUOTED, EDCqlLogParserNUMBER, EDCqlLogParserTERM:
 			{
 				p.SetState(96)
 				p.Query()
@@ -1763,7 +1809,7 @@ func (p *EDCqlLogParser) QueryOperation() (localctx IQueryOperationContext) {
 			}
 		}
 
-	case EDCqlLogParserNOT, EDCqlLogParserLPAREN, EDCqlLogParserROLLUP_START, EDCqlLogParserBY, EDCqlLogParserCOUNT_UNIQUE, EDCqlLogParserFILL_START, EDCqlLogParserCOMMON_OPERATOR, EDCqlLogParserFILL_OPERATOR, EDCqlLogParserAGGREGATION_OPERATOR, EDCqlLogParserQUOTED, EDCqlLogParserNUMBER, EDCqlLogParserTERM:
+	case EDCqlLogParserNOT, EDCqlLogParserLPAREN, EDCqlLogParserROLLUP_START, EDCqlLogParserBY, EDCqlLogParserCOUNT_UNIQUE, EDCqlLogParserFILL_START, EDCqlLogParserCOMMON_OPERATOR, EDCqlLogParserFILL_OPERATOR, EDCqlLogParserAGGREGATION_OPERATOR, EDCqlLogParserCOUNTER_OPERATOR, EDCqlLogParserQUOTED, EDCqlLogParserNUMBER, EDCqlLogParserTERM:
 		{
 			p.SetState(101)
 			p.Query()
@@ -2792,7 +2838,7 @@ func (p *EDCqlLogParser) Clause() (localctx IClauseContext) {
 	}
 
 	switch p.GetTokenStream().LA(1) {
-	case EDCqlLogParserROLLUP_START, EDCqlLogParserBY, EDCqlLogParserCOUNT_UNIQUE, EDCqlLogParserFILL_START, EDCqlLogParserCOMMON_OPERATOR, EDCqlLogParserFILL_OPERATOR, EDCqlLogParserAGGREGATION_OPERATOR, EDCqlLogParserQUOTED, EDCqlLogParserNUMBER, EDCqlLogParserTERM:
+	case EDCqlLogParserROLLUP_START, EDCqlLogParserBY, EDCqlLogParserCOUNT_UNIQUE, EDCqlLogParserFILL_START, EDCqlLogParserCOMMON_OPERATOR, EDCqlLogParserFILL_OPERATOR, EDCqlLogParserAGGREGATION_OPERATOR, EDCqlLogParserCOUNTER_OPERATOR, EDCqlLogParserQUOTED, EDCqlLogParserNUMBER, EDCqlLogParserTERM:
 		{
 			p.SetState(146)
 			p.Term()
@@ -2832,6 +2878,7 @@ type ITermContext interface {
 	// Getter signatures
 	QuotedTerm() IQuotedTermContext
 	AGGREGATION_OPERATOR() antlr.TerminalNode
+	COUNTER_OPERATOR() antlr.TerminalNode
 	COMMON_OPERATOR() antlr.TerminalNode
 	FILL_OPERATOR() antlr.TerminalNode
 	COUNT_UNIQUE() antlr.TerminalNode
@@ -2895,6 +2942,10 @@ func (s *TermContext) QuotedTerm() IQuotedTermContext {
 
 func (s *TermContext) AGGREGATION_OPERATOR() antlr.TerminalNode {
 	return s.GetToken(EDCqlLogParserAGGREGATION_OPERATOR, 0)
+}
+
+func (s *TermContext) COUNTER_OPERATOR() antlr.TerminalNode {
+	return s.GetToken(EDCqlLogParserCOUNTER_OPERATOR, 0)
 }
 
 func (s *TermContext) COMMON_OPERATOR() antlr.TerminalNode {
@@ -2962,7 +3013,7 @@ func (s *TermContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 func (p *EDCqlLogParser) Term() (localctx ITermContext) {
 	localctx = NewTermContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 32, EDCqlLogParserRULE_term)
-	p.SetState(160)
+	p.SetState(161)
 	p.GetErrorHandler().Sync(p)
 	if p.HasError() {
 		goto errorExit
@@ -2987,10 +3038,21 @@ func (p *EDCqlLogParser) Term() (localctx ITermContext) {
 			}
 		}
 
-	case EDCqlLogParserCOMMON_OPERATOR:
+	case EDCqlLogParserCOUNTER_OPERATOR:
 		p.EnterOuterAlt(localctx, 3)
 		{
 			p.SetState(152)
+			p.Match(EDCqlLogParserCOUNTER_OPERATOR)
+			if p.HasError() {
+				// Recognition error - abort rule
+				goto errorExit
+			}
+		}
+
+	case EDCqlLogParserCOMMON_OPERATOR:
+		p.EnterOuterAlt(localctx, 4)
+		{
+			p.SetState(153)
 			p.Match(EDCqlLogParserCOMMON_OPERATOR)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -2999,9 +3061,9 @@ func (p *EDCqlLogParser) Term() (localctx ITermContext) {
 		}
 
 	case EDCqlLogParserFILL_OPERATOR:
-		p.EnterOuterAlt(localctx, 4)
+		p.EnterOuterAlt(localctx, 5)
 		{
-			p.SetState(153)
+			p.SetState(154)
 			p.Match(EDCqlLogParserFILL_OPERATOR)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -3010,9 +3072,9 @@ func (p *EDCqlLogParser) Term() (localctx ITermContext) {
 		}
 
 	case EDCqlLogParserCOUNT_UNIQUE:
-		p.EnterOuterAlt(localctx, 5)
+		p.EnterOuterAlt(localctx, 6)
 		{
-			p.SetState(154)
+			p.SetState(155)
 			p.Match(EDCqlLogParserCOUNT_UNIQUE)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -3021,9 +3083,9 @@ func (p *EDCqlLogParser) Term() (localctx ITermContext) {
 		}
 
 	case EDCqlLogParserROLLUP_START:
-		p.EnterOuterAlt(localctx, 6)
+		p.EnterOuterAlt(localctx, 7)
 		{
-			p.SetState(155)
+			p.SetState(156)
 			p.Match(EDCqlLogParserROLLUP_START)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -3032,9 +3094,9 @@ func (p *EDCqlLogParser) Term() (localctx ITermContext) {
 		}
 
 	case EDCqlLogParserFILL_START:
-		p.EnterOuterAlt(localctx, 7)
+		p.EnterOuterAlt(localctx, 8)
 		{
-			p.SetState(156)
+			p.SetState(157)
 			p.Match(EDCqlLogParserFILL_START)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -3043,9 +3105,9 @@ func (p *EDCqlLogParser) Term() (localctx ITermContext) {
 		}
 
 	case EDCqlLogParserBY:
-		p.EnterOuterAlt(localctx, 8)
+		p.EnterOuterAlt(localctx, 9)
 		{
-			p.SetState(157)
+			p.SetState(158)
 			p.Match(EDCqlLogParserBY)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -3054,9 +3116,9 @@ func (p *EDCqlLogParser) Term() (localctx ITermContext) {
 		}
 
 	case EDCqlLogParserNUMBER:
-		p.EnterOuterAlt(localctx, 9)
+		p.EnterOuterAlt(localctx, 10)
 		{
-			p.SetState(158)
+			p.SetState(159)
 			p.Match(EDCqlLogParserNUMBER)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -3065,9 +3127,9 @@ func (p *EDCqlLogParser) Term() (localctx ITermContext) {
 		}
 
 	case EDCqlLogParserTERM:
-		p.EnterOuterAlt(localctx, 10)
+		p.EnterOuterAlt(localctx, 11)
 		{
-			p.SetState(159)
+			p.SetState(160)
 			p.Match(EDCqlLogParserTERM)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -3200,7 +3262,7 @@ func (p *EDCqlLogParser) GroupingExpr() (localctx IGroupingExprContext) {
 	p.EnterRule(localctx, 34, EDCqlLogParserRULE_groupingExpr)
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(162)
+		p.SetState(163)
 		p.Match(EDCqlLogParserLPAREN)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -3208,11 +3270,11 @@ func (p *EDCqlLogParser) GroupingExpr() (localctx IGroupingExprContext) {
 		}
 	}
 	{
-		p.SetState(163)
+		p.SetState(164)
 		p.Query()
 	}
 	{
-		p.SetState(164)
+		p.SetState(165)
 		p.Match(EDCqlLogParserRPAREN)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -3242,6 +3304,7 @@ type IFieldNameContext interface {
 
 	// Getter signatures
 	TERM() antlr.TerminalNode
+	COUNTER_OPERATOR() antlr.TerminalNode
 
 	// IsFieldNameContext differentiates from other interfaces.
 	IsFieldNameContext()
@@ -3283,6 +3346,10 @@ func (s *FieldNameContext) TERM() antlr.TerminalNode {
 	return s.GetToken(EDCqlLogParserTERM, 0)
 }
 
+func (s *FieldNameContext) COUNTER_OPERATOR() antlr.TerminalNode {
+	return s.GetToken(EDCqlLogParserCOUNTER_OPERATOR, 0)
+}
+
 func (s *FieldNameContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
@@ -3316,13 +3383,18 @@ func (s *FieldNameContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 func (p *EDCqlLogParser) FieldName() (localctx IFieldNameContext) {
 	localctx = NewFieldNameContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 36, EDCqlLogParserRULE_fieldName)
+	var _la int
+
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(166)
-		p.Match(EDCqlLogParserTERM)
-		if p.HasError() {
-			// Recognition error - abort rule
-			goto errorExit
+		p.SetState(167)
+		_la = p.GetTokenStream().LA(1)
+
+		if !(_la == EDCqlLogParserCOUNTER_OPERATOR || _la == EDCqlLogParserTERM) {
+			p.GetErrorHandler().RecoverInline(p)
+		} else {
+			p.GetErrorHandler().ReportMatch(p)
+			p.Consume()
 		}
 	}
 
@@ -3424,7 +3496,7 @@ func (p *EDCqlLogParser) QuotedTerm() (localctx IQuotedTermContext) {
 	p.EnterRule(localctx, 38, EDCqlLogParserRULE_quotedTerm)
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(168)
+		p.SetState(169)
 		p.Match(EDCqlLogParserQUOTED)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -3537,7 +3609,7 @@ func (p *EDCqlLogParser) OperatorColon() (localctx IOperatorColonContext) {
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(170)
+		p.SetState(171)
 		_la = p.GetTokenStream().LA(1)
 
 		if !(_la == EDCqlLogParserOP_COLON || _la == EDCqlLogParserOPERATOR) {

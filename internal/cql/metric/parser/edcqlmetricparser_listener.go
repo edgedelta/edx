@@ -26,6 +26,9 @@ type EDCqlMetricParserListener interface {
 	// EnterAggregationMethod is called when entering the aggregationMethod production.
 	EnterAggregationMethod(c *AggregationMethodContext)
 
+	// EnterOperatorColon is called when entering the operatorColon production.
+	EnterOperatorColon(c *OperatorColonContext)
+
 	// EnterGroupByFields is called when entering the groupByFields production.
 	EnterGroupByFields(c *GroupByFieldsContext)
 
@@ -86,9 +89,6 @@ type EDCqlMetricParserListener interface {
 	// EnterQuotedTerm is called when entering the quotedTerm production.
 	EnterQuotedTerm(c *QuotedTermContext)
 
-	// EnterOperatorColon is called when entering the operatorColon production.
-	EnterOperatorColon(c *OperatorColonContext)
-
 	// ExitFinalQuery is called when exiting the finalQuery production.
 	ExitFinalQuery(c *FinalQueryContext)
 
@@ -106,6 +106,9 @@ type EDCqlMetricParserListener interface {
 
 	// ExitAggregationMethod is called when exiting the aggregationMethod production.
 	ExitAggregationMethod(c *AggregationMethodContext)
+
+	// ExitOperatorColon is called when exiting the operatorColon production.
+	ExitOperatorColon(c *OperatorColonContext)
 
 	// ExitGroupByFields is called when exiting the groupByFields production.
 	ExitGroupByFields(c *GroupByFieldsContext)
@@ -166,7 +169,4 @@ type EDCqlMetricParserListener interface {
 
 	// ExitQuotedTerm is called when exiting the quotedTerm production.
 	ExitQuotedTerm(c *QuotedTermContext)
-
-	// ExitOperatorColon is called when exiting the operatorColon production.
-	ExitOperatorColon(c *OperatorColonContext)
 }
