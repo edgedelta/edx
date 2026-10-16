@@ -26,6 +26,9 @@ type EDCqlMetricParserVisitor interface {
 	// Visit a parse tree produced by EDCqlMetricParser#aggregationMethod.
 	VisitAggregationMethod(ctx *AggregationMethodContext) interface{}
 
+	// Visit a parse tree produced by EDCqlMetricParser#operatorColon.
+	VisitOperatorColon(ctx *OperatorColonContext) interface{}
+
 	// Visit a parse tree produced by EDCqlMetricParser#groupByFields.
 	VisitGroupByFields(ctx *GroupByFieldsContext) interface{}
 
@@ -85,7 +88,4 @@ type EDCqlMetricParserVisitor interface {
 
 	// Visit a parse tree produced by EDCqlMetricParser#quotedTerm.
 	VisitQuotedTerm(ctx *QuotedTermContext) interface{}
-
-	// Visit a parse tree produced by EDCqlMetricParser#operatorColon.
-	VisitOperatorColon(ctx *OperatorColonContext) interface{}
 }

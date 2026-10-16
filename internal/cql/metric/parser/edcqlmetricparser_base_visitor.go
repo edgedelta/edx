@@ -32,6 +32,10 @@ func (v *BaseEDCqlMetricParserVisitor) VisitAggregationMethod(ctx *AggregationMe
 	return v.VisitChildren(ctx)
 }
 
+func (v *BaseEDCqlMetricParserVisitor) VisitOperatorColon(ctx *OperatorColonContext) interface{} {
+	return v.VisitChildren(ctx)
+}
+
 func (v *BaseEDCqlMetricParserVisitor) VisitGroupByFields(ctx *GroupByFieldsContext) interface{} {
 	return v.VisitChildren(ctx)
 }
@@ -109,9 +113,5 @@ func (v *BaseEDCqlMetricParserVisitor) VisitFieldName(ctx *FieldNameContext) int
 }
 
 func (v *BaseEDCqlMetricParserVisitor) VisitQuotedTerm(ctx *QuotedTermContext) interface{} {
-	return v.VisitChildren(ctx)
-}
-
-func (v *BaseEDCqlMetricParserVisitor) VisitOperatorColon(ctx *OperatorColonContext) interface{} {
 	return v.VisitChildren(ctx)
 }

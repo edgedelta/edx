@@ -212,15 +212,26 @@ func hostOf(rawURL string) string {
 // large response can never be clipped by a terminal or an AI/CI harness's
 // stdout capture limit; a one-line confirmation goes to stderr.
 func printResult(data []byte) error {
-	opts := output.Options{Format: flagOutput, Columns: flagColumns}
+	return printResultWith(data, output.Options{Format: flagOutput, Columns: flagColumns})
+}
+
+// printResultWith is printResult with explicit render options (e.g. default
+// table columns chosen by the command when --columns is not given).
+func printResultWith(data []byte, opts output.Options) error {
+	return writeOutput(func(w io.Writer) error { return output.Print(w, data, opts) })
+}
+
+// writeOutput runs render against stdout, or against --output-file when set,
+// so commands with a custom renderer get the same truncation-safe file output.
+func writeOutput(render func(w io.Writer) error) error {
 	if flagOutputFile == "" {
-		return output.Print(os.Stdout, data, opts)
+		return render(os.Stdout)
 	}
 	f, err := os.OpenFile(flagOutputFile, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0o600)
 	if err != nil {
 		return err
 	}
-	if err := output.Print(f, data, opts); err != nil {
+	if err := render(f); err != nil {
 		f.Close()
 		return err
 	}

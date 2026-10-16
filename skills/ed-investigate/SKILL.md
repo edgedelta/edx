@@ -52,7 +52,8 @@ edx logs search -q '"<distinctive token from pattern>"' --from <start> --to <end
 
 ```bash
 edx logs graph -q 'severity_text:"ERROR"' --group-by service.name --lookback 6h
-edx metrics query --name <latency/error metric> --agg avg --group-by service.name
+edx metrics describe <latency/error metric>     # kind, labels, example queries
+edx metrics query --name <latency/error metric> --agg avg --group-by service.name --summary --baseline 1w
 ```
 
 Identify exactly when the regression started - this timestamp drives step 5.

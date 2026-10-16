@@ -147,7 +147,7 @@ The API only supports archives backed by a legacy archive integration
 (--source must name one). For pipeline-archive sources (archive_source, as
 returned by "edx rehydrations validate") estimate instead with the metrics the
 web UI uses, e.g.:
-  edx metrics query --name ed.rehydration.bytes --agg sum --query '<cql>'`,
+  edx metrics query --name ed.rehydration.bytes --agg sum --filter '<cql>'`,
 		Example: `  edx rehydrations analyze --query 'service.name:"api"' --tag prod --source my-s3 --lookback 1h
   edx rehydrations analyze --file rehydration.json`,
 		RunE: func(cmd *cobra.Command, args []string) error {

@@ -33,110 +33,113 @@ var EDCqlMetricParserParserStaticData struct {
 func edcqlmetricparserParserInit() {
 	staticData := &EDCqlMetricParserParserStaticData
 	staticData.LiteralNames = []string{
-		"", "", "", "", "'{'", "'}'", "'('", "')'", "", "", "'*'", "", "'.rollup'",
+		"", "", "", "", "'{'", "'}'", "'('", "')'", "", "", "", "'*'", "", "'.rollup'",
 		"", "'count_unique'", "'.fill'", "'last'",
 	}
 	staticData.SymbolicNames = []string{
 		"", "AND", "OR", "NOT", "LBRACE", "RBRACE", "LPAREN", "RPAREN", "OP_COLON",
-		"OPERATOR", "MATCH_ALL", "COMMA", "ROLLUP_START", "BY", "COUNT_UNIQUE",
-		"FILL_START", "COMMON_OPERATOR", "FILL_OPERATOR", "AGGREGATION_OPERATOR",
-		"QUOTED", "NUMBER", "TERM", "DEFAULT_SKIP", "UNKNOWN",
+		"OPERATOR", "REGEX_OPERATOR", "MATCH_ALL", "COMMA", "ROLLUP_START",
+		"BY", "COUNT_UNIQUE", "FILL_START", "COMMON_OPERATOR", "FILL_OPERATOR",
+		"AGGREGATION_OPERATOR", "COUNTER_OPERATOR", "QUOTED", "NUMBER", "TERM",
+		"DEFAULT_SKIP", "UNKNOWN",
 	}
 	staticData.RuleNames = []string{
 		"finalQuery", "topLevelQuery", "queryOperation", "metricName", "aggregationFilter",
-		"aggregationMethod", "groupByFields", "countUniqueFields", "groupBySection",
-		"countUniqueSection", "rollupWindow", "rollupSection", "aggregation",
-		"fillMethod", "fillLimit", "fillSection", "query", "disjQuery", "conjQuery",
-		"modClause", "modifier", "clause", "term", "groupingExpr", "fieldName",
-		"quotedTerm", "operatorColon",
+		"aggregationMethod", "operatorColon", "groupByFields", "countUniqueFields",
+		"groupBySection", "countUniqueSection", "rollupWindow", "rollupSection",
+		"aggregation", "fillMethod", "fillLimit", "fillSection", "query", "disjQuery",
+		"conjQuery", "modClause", "modifier", "clause", "term", "groupingExpr",
+		"fieldName", "quotedTerm",
 	}
 	staticData.PredictionContextCache = antlr.NewPredictionContextCache()
 	staticData.serializedATN = []int32{
-		4, 1, 23, 203, 2, 0, 7, 0, 2, 1, 7, 1, 2, 2, 7, 2, 2, 3, 7, 3, 2, 4, 7,
+		4, 1, 25, 205, 2, 0, 7, 0, 2, 1, 7, 1, 2, 2, 7, 2, 2, 3, 7, 3, 2, 4, 7,
 		4, 2, 5, 7, 5, 2, 6, 7, 6, 2, 7, 7, 7, 2, 8, 7, 8, 2, 9, 7, 9, 2, 10, 7,
 		10, 2, 11, 7, 11, 2, 12, 7, 12, 2, 13, 7, 13, 2, 14, 7, 14, 2, 15, 7, 15,
 		2, 16, 7, 16, 2, 17, 7, 17, 2, 18, 7, 18, 2, 19, 7, 19, 2, 20, 7, 20, 2,
 		21, 7, 21, 2, 22, 7, 22, 2, 23, 7, 23, 2, 24, 7, 24, 2, 25, 7, 25, 2, 26,
 		7, 26, 1, 0, 1, 0, 1, 1, 1, 1, 1, 1, 1, 2, 1, 2, 3, 2, 62, 8, 2, 1, 3,
-		1, 3, 1, 4, 1, 4, 3, 4, 68, 8, 4, 1, 5, 1, 5, 1, 5, 3, 5, 73, 8, 5, 1,
-		6, 1, 6, 1, 6, 5, 6, 78, 8, 6, 10, 6, 12, 6, 81, 9, 6, 1, 7, 1, 7, 1, 7,
-		5, 7, 86, 8, 7, 10, 7, 12, 7, 89, 9, 7, 1, 8, 1, 8, 1, 8, 1, 8, 1, 8, 1,
-		9, 1, 9, 1, 9, 3, 9, 99, 8, 9, 1, 9, 3, 9, 102, 8, 9, 1, 10, 1, 10, 1,
-		11, 1, 11, 1, 11, 1, 11, 1, 11, 1, 12, 1, 12, 1, 12, 3, 12, 114, 8, 12,
-		1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 3, 12, 121, 8, 12, 1, 12, 3, 12, 124,
-		8, 12, 1, 12, 3, 12, 127, 8, 12, 1, 13, 1, 13, 1, 14, 1, 14, 1, 15, 1,
-		15, 1, 15, 1, 15, 1, 15, 3, 15, 138, 8, 15, 1, 15, 1, 15, 1, 16, 4, 16,
-		143, 8, 16, 11, 16, 12, 16, 144, 1, 17, 1, 17, 1, 17, 5, 17, 150, 8, 17,
-		10, 17, 12, 17, 153, 9, 17, 1, 18, 1, 18, 3, 18, 157, 8, 18, 1, 18, 5,
-		18, 160, 8, 18, 10, 18, 12, 18, 163, 9, 18, 1, 19, 3, 19, 166, 8, 19, 1,
-		19, 1, 19, 1, 20, 1, 20, 1, 21, 1, 21, 1, 21, 3, 21, 175, 8, 21, 1, 21,
-		1, 21, 3, 21, 179, 8, 21, 1, 22, 1, 22, 1, 22, 1, 22, 1, 22, 1, 22, 1,
-		22, 1, 22, 1, 22, 1, 22, 3, 22, 191, 8, 22, 1, 23, 1, 23, 1, 23, 1, 23,
-		1, 24, 1, 24, 1, 25, 1, 25, 1, 26, 1, 26, 1, 26, 0, 0, 27, 0, 2, 4, 6,
-		8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42,
-		44, 46, 48, 50, 52, 0, 2, 1, 0, 16, 17, 1, 0, 8, 9, 204, 0, 54, 1, 0, 0,
-		0, 2, 56, 1, 0, 0, 0, 4, 61, 1, 0, 0, 0, 6, 63, 1, 0, 0, 0, 8, 67, 1, 0,
-		0, 0, 10, 72, 1, 0, 0, 0, 12, 74, 1, 0, 0, 0, 14, 82, 1, 0, 0, 0, 16, 90,
-		1, 0, 0, 0, 18, 95, 1, 0, 0, 0, 20, 103, 1, 0, 0, 0, 22, 105, 1, 0, 0,
-		0, 24, 113, 1, 0, 0, 0, 26, 128, 1, 0, 0, 0, 28, 130, 1, 0, 0, 0, 30, 132,
-		1, 0, 0, 0, 32, 142, 1, 0, 0, 0, 34, 146, 1, 0, 0, 0, 36, 154, 1, 0, 0,
-		0, 38, 165, 1, 0, 0, 0, 40, 169, 1, 0, 0, 0, 42, 174, 1, 0, 0, 0, 44, 190,
-		1, 0, 0, 0, 46, 192, 1, 0, 0, 0, 48, 196, 1, 0, 0, 0, 50, 198, 1, 0, 0,
-		0, 52, 200, 1, 0, 0, 0, 54, 55, 3, 2, 1, 0, 55, 1, 1, 0, 0, 0, 56, 57,
-		3, 4, 2, 0, 57, 58, 5, 0, 0, 1, 58, 3, 1, 0, 0, 0, 59, 62, 3, 24, 12, 0,
-		60, 62, 3, 32, 16, 0, 61, 59, 1, 0, 0, 0, 61, 60, 1, 0, 0, 0, 62, 5, 1,
-		0, 0, 0, 63, 64, 5, 21, 0, 0, 64, 7, 1, 0, 0, 0, 65, 68, 5, 10, 0, 0, 66,
-		68, 3, 32, 16, 0, 67, 65, 1, 0, 0, 0, 67, 66, 1, 0, 0, 0, 68, 9, 1, 0,
-		0, 0, 69, 73, 5, 18, 0, 0, 70, 73, 5, 16, 0, 0, 71, 73, 3, 18, 9, 0, 72,
-		69, 1, 0, 0, 0, 72, 70, 1, 0, 0, 0, 72, 71, 1, 0, 0, 0, 73, 11, 1, 0, 0,
-		0, 74, 79, 5, 21, 0, 0, 75, 76, 5, 11, 0, 0, 76, 78, 5, 21, 0, 0, 77, 75,
-		1, 0, 0, 0, 78, 81, 1, 0, 0, 0, 79, 77, 1, 0, 0, 0, 79, 80, 1, 0, 0, 0,
-		80, 13, 1, 0, 0, 0, 81, 79, 1, 0, 0, 0, 82, 87, 5, 21, 0, 0, 83, 84, 5,
-		11, 0, 0, 84, 86, 5, 21, 0, 0, 85, 83, 1, 0, 0, 0, 86, 89, 1, 0, 0, 0,
-		87, 85, 1, 0, 0, 0, 87, 88, 1, 0, 0, 0, 88, 15, 1, 0, 0, 0, 89, 87, 1,
-		0, 0, 0, 90, 91, 5, 13, 0, 0, 91, 92, 5, 4, 0, 0, 92, 93, 3, 12, 6, 0,
-		93, 94, 5, 5, 0, 0, 94, 17, 1, 0, 0, 0, 95, 101, 5, 14, 0, 0, 96, 98, 5,
-		6, 0, 0, 97, 99, 3, 14, 7, 0, 98, 97, 1, 0, 0, 0, 98, 99, 1, 0, 0, 0, 99,
-		100, 1, 0, 0, 0, 100, 102, 5, 7, 0, 0, 101, 96, 1, 0, 0, 0, 101, 102, 1,
-		0, 0, 0, 102, 19, 1, 0, 0, 0, 103, 104, 5, 20, 0, 0, 104, 21, 1, 0, 0,
-		0, 105, 106, 5, 12, 0, 0, 106, 107, 5, 6, 0, 0, 107, 108, 3, 20, 10, 0,
-		108, 109, 5, 7, 0, 0, 109, 23, 1, 0, 0, 0, 110, 111, 3, 10, 5, 0, 111,
-		112, 5, 8, 0, 0, 112, 114, 1, 0, 0, 0, 113, 110, 1, 0, 0, 0, 113, 114,
-		1, 0, 0, 0, 114, 115, 1, 0, 0, 0, 115, 116, 3, 6, 3, 0, 116, 117, 5, 4,
-		0, 0, 117, 118, 3, 8, 4, 0, 118, 120, 5, 5, 0, 0, 119, 121, 3, 16, 8, 0,
-		120, 119, 1, 0, 0, 0, 120, 121, 1, 0, 0, 0, 121, 123, 1, 0, 0, 0, 122,
-		124, 3, 30, 15, 0, 123, 122, 1, 0, 0, 0, 123, 124, 1, 0, 0, 0, 124, 126,
-		1, 0, 0, 0, 125, 127, 3, 22, 11, 0, 126, 125, 1, 0, 0, 0, 126, 127, 1,
-		0, 0, 0, 127, 25, 1, 0, 0, 0, 128, 129, 7, 0, 0, 0, 129, 27, 1, 0, 0, 0,
-		130, 131, 5, 20, 0, 0, 131, 29, 1, 0, 0, 0, 132, 133, 5, 15, 0, 0, 133,
-		134, 5, 6, 0, 0, 134, 137, 3, 26, 13, 0, 135, 136, 5, 11, 0, 0, 136, 138,
-		3, 28, 14, 0, 137, 135, 1, 0, 0, 0, 137, 138, 1, 0, 0, 0, 138, 139, 1,
-		0, 0, 0, 139, 140, 5, 7, 0, 0, 140, 31, 1, 0, 0, 0, 141, 143, 3, 34, 17,
-		0, 142, 141, 1, 0, 0, 0, 143, 144, 1, 0, 0, 0, 144, 142, 1, 0, 0, 0, 144,
-		145, 1, 0, 0, 0, 145, 33, 1, 0, 0, 0, 146, 151, 3, 36, 18, 0, 147, 148,
-		5, 2, 0, 0, 148, 150, 3, 36, 18, 0, 149, 147, 1, 0, 0, 0, 150, 153, 1,
-		0, 0, 0, 151, 149, 1, 0, 0, 0, 151, 152, 1, 0, 0, 0, 152, 35, 1, 0, 0,
-		0, 153, 151, 1, 0, 0, 0, 154, 161, 3, 38, 19, 0, 155, 157, 5, 1, 0, 0,
-		156, 155, 1, 0, 0, 0, 156, 157, 1, 0, 0, 0, 157, 158, 1, 0, 0, 0, 158,
-		160, 3, 38, 19, 0, 159, 156, 1, 0, 0, 0, 160, 163, 1, 0, 0, 0, 161, 159,
-		1, 0, 0, 0, 161, 162, 1, 0, 0, 0, 162, 37, 1, 0, 0, 0, 163, 161, 1, 0,
-		0, 0, 164, 166, 3, 40, 20, 0, 165, 164, 1, 0, 0, 0, 165, 166, 1, 0, 0,
-		0, 166, 167, 1, 0, 0, 0, 167, 168, 3, 42, 21, 0, 168, 39, 1, 0, 0, 0, 169,
-		170, 5, 3, 0, 0, 170, 41, 1, 0, 0, 0, 171, 172, 3, 48, 24, 0, 172, 173,
-		3, 52, 26, 0, 173, 175, 1, 0, 0, 0, 174, 171, 1, 0, 0, 0, 174, 175, 1,
-		0, 0, 0, 175, 178, 1, 0, 0, 0, 176, 179, 3, 44, 22, 0, 177, 179, 3, 46,
-		23, 0, 178, 176, 1, 0, 0, 0, 178, 177, 1, 0, 0, 0, 179, 43, 1, 0, 0, 0,
-		180, 191, 3, 50, 25, 0, 181, 191, 5, 18, 0, 0, 182, 191, 5, 16, 0, 0, 183,
-		191, 5, 17, 0, 0, 184, 191, 5, 14, 0, 0, 185, 191, 5, 12, 0, 0, 186, 191,
-		5, 15, 0, 0, 187, 191, 5, 13, 0, 0, 188, 191, 5, 20, 0, 0, 189, 191, 5,
-		21, 0, 0, 190, 180, 1, 0, 0, 0, 190, 181, 1, 0, 0, 0, 190, 182, 1, 0, 0,
-		0, 190, 183, 1, 0, 0, 0, 190, 184, 1, 0, 0, 0, 190, 185, 1, 0, 0, 0, 190,
-		186, 1, 0, 0, 0, 190, 187, 1, 0, 0, 0, 190, 188, 1, 0, 0, 0, 190, 189,
-		1, 0, 0, 0, 191, 45, 1, 0, 0, 0, 192, 193, 5, 6, 0, 0, 193, 194, 3, 32,
-		16, 0, 194, 195, 5, 7, 0, 0, 195, 47, 1, 0, 0, 0, 196, 197, 5, 21, 0, 0,
-		197, 49, 1, 0, 0, 0, 198, 199, 5, 19, 0, 0, 199, 51, 1, 0, 0, 0, 200, 201,
-		7, 1, 0, 0, 201, 53, 1, 0, 0, 0, 20, 61, 67, 72, 79, 87, 98, 101, 113,
-		120, 123, 126, 137, 144, 151, 156, 161, 165, 174, 178, 190,
+		1, 3, 1, 4, 1, 4, 3, 4, 68, 8, 4, 1, 5, 1, 5, 1, 5, 1, 5, 3, 5, 74, 8,
+		5, 1, 6, 1, 6, 1, 7, 1, 7, 1, 7, 5, 7, 81, 8, 7, 10, 7, 12, 7, 84, 9, 7,
+		1, 8, 1, 8, 1, 8, 5, 8, 89, 8, 8, 10, 8, 12, 8, 92, 9, 8, 1, 9, 1, 9, 1,
+		9, 1, 9, 1, 9, 1, 10, 1, 10, 1, 10, 3, 10, 102, 8, 10, 1, 10, 3, 10, 105,
+		8, 10, 1, 11, 1, 11, 1, 12, 1, 12, 1, 12, 1, 12, 1, 12, 1, 13, 1, 13, 1,
+		13, 3, 13, 117, 8, 13, 1, 13, 1, 13, 1, 13, 1, 13, 1, 13, 3, 13, 124, 8,
+		13, 1, 13, 3, 13, 127, 8, 13, 1, 13, 3, 13, 130, 8, 13, 1, 14, 1, 14, 1,
+		15, 1, 15, 1, 16, 1, 16, 1, 16, 1, 16, 1, 16, 3, 16, 141, 8, 16, 1, 16,
+		1, 16, 1, 17, 4, 17, 146, 8, 17, 11, 17, 12, 17, 147, 1, 18, 1, 18, 1,
+		18, 5, 18, 153, 8, 18, 10, 18, 12, 18, 156, 9, 18, 1, 19, 1, 19, 3, 19,
+		160, 8, 19, 1, 19, 5, 19, 163, 8, 19, 10, 19, 12, 19, 166, 9, 19, 1, 20,
+		3, 20, 169, 8, 20, 1, 20, 1, 20, 1, 21, 1, 21, 1, 22, 1, 22, 1, 22, 3,
+		22, 178, 8, 22, 1, 22, 1, 22, 3, 22, 182, 8, 22, 1, 23, 1, 23, 1, 23, 1,
+		23, 1, 23, 1, 23, 1, 23, 1, 23, 1, 23, 1, 23, 1, 23, 3, 23, 195, 8, 23,
+		1, 24, 1, 24, 1, 24, 1, 24, 1, 25, 1, 25, 1, 26, 1, 26, 1, 26, 0, 0, 27,
+		0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36,
+		38, 40, 42, 44, 46, 48, 50, 52, 0, 3, 2, 0, 20, 20, 23, 23, 1, 0, 8, 10,
+		1, 0, 17, 18, 208, 0, 54, 1, 0, 0, 0, 2, 56, 1, 0, 0, 0, 4, 61, 1, 0, 0,
+		0, 6, 63, 1, 0, 0, 0, 8, 67, 1, 0, 0, 0, 10, 73, 1, 0, 0, 0, 12, 75, 1,
+		0, 0, 0, 14, 77, 1, 0, 0, 0, 16, 85, 1, 0, 0, 0, 18, 93, 1, 0, 0, 0, 20,
+		98, 1, 0, 0, 0, 22, 106, 1, 0, 0, 0, 24, 108, 1, 0, 0, 0, 26, 116, 1, 0,
+		0, 0, 28, 131, 1, 0, 0, 0, 30, 133, 1, 0, 0, 0, 32, 135, 1, 0, 0, 0, 34,
+		145, 1, 0, 0, 0, 36, 149, 1, 0, 0, 0, 38, 157, 1, 0, 0, 0, 40, 168, 1,
+		0, 0, 0, 42, 172, 1, 0, 0, 0, 44, 177, 1, 0, 0, 0, 46, 194, 1, 0, 0, 0,
+		48, 196, 1, 0, 0, 0, 50, 200, 1, 0, 0, 0, 52, 202, 1, 0, 0, 0, 54, 55,
+		3, 2, 1, 0, 55, 1, 1, 0, 0, 0, 56, 57, 3, 4, 2, 0, 57, 58, 5, 0, 0, 1,
+		58, 3, 1, 0, 0, 0, 59, 62, 3, 26, 13, 0, 60, 62, 3, 34, 17, 0, 61, 59,
+		1, 0, 0, 0, 61, 60, 1, 0, 0, 0, 62, 5, 1, 0, 0, 0, 63, 64, 7, 0, 0, 0,
+		64, 7, 1, 0, 0, 0, 65, 68, 5, 11, 0, 0, 66, 68, 3, 34, 17, 0, 67, 65, 1,
+		0, 0, 0, 67, 66, 1, 0, 0, 0, 68, 9, 1, 0, 0, 0, 69, 74, 5, 19, 0, 0, 70,
+		74, 5, 17, 0, 0, 71, 74, 5, 20, 0, 0, 72, 74, 3, 20, 10, 0, 73, 69, 1,
+		0, 0, 0, 73, 70, 1, 0, 0, 0, 73, 71, 1, 0, 0, 0, 73, 72, 1, 0, 0, 0, 74,
+		11, 1, 0, 0, 0, 75, 76, 7, 1, 0, 0, 76, 13, 1, 0, 0, 0, 77, 82, 7, 0, 0,
+		0, 78, 79, 5, 12, 0, 0, 79, 81, 7, 0, 0, 0, 80, 78, 1, 0, 0, 0, 81, 84,
+		1, 0, 0, 0, 82, 80, 1, 0, 0, 0, 82, 83, 1, 0, 0, 0, 83, 15, 1, 0, 0, 0,
+		84, 82, 1, 0, 0, 0, 85, 90, 7, 0, 0, 0, 86, 87, 5, 12, 0, 0, 87, 89, 7,
+		0, 0, 0, 88, 86, 1, 0, 0, 0, 89, 92, 1, 0, 0, 0, 90, 88, 1, 0, 0, 0, 90,
+		91, 1, 0, 0, 0, 91, 17, 1, 0, 0, 0, 92, 90, 1, 0, 0, 0, 93, 94, 5, 14,
+		0, 0, 94, 95, 5, 4, 0, 0, 95, 96, 3, 14, 7, 0, 96, 97, 5, 5, 0, 0, 97,
+		19, 1, 0, 0, 0, 98, 104, 5, 15, 0, 0, 99, 101, 5, 6, 0, 0, 100, 102, 3,
+		16, 8, 0, 101, 100, 1, 0, 0, 0, 101, 102, 1, 0, 0, 0, 102, 103, 1, 0, 0,
+		0, 103, 105, 5, 7, 0, 0, 104, 99, 1, 0, 0, 0, 104, 105, 1, 0, 0, 0, 105,
+		21, 1, 0, 0, 0, 106, 107, 5, 22, 0, 0, 107, 23, 1, 0, 0, 0, 108, 109, 5,
+		13, 0, 0, 109, 110, 5, 6, 0, 0, 110, 111, 3, 22, 11, 0, 111, 112, 5, 7,
+		0, 0, 112, 25, 1, 0, 0, 0, 113, 114, 3, 10, 5, 0, 114, 115, 5, 8, 0, 0,
+		115, 117, 1, 0, 0, 0, 116, 113, 1, 0, 0, 0, 116, 117, 1, 0, 0, 0, 117,
+		118, 1, 0, 0, 0, 118, 119, 3, 6, 3, 0, 119, 120, 5, 4, 0, 0, 120, 121,
+		3, 8, 4, 0, 121, 123, 5, 5, 0, 0, 122, 124, 3, 18, 9, 0, 123, 122, 1, 0,
+		0, 0, 123, 124, 1, 0, 0, 0, 124, 126, 1, 0, 0, 0, 125, 127, 3, 32, 16,
+		0, 126, 125, 1, 0, 0, 0, 126, 127, 1, 0, 0, 0, 127, 129, 1, 0, 0, 0, 128,
+		130, 3, 24, 12, 0, 129, 128, 1, 0, 0, 0, 129, 130, 1, 0, 0, 0, 130, 27,
+		1, 0, 0, 0, 131, 132, 7, 2, 0, 0, 132, 29, 1, 0, 0, 0, 133, 134, 5, 22,
+		0, 0, 134, 31, 1, 0, 0, 0, 135, 136, 5, 16, 0, 0, 136, 137, 5, 6, 0, 0,
+		137, 140, 3, 28, 14, 0, 138, 139, 5, 12, 0, 0, 139, 141, 3, 30, 15, 0,
+		140, 138, 1, 0, 0, 0, 140, 141, 1, 0, 0, 0, 141, 142, 1, 0, 0, 0, 142,
+		143, 5, 7, 0, 0, 143, 33, 1, 0, 0, 0, 144, 146, 3, 36, 18, 0, 145, 144,
+		1, 0, 0, 0, 146, 147, 1, 0, 0, 0, 147, 145, 1, 0, 0, 0, 147, 148, 1, 0,
+		0, 0, 148, 35, 1, 0, 0, 0, 149, 154, 3, 38, 19, 0, 150, 151, 5, 2, 0, 0,
+		151, 153, 3, 38, 19, 0, 152, 150, 1, 0, 0, 0, 153, 156, 1, 0, 0, 0, 154,
+		152, 1, 0, 0, 0, 154, 155, 1, 0, 0, 0, 155, 37, 1, 0, 0, 0, 156, 154, 1,
+		0, 0, 0, 157, 164, 3, 40, 20, 0, 158, 160, 5, 1, 0, 0, 159, 158, 1, 0,
+		0, 0, 159, 160, 1, 0, 0, 0, 160, 161, 1, 0, 0, 0, 161, 163, 3, 40, 20,
+		0, 162, 159, 1, 0, 0, 0, 163, 166, 1, 0, 0, 0, 164, 162, 1, 0, 0, 0, 164,
+		165, 1, 0, 0, 0, 165, 39, 1, 0, 0, 0, 166, 164, 1, 0, 0, 0, 167, 169, 3,
+		42, 21, 0, 168, 167, 1, 0, 0, 0, 168, 169, 1, 0, 0, 0, 169, 170, 1, 0,
+		0, 0, 170, 171, 3, 44, 22, 0, 171, 41, 1, 0, 0, 0, 172, 173, 5, 3, 0, 0,
+		173, 43, 1, 0, 0, 0, 174, 175, 3, 50, 25, 0, 175, 176, 3, 12, 6, 0, 176,
+		178, 1, 0, 0, 0, 177, 174, 1, 0, 0, 0, 177, 178, 1, 0, 0, 0, 178, 181,
+		1, 0, 0, 0, 179, 182, 3, 46, 23, 0, 180, 182, 3, 48, 24, 0, 181, 179, 1,
+		0, 0, 0, 181, 180, 1, 0, 0, 0, 182, 45, 1, 0, 0, 0, 183, 195, 3, 52, 26,
+		0, 184, 195, 5, 19, 0, 0, 185, 195, 5, 20, 0, 0, 186, 195, 5, 17, 0, 0,
+		187, 195, 5, 18, 0, 0, 188, 195, 5, 15, 0, 0, 189, 195, 5, 13, 0, 0, 190,
+		195, 5, 16, 0, 0, 191, 195, 5, 14, 0, 0, 192, 195, 5, 22, 0, 0, 193, 195,
+		5, 23, 0, 0, 194, 183, 1, 0, 0, 0, 194, 184, 1, 0, 0, 0, 194, 185, 1, 0,
+		0, 0, 194, 186, 1, 0, 0, 0, 194, 187, 1, 0, 0, 0, 194, 188, 1, 0, 0, 0,
+		194, 189, 1, 0, 0, 0, 194, 190, 1, 0, 0, 0, 194, 191, 1, 0, 0, 0, 194,
+		192, 1, 0, 0, 0, 194, 193, 1, 0, 0, 0, 195, 47, 1, 0, 0, 0, 196, 197, 5,
+		6, 0, 0, 197, 198, 3, 34, 17, 0, 198, 199, 5, 7, 0, 0, 199, 49, 1, 0, 0,
+		0, 200, 201, 7, 0, 0, 0, 201, 51, 1, 0, 0, 0, 202, 203, 5, 21, 0, 0, 203,
+		53, 1, 0, 0, 0, 20, 61, 67, 73, 82, 90, 101, 104, 116, 123, 126, 129, 140,
+		147, 154, 159, 164, 168, 177, 181, 194,
 	}
 	deserializer := antlr.NewATNDeserializer(nil)
 	staticData.atn = deserializer.Deserialize(staticData.serializedATN)
@@ -184,20 +187,22 @@ const (
 	EDCqlMetricParserRPAREN               = 7
 	EDCqlMetricParserOP_COLON             = 8
 	EDCqlMetricParserOPERATOR             = 9
-	EDCqlMetricParserMATCH_ALL            = 10
-	EDCqlMetricParserCOMMA                = 11
-	EDCqlMetricParserROLLUP_START         = 12
-	EDCqlMetricParserBY                   = 13
-	EDCqlMetricParserCOUNT_UNIQUE         = 14
-	EDCqlMetricParserFILL_START           = 15
-	EDCqlMetricParserCOMMON_OPERATOR      = 16
-	EDCqlMetricParserFILL_OPERATOR        = 17
-	EDCqlMetricParserAGGREGATION_OPERATOR = 18
-	EDCqlMetricParserQUOTED               = 19
-	EDCqlMetricParserNUMBER               = 20
-	EDCqlMetricParserTERM                 = 21
-	EDCqlMetricParserDEFAULT_SKIP         = 22
-	EDCqlMetricParserUNKNOWN              = 23
+	EDCqlMetricParserREGEX_OPERATOR       = 10
+	EDCqlMetricParserMATCH_ALL            = 11
+	EDCqlMetricParserCOMMA                = 12
+	EDCqlMetricParserROLLUP_START         = 13
+	EDCqlMetricParserBY                   = 14
+	EDCqlMetricParserCOUNT_UNIQUE         = 15
+	EDCqlMetricParserFILL_START           = 16
+	EDCqlMetricParserCOMMON_OPERATOR      = 17
+	EDCqlMetricParserFILL_OPERATOR        = 18
+	EDCqlMetricParserAGGREGATION_OPERATOR = 19
+	EDCqlMetricParserCOUNTER_OPERATOR     = 20
+	EDCqlMetricParserQUOTED               = 21
+	EDCqlMetricParserNUMBER               = 22
+	EDCqlMetricParserTERM                 = 23
+	EDCqlMetricParserDEFAULT_SKIP         = 24
+	EDCqlMetricParserUNKNOWN              = 25
 )
 
 // EDCqlMetricParser rules.
@@ -208,27 +213,27 @@ const (
 	EDCqlMetricParserRULE_metricName         = 3
 	EDCqlMetricParserRULE_aggregationFilter  = 4
 	EDCqlMetricParserRULE_aggregationMethod  = 5
-	EDCqlMetricParserRULE_groupByFields      = 6
-	EDCqlMetricParserRULE_countUniqueFields  = 7
-	EDCqlMetricParserRULE_groupBySection     = 8
-	EDCqlMetricParserRULE_countUniqueSection = 9
-	EDCqlMetricParserRULE_rollupWindow       = 10
-	EDCqlMetricParserRULE_rollupSection      = 11
-	EDCqlMetricParserRULE_aggregation        = 12
-	EDCqlMetricParserRULE_fillMethod         = 13
-	EDCqlMetricParserRULE_fillLimit          = 14
-	EDCqlMetricParserRULE_fillSection        = 15
-	EDCqlMetricParserRULE_query              = 16
-	EDCqlMetricParserRULE_disjQuery          = 17
-	EDCqlMetricParserRULE_conjQuery          = 18
-	EDCqlMetricParserRULE_modClause          = 19
-	EDCqlMetricParserRULE_modifier           = 20
-	EDCqlMetricParserRULE_clause             = 21
-	EDCqlMetricParserRULE_term               = 22
-	EDCqlMetricParserRULE_groupingExpr       = 23
-	EDCqlMetricParserRULE_fieldName          = 24
-	EDCqlMetricParserRULE_quotedTerm         = 25
-	EDCqlMetricParserRULE_operatorColon      = 26
+	EDCqlMetricParserRULE_operatorColon      = 6
+	EDCqlMetricParserRULE_groupByFields      = 7
+	EDCqlMetricParserRULE_countUniqueFields  = 8
+	EDCqlMetricParserRULE_groupBySection     = 9
+	EDCqlMetricParserRULE_countUniqueSection = 10
+	EDCqlMetricParserRULE_rollupWindow       = 11
+	EDCqlMetricParserRULE_rollupSection      = 12
+	EDCqlMetricParserRULE_aggregation        = 13
+	EDCqlMetricParserRULE_fillMethod         = 14
+	EDCqlMetricParserRULE_fillLimit          = 15
+	EDCqlMetricParserRULE_fillSection        = 16
+	EDCqlMetricParserRULE_query              = 17
+	EDCqlMetricParserRULE_disjQuery          = 18
+	EDCqlMetricParserRULE_conjQuery          = 19
+	EDCqlMetricParserRULE_modClause          = 20
+	EDCqlMetricParserRULE_modifier           = 21
+	EDCqlMetricParserRULE_clause             = 22
+	EDCqlMetricParserRULE_term               = 23
+	EDCqlMetricParserRULE_groupingExpr       = 24
+	EDCqlMetricParserRULE_fieldName          = 25
+	EDCqlMetricParserRULE_quotedTerm         = 26
 )
 
 // IFinalQueryContext is an interface to support dynamic dispatch.
@@ -631,6 +636,7 @@ type IMetricNameContext interface {
 
 	// Getter signatures
 	TERM() antlr.TerminalNode
+	COUNTER_OPERATOR() antlr.TerminalNode
 
 	// IsMetricNameContext differentiates from other interfaces.
 	IsMetricNameContext()
@@ -672,6 +678,10 @@ func (s *MetricNameContext) TERM() antlr.TerminalNode {
 	return s.GetToken(EDCqlMetricParserTERM, 0)
 }
 
+func (s *MetricNameContext) COUNTER_OPERATOR() antlr.TerminalNode {
+	return s.GetToken(EDCqlMetricParserCOUNTER_OPERATOR, 0)
+}
+
 func (s *MetricNameContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
@@ -705,13 +715,18 @@ func (s *MetricNameContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 func (p *EDCqlMetricParser) MetricName() (localctx IMetricNameContext) {
 	localctx = NewMetricNameContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 6, EDCqlMetricParserRULE_metricName)
+	var _la int
+
 	p.EnterOuterAlt(localctx, 1)
 	{
 		p.SetState(63)
-		p.Match(EDCqlMetricParserTERM)
-		if p.HasError() {
-			// Recognition error - abort rule
-			goto errorExit
+		_la = p.GetTokenStream().LA(1)
+
+		if !(_la == EDCqlMetricParserCOUNTER_OPERATOR || _la == EDCqlMetricParserTERM) {
+			p.GetErrorHandler().RecoverInline(p)
+		} else {
+			p.GetErrorHandler().ReportMatch(p)
+			p.Consume()
 		}
 	}
 
@@ -846,7 +861,7 @@ func (p *EDCqlMetricParser) AggregationFilter() (localctx IAggregationFilterCont
 			}
 		}
 
-	case EDCqlMetricParserNOT, EDCqlMetricParserLPAREN, EDCqlMetricParserROLLUP_START, EDCqlMetricParserBY, EDCqlMetricParserCOUNT_UNIQUE, EDCqlMetricParserFILL_START, EDCqlMetricParserCOMMON_OPERATOR, EDCqlMetricParserFILL_OPERATOR, EDCqlMetricParserAGGREGATION_OPERATOR, EDCqlMetricParserQUOTED, EDCqlMetricParserNUMBER, EDCqlMetricParserTERM:
+	case EDCqlMetricParserNOT, EDCqlMetricParserLPAREN, EDCqlMetricParserROLLUP_START, EDCqlMetricParserBY, EDCqlMetricParserCOUNT_UNIQUE, EDCqlMetricParserFILL_START, EDCqlMetricParserCOMMON_OPERATOR, EDCqlMetricParserFILL_OPERATOR, EDCqlMetricParserAGGREGATION_OPERATOR, EDCqlMetricParserCOUNTER_OPERATOR, EDCqlMetricParserQUOTED, EDCqlMetricParserNUMBER, EDCqlMetricParserTERM:
 		p.EnterOuterAlt(localctx, 2)
 		{
 			p.SetState(66)
@@ -881,6 +896,7 @@ type IAggregationMethodContext interface {
 	// Getter signatures
 	AGGREGATION_OPERATOR() antlr.TerminalNode
 	COMMON_OPERATOR() antlr.TerminalNode
+	COUNTER_OPERATOR() antlr.TerminalNode
 	CountUniqueSection() ICountUniqueSectionContext
 
 	// IsAggregationMethodContext differentiates from other interfaces.
@@ -925,6 +941,10 @@ func (s *AggregationMethodContext) AGGREGATION_OPERATOR() antlr.TerminalNode {
 
 func (s *AggregationMethodContext) COMMON_OPERATOR() antlr.TerminalNode {
 	return s.GetToken(EDCqlMetricParserCOMMON_OPERATOR, 0)
+}
+
+func (s *AggregationMethodContext) COUNTER_OPERATOR() antlr.TerminalNode {
+	return s.GetToken(EDCqlMetricParserCOUNTER_OPERATOR, 0)
 }
 
 func (s *AggregationMethodContext) CountUniqueSection() ICountUniqueSectionContext {
@@ -976,7 +996,7 @@ func (s *AggregationMethodContext) Accept(visitor antlr.ParseTreeVisitor) interf
 func (p *EDCqlMetricParser) AggregationMethod() (localctx IAggregationMethodContext) {
 	localctx = NewAggregationMethodContext(p, p.GetParserRuleContext(), p.GetState())
 	p.EnterRule(localctx, 10, EDCqlMetricParserRULE_aggregationMethod)
-	p.SetState(72)
+	p.SetState(73)
 	p.GetErrorHandler().Sync(p)
 	if p.HasError() {
 		goto errorExit
@@ -1005,16 +1025,148 @@ func (p *EDCqlMetricParser) AggregationMethod() (localctx IAggregationMethodCont
 			}
 		}
 
-	case EDCqlMetricParserCOUNT_UNIQUE:
+	case EDCqlMetricParserCOUNTER_OPERATOR:
 		p.EnterOuterAlt(localctx, 3)
 		{
 			p.SetState(71)
+			p.Match(EDCqlMetricParserCOUNTER_OPERATOR)
+			if p.HasError() {
+				// Recognition error - abort rule
+				goto errorExit
+			}
+		}
+
+	case EDCqlMetricParserCOUNT_UNIQUE:
+		p.EnterOuterAlt(localctx, 4)
+		{
+			p.SetState(72)
 			p.CountUniqueSection()
 		}
 
 	default:
 		p.SetError(antlr.NewNoViableAltException(p, nil, nil, nil, nil, nil))
 		goto errorExit
+	}
+
+errorExit:
+	if p.HasError() {
+		v := p.GetError()
+		localctx.SetException(v)
+		p.GetErrorHandler().ReportError(p, v)
+		p.GetErrorHandler().Recover(p, v)
+		p.SetError(nil)
+	}
+	p.ExitRule()
+	return localctx
+	goto errorExit // Trick to prevent compiler error if the label is not used
+}
+
+// IOperatorColonContext is an interface to support dynamic dispatch.
+type IOperatorColonContext interface {
+	antlr.ParserRuleContext
+
+	// GetParser returns the parser.
+	GetParser() antlr.Parser
+
+	// Getter signatures
+	OPERATOR() antlr.TerminalNode
+	OP_COLON() antlr.TerminalNode
+	REGEX_OPERATOR() antlr.TerminalNode
+
+	// IsOperatorColonContext differentiates from other interfaces.
+	IsOperatorColonContext()
+}
+
+type OperatorColonContext struct {
+	antlr.BaseParserRuleContext
+	parser antlr.Parser
+}
+
+func NewEmptyOperatorColonContext() *OperatorColonContext {
+	var p = new(OperatorColonContext)
+	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, nil, -1)
+	p.RuleIndex = EDCqlMetricParserRULE_operatorColon
+	return p
+}
+
+func InitEmptyOperatorColonContext(p *OperatorColonContext) {
+	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, nil, -1)
+	p.RuleIndex = EDCqlMetricParserRULE_operatorColon
+}
+
+func (*OperatorColonContext) IsOperatorColonContext() {}
+
+func NewOperatorColonContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *OperatorColonContext {
+	var p = new(OperatorColonContext)
+
+	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, parent, invokingState)
+
+	p.parser = parser
+	p.RuleIndex = EDCqlMetricParserRULE_operatorColon
+
+	return p
+}
+
+func (s *OperatorColonContext) GetParser() antlr.Parser { return s.parser }
+
+func (s *OperatorColonContext) OPERATOR() antlr.TerminalNode {
+	return s.GetToken(EDCqlMetricParserOPERATOR, 0)
+}
+
+func (s *OperatorColonContext) OP_COLON() antlr.TerminalNode {
+	return s.GetToken(EDCqlMetricParserOP_COLON, 0)
+}
+
+func (s *OperatorColonContext) REGEX_OPERATOR() antlr.TerminalNode {
+	return s.GetToken(EDCqlMetricParserREGEX_OPERATOR, 0)
+}
+
+func (s *OperatorColonContext) GetRuleContext() antlr.RuleContext {
+	return s
+}
+
+func (s *OperatorColonContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
+	return antlr.TreesStringTree(s, ruleNames, recog)
+}
+
+func (s *OperatorColonContext) EnterRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(EDCqlMetricParserListener); ok {
+		listenerT.EnterOperatorColon(s)
+	}
+}
+
+func (s *OperatorColonContext) ExitRule(listener antlr.ParseTreeListener) {
+	if listenerT, ok := listener.(EDCqlMetricParserListener); ok {
+		listenerT.ExitOperatorColon(s)
+	}
+}
+
+func (s *OperatorColonContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
+	switch t := visitor.(type) {
+	case EDCqlMetricParserVisitor:
+		return t.VisitOperatorColon(s)
+
+	default:
+		return t.VisitChildren(s)
+	}
+}
+
+func (p *EDCqlMetricParser) OperatorColon() (localctx IOperatorColonContext) {
+	localctx = NewOperatorColonContext(p, p.GetParserRuleContext(), p.GetState())
+	p.EnterRule(localctx, 12, EDCqlMetricParserRULE_operatorColon)
+	var _la int
+
+	p.EnterOuterAlt(localctx, 1)
+	{
+		p.SetState(75)
+		_la = p.GetTokenStream().LA(1)
+
+		if !((int64(_la) & ^0x3f) == 0 && ((int64(1)<<_la)&1792) != 0) {
+			p.GetErrorHandler().RecoverInline(p)
+		} else {
+			p.GetErrorHandler().ReportMatch(p)
+			p.Consume()
+		}
 	}
 
 errorExit:
@@ -1040,6 +1192,8 @@ type IGroupByFieldsContext interface {
 	// Getter signatures
 	AllTERM() []antlr.TerminalNode
 	TERM(i int) antlr.TerminalNode
+	AllCOUNTER_OPERATOR() []antlr.TerminalNode
+	COUNTER_OPERATOR(i int) antlr.TerminalNode
 	AllCOMMA() []antlr.TerminalNode
 	COMMA(i int) antlr.TerminalNode
 
@@ -1087,6 +1241,14 @@ func (s *GroupByFieldsContext) TERM(i int) antlr.TerminalNode {
 	return s.GetToken(EDCqlMetricParserTERM, i)
 }
 
+func (s *GroupByFieldsContext) AllCOUNTER_OPERATOR() []antlr.TerminalNode {
+	return s.GetTokens(EDCqlMetricParserCOUNTER_OPERATOR)
+}
+
+func (s *GroupByFieldsContext) COUNTER_OPERATOR(i int) antlr.TerminalNode {
+	return s.GetToken(EDCqlMetricParserCOUNTER_OPERATOR, i)
+}
+
 func (s *GroupByFieldsContext) AllCOMMA() []antlr.TerminalNode {
 	return s.GetTokens(EDCqlMetricParserCOMMA)
 }
@@ -1127,19 +1289,22 @@ func (s *GroupByFieldsContext) Accept(visitor antlr.ParseTreeVisitor) interface{
 
 func (p *EDCqlMetricParser) GroupByFields() (localctx IGroupByFieldsContext) {
 	localctx = NewGroupByFieldsContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 12, EDCqlMetricParserRULE_groupByFields)
+	p.EnterRule(localctx, 14, EDCqlMetricParserRULE_groupByFields)
 	var _la int
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(74)
-		p.Match(EDCqlMetricParserTERM)
-		if p.HasError() {
-			// Recognition error - abort rule
-			goto errorExit
+		p.SetState(77)
+		_la = p.GetTokenStream().LA(1)
+
+		if !(_la == EDCqlMetricParserCOUNTER_OPERATOR || _la == EDCqlMetricParserTERM) {
+			p.GetErrorHandler().RecoverInline(p)
+		} else {
+			p.GetErrorHandler().ReportMatch(p)
+			p.Consume()
 		}
 	}
-	p.SetState(79)
+	p.SetState(82)
 	p.GetErrorHandler().Sync(p)
 	if p.HasError() {
 		goto errorExit
@@ -1148,7 +1313,7 @@ func (p *EDCqlMetricParser) GroupByFields() (localctx IGroupByFieldsContext) {
 
 	for _la == EDCqlMetricParserCOMMA {
 		{
-			p.SetState(75)
+			p.SetState(78)
 			p.Match(EDCqlMetricParserCOMMA)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -1156,15 +1321,18 @@ func (p *EDCqlMetricParser) GroupByFields() (localctx IGroupByFieldsContext) {
 			}
 		}
 		{
-			p.SetState(76)
-			p.Match(EDCqlMetricParserTERM)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
+			p.SetState(79)
+			_la = p.GetTokenStream().LA(1)
+
+			if !(_la == EDCqlMetricParserCOUNTER_OPERATOR || _la == EDCqlMetricParserTERM) {
+				p.GetErrorHandler().RecoverInline(p)
+			} else {
+				p.GetErrorHandler().ReportMatch(p)
+				p.Consume()
 			}
 		}
 
-		p.SetState(81)
+		p.SetState(84)
 		p.GetErrorHandler().Sync(p)
 		if p.HasError() {
 			goto errorExit
@@ -1195,6 +1363,8 @@ type ICountUniqueFieldsContext interface {
 	// Getter signatures
 	AllTERM() []antlr.TerminalNode
 	TERM(i int) antlr.TerminalNode
+	AllCOUNTER_OPERATOR() []antlr.TerminalNode
+	COUNTER_OPERATOR(i int) antlr.TerminalNode
 	AllCOMMA() []antlr.TerminalNode
 	COMMA(i int) antlr.TerminalNode
 
@@ -1242,6 +1412,14 @@ func (s *CountUniqueFieldsContext) TERM(i int) antlr.TerminalNode {
 	return s.GetToken(EDCqlMetricParserTERM, i)
 }
 
+func (s *CountUniqueFieldsContext) AllCOUNTER_OPERATOR() []antlr.TerminalNode {
+	return s.GetTokens(EDCqlMetricParserCOUNTER_OPERATOR)
+}
+
+func (s *CountUniqueFieldsContext) COUNTER_OPERATOR(i int) antlr.TerminalNode {
+	return s.GetToken(EDCqlMetricParserCOUNTER_OPERATOR, i)
+}
+
 func (s *CountUniqueFieldsContext) AllCOMMA() []antlr.TerminalNode {
 	return s.GetTokens(EDCqlMetricParserCOMMA)
 }
@@ -1282,19 +1460,22 @@ func (s *CountUniqueFieldsContext) Accept(visitor antlr.ParseTreeVisitor) interf
 
 func (p *EDCqlMetricParser) CountUniqueFields() (localctx ICountUniqueFieldsContext) {
 	localctx = NewCountUniqueFieldsContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 14, EDCqlMetricParserRULE_countUniqueFields)
+	p.EnterRule(localctx, 16, EDCqlMetricParserRULE_countUniqueFields)
 	var _la int
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(82)
-		p.Match(EDCqlMetricParserTERM)
-		if p.HasError() {
-			// Recognition error - abort rule
-			goto errorExit
+		p.SetState(85)
+		_la = p.GetTokenStream().LA(1)
+
+		if !(_la == EDCqlMetricParserCOUNTER_OPERATOR || _la == EDCqlMetricParserTERM) {
+			p.GetErrorHandler().RecoverInline(p)
+		} else {
+			p.GetErrorHandler().ReportMatch(p)
+			p.Consume()
 		}
 	}
-	p.SetState(87)
+	p.SetState(90)
 	p.GetErrorHandler().Sync(p)
 	if p.HasError() {
 		goto errorExit
@@ -1303,7 +1484,7 @@ func (p *EDCqlMetricParser) CountUniqueFields() (localctx ICountUniqueFieldsCont
 
 	for _la == EDCqlMetricParserCOMMA {
 		{
-			p.SetState(83)
+			p.SetState(86)
 			p.Match(EDCqlMetricParserCOMMA)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -1311,15 +1492,18 @@ func (p *EDCqlMetricParser) CountUniqueFields() (localctx ICountUniqueFieldsCont
 			}
 		}
 		{
-			p.SetState(84)
-			p.Match(EDCqlMetricParserTERM)
-			if p.HasError() {
-				// Recognition error - abort rule
-				goto errorExit
+			p.SetState(87)
+			_la = p.GetTokenStream().LA(1)
+
+			if !(_la == EDCqlMetricParserCOUNTER_OPERATOR || _la == EDCqlMetricParserTERM) {
+				p.GetErrorHandler().RecoverInline(p)
+			} else {
+				p.GetErrorHandler().ReportMatch(p)
+				p.Consume()
 			}
 		}
 
-		p.SetState(89)
+		p.SetState(92)
 		p.GetErrorHandler().Sync(p)
 		if p.HasError() {
 			goto errorExit
@@ -1449,10 +1633,10 @@ func (s *GroupBySectionContext) Accept(visitor antlr.ParseTreeVisitor) interface
 
 func (p *EDCqlMetricParser) GroupBySection() (localctx IGroupBySectionContext) {
 	localctx = NewGroupBySectionContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 16, EDCqlMetricParserRULE_groupBySection)
+	p.EnterRule(localctx, 18, EDCqlMetricParserRULE_groupBySection)
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(90)
+		p.SetState(93)
 		p.Match(EDCqlMetricParserBY)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -1460,7 +1644,7 @@ func (p *EDCqlMetricParser) GroupBySection() (localctx IGroupBySectionContext) {
 		}
 	}
 	{
-		p.SetState(91)
+		p.SetState(94)
 		p.Match(EDCqlMetricParserLBRACE)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -1468,11 +1652,11 @@ func (p *EDCqlMetricParser) GroupBySection() (localctx IGroupBySectionContext) {
 		}
 	}
 	{
-		p.SetState(92)
+		p.SetState(95)
 		p.GroupByFields()
 	}
 	{
-		p.SetState(93)
+		p.SetState(96)
 		p.Match(EDCqlMetricParserRBRACE)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -1602,19 +1786,19 @@ func (s *CountUniqueSectionContext) Accept(visitor antlr.ParseTreeVisitor) inter
 
 func (p *EDCqlMetricParser) CountUniqueSection() (localctx ICountUniqueSectionContext) {
 	localctx = NewCountUniqueSectionContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 18, EDCqlMetricParserRULE_countUniqueSection)
+	p.EnterRule(localctx, 20, EDCqlMetricParserRULE_countUniqueSection)
 	var _la int
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(95)
+		p.SetState(98)
 		p.Match(EDCqlMetricParserCOUNT_UNIQUE)
 		if p.HasError() {
 			// Recognition error - abort rule
 			goto errorExit
 		}
 	}
-	p.SetState(101)
+	p.SetState(104)
 	p.GetErrorHandler().Sync(p)
 	if p.HasError() {
 		goto errorExit
@@ -1623,29 +1807,29 @@ func (p *EDCqlMetricParser) CountUniqueSection() (localctx ICountUniqueSectionCo
 
 	if _la == EDCqlMetricParserLPAREN {
 		{
-			p.SetState(96)
+			p.SetState(99)
 			p.Match(EDCqlMetricParserLPAREN)
 			if p.HasError() {
 				// Recognition error - abort rule
 				goto errorExit
 			}
 		}
-		p.SetState(98)
+		p.SetState(101)
 		p.GetErrorHandler().Sync(p)
 		if p.HasError() {
 			goto errorExit
 		}
 		_la = p.GetTokenStream().LA(1)
 
-		if _la == EDCqlMetricParserTERM {
+		if _la == EDCqlMetricParserCOUNTER_OPERATOR || _la == EDCqlMetricParserTERM {
 			{
-				p.SetState(97)
+				p.SetState(100)
 				p.CountUniqueFields()
 			}
 
 		}
 		{
-			p.SetState(100)
+			p.SetState(103)
 			p.Match(EDCqlMetricParserRPAREN)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -1750,10 +1934,10 @@ func (s *RollupWindowContext) Accept(visitor antlr.ParseTreeVisitor) interface{}
 
 func (p *EDCqlMetricParser) RollupWindow() (localctx IRollupWindowContext) {
 	localctx = NewRollupWindowContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 20, EDCqlMetricParserRULE_rollupWindow)
+	p.EnterRule(localctx, 22, EDCqlMetricParserRULE_rollupWindow)
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(103)
+		p.SetState(106)
 		p.Match(EDCqlMetricParserNUMBER)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -1883,10 +2067,10 @@ func (s *RollupSectionContext) Accept(visitor antlr.ParseTreeVisitor) interface{
 
 func (p *EDCqlMetricParser) RollupSection() (localctx IRollupSectionContext) {
 	localctx = NewRollupSectionContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 22, EDCqlMetricParserRULE_rollupSection)
+	p.EnterRule(localctx, 24, EDCqlMetricParserRULE_rollupSection)
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(105)
+		p.SetState(108)
 		p.Match(EDCqlMetricParserROLLUP_START)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -1894,7 +2078,7 @@ func (p *EDCqlMetricParser) RollupSection() (localctx IRollupSectionContext) {
 		}
 	}
 	{
-		p.SetState(106)
+		p.SetState(109)
 		p.Match(EDCqlMetricParserLPAREN)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -1902,11 +2086,11 @@ func (p *EDCqlMetricParser) RollupSection() (localctx IRollupSectionContext) {
 		}
 	}
 	{
-		p.SetState(107)
+		p.SetState(110)
 		p.RollupWindow()
 	}
 	{
-		p.SetState(108)
+		p.SetState(111)
 		p.Match(EDCqlMetricParserRPAREN)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -2121,24 +2305,20 @@ func (s *AggregationContext) Accept(visitor antlr.ParseTreeVisitor) interface{} 
 
 func (p *EDCqlMetricParser) Aggregation() (localctx IAggregationContext) {
 	localctx = NewAggregationContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 24, EDCqlMetricParserRULE_aggregation)
+	p.EnterRule(localctx, 26, EDCqlMetricParserRULE_aggregation)
 	var _la int
 
 	p.EnterOuterAlt(localctx, 1)
-	p.SetState(113)
+	p.SetState(116)
 	p.GetErrorHandler().Sync(p)
-	if p.HasError() {
-		goto errorExit
-	}
-	_la = p.GetTokenStream().LA(1)
 
-	if (int64(_la) & ^0x3f) == 0 && ((int64(1)<<_la)&344064) != 0 {
+	if p.GetInterpreter().AdaptivePredict(p.BaseParser, p.GetTokenStream(), 7, p.GetParserRuleContext()) == 1 {
 		{
-			p.SetState(110)
+			p.SetState(113)
 			p.AggregationMethod()
 		}
 		{
-			p.SetState(111)
+			p.SetState(114)
 			p.Match(EDCqlMetricParserOP_COLON)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -2146,13 +2326,15 @@ func (p *EDCqlMetricParser) Aggregation() (localctx IAggregationContext) {
 			}
 		}
 
+	} else if p.HasError() { // JIM
+		goto errorExit
 	}
 	{
-		p.SetState(115)
+		p.SetState(118)
 		p.MetricName()
 	}
 	{
-		p.SetState(116)
+		p.SetState(119)
 		p.Match(EDCqlMetricParserLBRACE)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -2160,30 +2342,16 @@ func (p *EDCqlMetricParser) Aggregation() (localctx IAggregationContext) {
 		}
 	}
 	{
-		p.SetState(117)
+		p.SetState(120)
 		p.AggregationFilter()
 	}
 	{
-		p.SetState(118)
+		p.SetState(121)
 		p.Match(EDCqlMetricParserRBRACE)
 		if p.HasError() {
 			// Recognition error - abort rule
 			goto errorExit
 		}
-	}
-	p.SetState(120)
-	p.GetErrorHandler().Sync(p)
-	if p.HasError() {
-		goto errorExit
-	}
-	_la = p.GetTokenStream().LA(1)
-
-	if _la == EDCqlMetricParserBY {
-		{
-			p.SetState(119)
-			p.GroupBySection()
-		}
-
 	}
 	p.SetState(123)
 	p.GetErrorHandler().Sync(p)
@@ -2192,10 +2360,10 @@ func (p *EDCqlMetricParser) Aggregation() (localctx IAggregationContext) {
 	}
 	_la = p.GetTokenStream().LA(1)
 
-	if _la == EDCqlMetricParserFILL_START {
+	if _la == EDCqlMetricParserBY {
 		{
 			p.SetState(122)
-			p.FillSection()
+			p.GroupBySection()
 		}
 
 	}
@@ -2206,9 +2374,23 @@ func (p *EDCqlMetricParser) Aggregation() (localctx IAggregationContext) {
 	}
 	_la = p.GetTokenStream().LA(1)
 
-	if _la == EDCqlMetricParserROLLUP_START {
+	if _la == EDCqlMetricParserFILL_START {
 		{
 			p.SetState(125)
+			p.FillSection()
+		}
+
+	}
+	p.SetState(129)
+	p.GetErrorHandler().Sync(p)
+	if p.HasError() {
+		goto errorExit
+	}
+	_la = p.GetTokenStream().LA(1)
+
+	if _la == EDCqlMetricParserROLLUP_START {
+		{
+			p.SetState(128)
 			p.RollupSection()
 		}
 
@@ -2314,12 +2496,12 @@ func (s *FillMethodContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 
 func (p *EDCqlMetricParser) FillMethod() (localctx IFillMethodContext) {
 	localctx = NewFillMethodContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 26, EDCqlMetricParserRULE_fillMethod)
+	p.EnterRule(localctx, 28, EDCqlMetricParserRULE_fillMethod)
 	var _la int
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(128)
+		p.SetState(131)
 		_la = p.GetTokenStream().LA(1)
 
 		if !(_la == EDCqlMetricParserCOMMON_OPERATOR || _la == EDCqlMetricParserFILL_OPERATOR) {
@@ -2425,10 +2607,10 @@ func (s *FillLimitContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 
 func (p *EDCqlMetricParser) FillLimit() (localctx IFillLimitContext) {
 	localctx = NewFillLimitContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 28, EDCqlMetricParserRULE_fillLimit)
+	p.EnterRule(localctx, 30, EDCqlMetricParserRULE_fillLimit)
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(130)
+		p.SetState(133)
 		p.Match(EDCqlMetricParserNUMBER)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -2580,12 +2762,12 @@ func (s *FillSectionContext) Accept(visitor antlr.ParseTreeVisitor) interface{} 
 
 func (p *EDCqlMetricParser) FillSection() (localctx IFillSectionContext) {
 	localctx = NewFillSectionContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 30, EDCqlMetricParserRULE_fillSection)
+	p.EnterRule(localctx, 32, EDCqlMetricParserRULE_fillSection)
 	var _la int
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(132)
+		p.SetState(135)
 		p.Match(EDCqlMetricParserFILL_START)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -2593,7 +2775,7 @@ func (p *EDCqlMetricParser) FillSection() (localctx IFillSectionContext) {
 		}
 	}
 	{
-		p.SetState(133)
+		p.SetState(136)
 		p.Match(EDCqlMetricParserLPAREN)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -2601,10 +2783,10 @@ func (p *EDCqlMetricParser) FillSection() (localctx IFillSectionContext) {
 		}
 	}
 	{
-		p.SetState(134)
+		p.SetState(137)
 		p.FillMethod()
 	}
-	p.SetState(137)
+	p.SetState(140)
 	p.GetErrorHandler().Sync(p)
 	if p.HasError() {
 		goto errorExit
@@ -2613,7 +2795,7 @@ func (p *EDCqlMetricParser) FillSection() (localctx IFillSectionContext) {
 
 	if _la == EDCqlMetricParserCOMMA {
 		{
-			p.SetState(135)
+			p.SetState(138)
 			p.Match(EDCqlMetricParserCOMMA)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -2621,13 +2803,13 @@ func (p *EDCqlMetricParser) FillSection() (localctx IFillSectionContext) {
 			}
 		}
 		{
-			p.SetState(136)
+			p.SetState(139)
 			p.FillLimit()
 		}
 
 	}
 	{
-		p.SetState(139)
+		p.SetState(142)
 		p.Match(EDCqlMetricParserRPAREN)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -2768,24 +2950,24 @@ func (s *QueryContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 
 func (p *EDCqlMetricParser) Query() (localctx IQueryContext) {
 	localctx = NewQueryContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 32, EDCqlMetricParserRULE_query)
+	p.EnterRule(localctx, 34, EDCqlMetricParserRULE_query)
 	var _la int
 
 	p.EnterOuterAlt(localctx, 1)
-	p.SetState(142)
+	p.SetState(145)
 	p.GetErrorHandler().Sync(p)
 	if p.HasError() {
 		goto errorExit
 	}
 	_la = p.GetTokenStream().LA(1)
 
-	for ok := true; ok; ok = ((int64(_la) & ^0x3f) == 0 && ((int64(1)<<_la)&4190280) != 0) {
+	for ok := true; ok; ok = ((int64(_la) & ^0x3f) == 0 && ((int64(1)<<_la)&16769096) != 0) {
 		{
-			p.SetState(141)
+			p.SetState(144)
 			p.DisjQuery()
 		}
 
-		p.SetState(144)
+		p.SetState(147)
 		p.GetErrorHandler().Sync(p)
 		if p.HasError() {
 			goto errorExit
@@ -2936,15 +3118,15 @@ func (s *DisjQueryContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 
 func (p *EDCqlMetricParser) DisjQuery() (localctx IDisjQueryContext) {
 	localctx = NewDisjQueryContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 34, EDCqlMetricParserRULE_disjQuery)
+	p.EnterRule(localctx, 36, EDCqlMetricParserRULE_disjQuery)
 	var _la int
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(146)
+		p.SetState(149)
 		p.ConjQuery()
 	}
-	p.SetState(151)
+	p.SetState(154)
 	p.GetErrorHandler().Sync(p)
 	if p.HasError() {
 		goto errorExit
@@ -2953,7 +3135,7 @@ func (p *EDCqlMetricParser) DisjQuery() (localctx IDisjQueryContext) {
 
 	for _la == EDCqlMetricParserOR {
 		{
-			p.SetState(147)
+			p.SetState(150)
 			p.Match(EDCqlMetricParserOR)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -2961,11 +3143,11 @@ func (p *EDCqlMetricParser) DisjQuery() (localctx IDisjQueryContext) {
 			}
 		}
 		{
-			p.SetState(148)
+			p.SetState(151)
 			p.ConjQuery()
 		}
 
-		p.SetState(153)
+		p.SetState(156)
 		p.GetErrorHandler().Sync(p)
 		if p.HasError() {
 			goto errorExit
@@ -3116,17 +3298,17 @@ func (s *ConjQueryContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 
 func (p *EDCqlMetricParser) ConjQuery() (localctx IConjQueryContext) {
 	localctx = NewConjQueryContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 36, EDCqlMetricParserRULE_conjQuery)
+	p.EnterRule(localctx, 38, EDCqlMetricParserRULE_conjQuery)
 	var _la int
 
 	var _alt int
 
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(154)
+		p.SetState(157)
 		p.ModClause()
 	}
-	p.SetState(161)
+	p.SetState(164)
 	p.GetErrorHandler().Sync(p)
 	if p.HasError() {
 		goto errorExit
@@ -3137,7 +3319,7 @@ func (p *EDCqlMetricParser) ConjQuery() (localctx IConjQueryContext) {
 	}
 	for _alt != 2 && _alt != antlr.ATNInvalidAltNumber {
 		if _alt == 1 {
-			p.SetState(156)
+			p.SetState(159)
 			p.GetErrorHandler().Sync(p)
 			if p.HasError() {
 				goto errorExit
@@ -3146,7 +3328,7 @@ func (p *EDCqlMetricParser) ConjQuery() (localctx IConjQueryContext) {
 
 			if _la == EDCqlMetricParserAND {
 				{
-					p.SetState(155)
+					p.SetState(158)
 					p.Match(EDCqlMetricParserAND)
 					if p.HasError() {
 						// Recognition error - abort rule
@@ -3156,12 +3338,12 @@ func (p *EDCqlMetricParser) ConjQuery() (localctx IConjQueryContext) {
 
 			}
 			{
-				p.SetState(158)
+				p.SetState(161)
 				p.ModClause()
 			}
 
 		}
-		p.SetState(163)
+		p.SetState(166)
 		p.GetErrorHandler().Sync(p)
 		if p.HasError() {
 			goto errorExit
@@ -3296,11 +3478,11 @@ func (s *ModClauseContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 
 func (p *EDCqlMetricParser) ModClause() (localctx IModClauseContext) {
 	localctx = NewModClauseContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 38, EDCqlMetricParserRULE_modClause)
+	p.EnterRule(localctx, 40, EDCqlMetricParserRULE_modClause)
 	var _la int
 
 	p.EnterOuterAlt(localctx, 1)
-	p.SetState(165)
+	p.SetState(168)
 	p.GetErrorHandler().Sync(p)
 	if p.HasError() {
 		goto errorExit
@@ -3309,13 +3491,13 @@ func (p *EDCqlMetricParser) ModClause() (localctx IModClauseContext) {
 
 	if _la == EDCqlMetricParserNOT {
 		{
-			p.SetState(164)
+			p.SetState(167)
 			p.Modifier()
 		}
 
 	}
 	{
-		p.SetState(167)
+		p.SetState(170)
 		p.Clause()
 	}
 
@@ -3414,10 +3596,10 @@ func (s *ModifierContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 
 func (p *EDCqlMetricParser) Modifier() (localctx IModifierContext) {
 	localctx = NewModifierContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 40, EDCqlMetricParserRULE_modifier)
+	p.EnterRule(localctx, 42, EDCqlMetricParserRULE_modifier)
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(169)
+		p.SetState(172)
 		p.Match(EDCqlMetricParserNOT)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -3583,41 +3765,41 @@ func (s *ClauseContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 
 func (p *EDCqlMetricParser) Clause() (localctx IClauseContext) {
 	localctx = NewClauseContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 42, EDCqlMetricParserRULE_clause)
+	p.EnterRule(localctx, 44, EDCqlMetricParserRULE_clause)
 	p.EnterOuterAlt(localctx, 1)
-	p.SetState(174)
+	p.SetState(177)
 	p.GetErrorHandler().Sync(p)
 
 	if p.GetInterpreter().AdaptivePredict(p.BaseParser, p.GetTokenStream(), 17, p.GetParserRuleContext()) == 1 {
 		{
-			p.SetState(171)
+			p.SetState(174)
 			p.FieldName()
 		}
 
 		{
-			p.SetState(172)
+			p.SetState(175)
 			p.OperatorColon()
 		}
 
 	} else if p.HasError() { // JIM
 		goto errorExit
 	}
-	p.SetState(178)
+	p.SetState(181)
 	p.GetErrorHandler().Sync(p)
 	if p.HasError() {
 		goto errorExit
 	}
 
 	switch p.GetTokenStream().LA(1) {
-	case EDCqlMetricParserROLLUP_START, EDCqlMetricParserBY, EDCqlMetricParserCOUNT_UNIQUE, EDCqlMetricParserFILL_START, EDCqlMetricParserCOMMON_OPERATOR, EDCqlMetricParserFILL_OPERATOR, EDCqlMetricParserAGGREGATION_OPERATOR, EDCqlMetricParserQUOTED, EDCqlMetricParserNUMBER, EDCqlMetricParserTERM:
+	case EDCqlMetricParserROLLUP_START, EDCqlMetricParserBY, EDCqlMetricParserCOUNT_UNIQUE, EDCqlMetricParserFILL_START, EDCqlMetricParserCOMMON_OPERATOR, EDCqlMetricParserFILL_OPERATOR, EDCqlMetricParserAGGREGATION_OPERATOR, EDCqlMetricParserCOUNTER_OPERATOR, EDCqlMetricParserQUOTED, EDCqlMetricParserNUMBER, EDCqlMetricParserTERM:
 		{
-			p.SetState(176)
+			p.SetState(179)
 			p.Term()
 		}
 
 	case EDCqlMetricParserLPAREN:
 		{
-			p.SetState(177)
+			p.SetState(180)
 			p.GroupingExpr()
 		}
 
@@ -3649,6 +3831,7 @@ type ITermContext interface {
 	// Getter signatures
 	QuotedTerm() IQuotedTermContext
 	AGGREGATION_OPERATOR() antlr.TerminalNode
+	COUNTER_OPERATOR() antlr.TerminalNode
 	COMMON_OPERATOR() antlr.TerminalNode
 	FILL_OPERATOR() antlr.TerminalNode
 	COUNT_UNIQUE() antlr.TerminalNode
@@ -3712,6 +3895,10 @@ func (s *TermContext) QuotedTerm() IQuotedTermContext {
 
 func (s *TermContext) AGGREGATION_OPERATOR() antlr.TerminalNode {
 	return s.GetToken(EDCqlMetricParserAGGREGATION_OPERATOR, 0)
+}
+
+func (s *TermContext) COUNTER_OPERATOR() antlr.TerminalNode {
+	return s.GetToken(EDCqlMetricParserCOUNTER_OPERATOR, 0)
 }
 
 func (s *TermContext) COMMON_OPERATOR() antlr.TerminalNode {
@@ -3778,8 +3965,8 @@ func (s *TermContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 
 func (p *EDCqlMetricParser) Term() (localctx ITermContext) {
 	localctx = NewTermContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 44, EDCqlMetricParserRULE_term)
-	p.SetState(190)
+	p.EnterRule(localctx, 46, EDCqlMetricParserRULE_term)
+	p.SetState(194)
 	p.GetErrorHandler().Sync(p)
 	if p.HasError() {
 		goto errorExit
@@ -3789,14 +3976,14 @@ func (p *EDCqlMetricParser) Term() (localctx ITermContext) {
 	case EDCqlMetricParserQUOTED:
 		p.EnterOuterAlt(localctx, 1)
 		{
-			p.SetState(180)
+			p.SetState(183)
 			p.QuotedTerm()
 		}
 
 	case EDCqlMetricParserAGGREGATION_OPERATOR:
 		p.EnterOuterAlt(localctx, 2)
 		{
-			p.SetState(181)
+			p.SetState(184)
 			p.Match(EDCqlMetricParserAGGREGATION_OPERATOR)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -3804,10 +3991,21 @@ func (p *EDCqlMetricParser) Term() (localctx ITermContext) {
 			}
 		}
 
-	case EDCqlMetricParserCOMMON_OPERATOR:
+	case EDCqlMetricParserCOUNTER_OPERATOR:
 		p.EnterOuterAlt(localctx, 3)
 		{
-			p.SetState(182)
+			p.SetState(185)
+			p.Match(EDCqlMetricParserCOUNTER_OPERATOR)
+			if p.HasError() {
+				// Recognition error - abort rule
+				goto errorExit
+			}
+		}
+
+	case EDCqlMetricParserCOMMON_OPERATOR:
+		p.EnterOuterAlt(localctx, 4)
+		{
+			p.SetState(186)
 			p.Match(EDCqlMetricParserCOMMON_OPERATOR)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -3816,9 +4014,9 @@ func (p *EDCqlMetricParser) Term() (localctx ITermContext) {
 		}
 
 	case EDCqlMetricParserFILL_OPERATOR:
-		p.EnterOuterAlt(localctx, 4)
+		p.EnterOuterAlt(localctx, 5)
 		{
-			p.SetState(183)
+			p.SetState(187)
 			p.Match(EDCqlMetricParserFILL_OPERATOR)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -3827,9 +4025,9 @@ func (p *EDCqlMetricParser) Term() (localctx ITermContext) {
 		}
 
 	case EDCqlMetricParserCOUNT_UNIQUE:
-		p.EnterOuterAlt(localctx, 5)
+		p.EnterOuterAlt(localctx, 6)
 		{
-			p.SetState(184)
+			p.SetState(188)
 			p.Match(EDCqlMetricParserCOUNT_UNIQUE)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -3838,9 +4036,9 @@ func (p *EDCqlMetricParser) Term() (localctx ITermContext) {
 		}
 
 	case EDCqlMetricParserROLLUP_START:
-		p.EnterOuterAlt(localctx, 6)
+		p.EnterOuterAlt(localctx, 7)
 		{
-			p.SetState(185)
+			p.SetState(189)
 			p.Match(EDCqlMetricParserROLLUP_START)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -3849,9 +4047,9 @@ func (p *EDCqlMetricParser) Term() (localctx ITermContext) {
 		}
 
 	case EDCqlMetricParserFILL_START:
-		p.EnterOuterAlt(localctx, 7)
+		p.EnterOuterAlt(localctx, 8)
 		{
-			p.SetState(186)
+			p.SetState(190)
 			p.Match(EDCqlMetricParserFILL_START)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -3860,9 +4058,9 @@ func (p *EDCqlMetricParser) Term() (localctx ITermContext) {
 		}
 
 	case EDCqlMetricParserBY:
-		p.EnterOuterAlt(localctx, 8)
+		p.EnterOuterAlt(localctx, 9)
 		{
-			p.SetState(187)
+			p.SetState(191)
 			p.Match(EDCqlMetricParserBY)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -3871,9 +4069,9 @@ func (p *EDCqlMetricParser) Term() (localctx ITermContext) {
 		}
 
 	case EDCqlMetricParserNUMBER:
-		p.EnterOuterAlt(localctx, 9)
+		p.EnterOuterAlt(localctx, 10)
 		{
-			p.SetState(188)
+			p.SetState(192)
 			p.Match(EDCqlMetricParserNUMBER)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -3882,9 +4080,9 @@ func (p *EDCqlMetricParser) Term() (localctx ITermContext) {
 		}
 
 	case EDCqlMetricParserTERM:
-		p.EnterOuterAlt(localctx, 10)
+		p.EnterOuterAlt(localctx, 11)
 		{
-			p.SetState(189)
+			p.SetState(193)
 			p.Match(EDCqlMetricParserTERM)
 			if p.HasError() {
 				// Recognition error - abort rule
@@ -4014,10 +4212,10 @@ func (s *GroupingExprContext) Accept(visitor antlr.ParseTreeVisitor) interface{}
 
 func (p *EDCqlMetricParser) GroupingExpr() (localctx IGroupingExprContext) {
 	localctx = NewGroupingExprContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 46, EDCqlMetricParserRULE_groupingExpr)
+	p.EnterRule(localctx, 48, EDCqlMetricParserRULE_groupingExpr)
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(192)
+		p.SetState(196)
 		p.Match(EDCqlMetricParserLPAREN)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -4025,11 +4223,11 @@ func (p *EDCqlMetricParser) GroupingExpr() (localctx IGroupingExprContext) {
 		}
 	}
 	{
-		p.SetState(193)
+		p.SetState(197)
 		p.Query()
 	}
 	{
-		p.SetState(194)
+		p.SetState(198)
 		p.Match(EDCqlMetricParserRPAREN)
 		if p.HasError() {
 			// Recognition error - abort rule
@@ -4059,6 +4257,7 @@ type IFieldNameContext interface {
 
 	// Getter signatures
 	TERM() antlr.TerminalNode
+	COUNTER_OPERATOR() antlr.TerminalNode
 
 	// IsFieldNameContext differentiates from other interfaces.
 	IsFieldNameContext()
@@ -4100,6 +4299,10 @@ func (s *FieldNameContext) TERM() antlr.TerminalNode {
 	return s.GetToken(EDCqlMetricParserTERM, 0)
 }
 
+func (s *FieldNameContext) COUNTER_OPERATOR() antlr.TerminalNode {
+	return s.GetToken(EDCqlMetricParserCOUNTER_OPERATOR, 0)
+}
+
 func (s *FieldNameContext) GetRuleContext() antlr.RuleContext {
 	return s
 }
@@ -4132,14 +4335,19 @@ func (s *FieldNameContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 
 func (p *EDCqlMetricParser) FieldName() (localctx IFieldNameContext) {
 	localctx = NewFieldNameContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 48, EDCqlMetricParserRULE_fieldName)
+	p.EnterRule(localctx, 50, EDCqlMetricParserRULE_fieldName)
+	var _la int
+
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(196)
-		p.Match(EDCqlMetricParserTERM)
-		if p.HasError() {
-			// Recognition error - abort rule
-			goto errorExit
+		p.SetState(200)
+		_la = p.GetTokenStream().LA(1)
+
+		if !(_la == EDCqlMetricParserCOUNTER_OPERATOR || _la == EDCqlMetricParserTERM) {
+			p.GetErrorHandler().RecoverInline(p)
+		} else {
+			p.GetErrorHandler().ReportMatch(p)
+			p.Consume()
 		}
 	}
 
@@ -4238,130 +4446,14 @@ func (s *QuotedTermContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
 
 func (p *EDCqlMetricParser) QuotedTerm() (localctx IQuotedTermContext) {
 	localctx = NewQuotedTermContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 50, EDCqlMetricParserRULE_quotedTerm)
+	p.EnterRule(localctx, 52, EDCqlMetricParserRULE_quotedTerm)
 	p.EnterOuterAlt(localctx, 1)
 	{
-		p.SetState(198)
+		p.SetState(202)
 		p.Match(EDCqlMetricParserQUOTED)
 		if p.HasError() {
 			// Recognition error - abort rule
 			goto errorExit
-		}
-	}
-
-errorExit:
-	if p.HasError() {
-		v := p.GetError()
-		localctx.SetException(v)
-		p.GetErrorHandler().ReportError(p, v)
-		p.GetErrorHandler().Recover(p, v)
-		p.SetError(nil)
-	}
-	p.ExitRule()
-	return localctx
-	goto errorExit // Trick to prevent compiler error if the label is not used
-}
-
-// IOperatorColonContext is an interface to support dynamic dispatch.
-type IOperatorColonContext interface {
-	antlr.ParserRuleContext
-
-	// GetParser returns the parser.
-	GetParser() antlr.Parser
-
-	// Getter signatures
-	OPERATOR() antlr.TerminalNode
-	OP_COLON() antlr.TerminalNode
-
-	// IsOperatorColonContext differentiates from other interfaces.
-	IsOperatorColonContext()
-}
-
-type OperatorColonContext struct {
-	antlr.BaseParserRuleContext
-	parser antlr.Parser
-}
-
-func NewEmptyOperatorColonContext() *OperatorColonContext {
-	var p = new(OperatorColonContext)
-	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, nil, -1)
-	p.RuleIndex = EDCqlMetricParserRULE_operatorColon
-	return p
-}
-
-func InitEmptyOperatorColonContext(p *OperatorColonContext) {
-	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, nil, -1)
-	p.RuleIndex = EDCqlMetricParserRULE_operatorColon
-}
-
-func (*OperatorColonContext) IsOperatorColonContext() {}
-
-func NewOperatorColonContext(parser antlr.Parser, parent antlr.ParserRuleContext, invokingState int) *OperatorColonContext {
-	var p = new(OperatorColonContext)
-
-	antlr.InitBaseParserRuleContext(&p.BaseParserRuleContext, parent, invokingState)
-
-	p.parser = parser
-	p.RuleIndex = EDCqlMetricParserRULE_operatorColon
-
-	return p
-}
-
-func (s *OperatorColonContext) GetParser() antlr.Parser { return s.parser }
-
-func (s *OperatorColonContext) OPERATOR() antlr.TerminalNode {
-	return s.GetToken(EDCqlMetricParserOPERATOR, 0)
-}
-
-func (s *OperatorColonContext) OP_COLON() antlr.TerminalNode {
-	return s.GetToken(EDCqlMetricParserOP_COLON, 0)
-}
-
-func (s *OperatorColonContext) GetRuleContext() antlr.RuleContext {
-	return s
-}
-
-func (s *OperatorColonContext) ToStringTree(ruleNames []string, recog antlr.Recognizer) string {
-	return antlr.TreesStringTree(s, ruleNames, recog)
-}
-
-func (s *OperatorColonContext) EnterRule(listener antlr.ParseTreeListener) {
-	if listenerT, ok := listener.(EDCqlMetricParserListener); ok {
-		listenerT.EnterOperatorColon(s)
-	}
-}
-
-func (s *OperatorColonContext) ExitRule(listener antlr.ParseTreeListener) {
-	if listenerT, ok := listener.(EDCqlMetricParserListener); ok {
-		listenerT.ExitOperatorColon(s)
-	}
-}
-
-func (s *OperatorColonContext) Accept(visitor antlr.ParseTreeVisitor) interface{} {
-	switch t := visitor.(type) {
-	case EDCqlMetricParserVisitor:
-		return t.VisitOperatorColon(s)
-
-	default:
-		return t.VisitChildren(s)
-	}
-}
-
-func (p *EDCqlMetricParser) OperatorColon() (localctx IOperatorColonContext) {
-	localctx = NewOperatorColonContext(p, p.GetParserRuleContext(), p.GetState())
-	p.EnterRule(localctx, 52, EDCqlMetricParserRULE_operatorColon)
-	var _la int
-
-	p.EnterOuterAlt(localctx, 1)
-	{
-		p.SetState(200)
-		_la = p.GetTokenStream().LA(1)
-
-		if !(_la == EDCqlMetricParserOP_COLON || _la == EDCqlMetricParserOPERATOR) {
-			p.GetErrorHandler().RecoverInline(p)
-		} else {
-			p.GetErrorHandler().ReportMatch(p)
-			p.Consume()
 		}
 	}
 
