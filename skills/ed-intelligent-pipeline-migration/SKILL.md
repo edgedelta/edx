@@ -110,6 +110,11 @@ every log and metric shape the pipeline carries.
 Reading `report.json`:
 - `only_go` / `only_red`: records on one side only, with samples.
   `fields_only_*` lists keys that appear on one side only.
+- `value_diffs`: pairs `only_go` and `only_red` records on `--pair-by`
+  (default `body`) and counts the fields whose values differ. Read it first
+  when every record differs; it usually names a single field. For example,
+  after `merge_maps` into `attributes` the Go agent sends
+  `resource.server.port` as null and RED keeps the port.
 - A `status` other than `ok` means nothing was compared. If the Go agent
   captured nothing on any output, it may have replaced an output it could not
   build with a no-op; that is logged as an error in `<out>/go/edgedelta.log`.

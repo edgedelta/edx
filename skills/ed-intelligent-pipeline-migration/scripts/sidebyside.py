@@ -217,6 +217,8 @@ def main():
     p.add_argument("--ignore", action="append", default=[], help="extra field name to drop before comparing")
     p.add_argument("--no-default-ignore", action="store_true", help="compare every field, including DEFAULT_IGNORE")
     p.add_argument("--max-samples", type=int, default=5)
+    p.add_argument("--pair-by", default="body",
+                   help="top-level record field used to pair only_go and only_red records for value_diffs")
     a = p.parse_args()
 
     a.out.mkdir(parents=True, exist_ok=True)
@@ -305,7 +307,8 @@ def main():
                  "fields_only_go": sorted(set(fields["go"]) - set(fields["red"])),
                  "fields_only_red": sorted(set(fields["red"]) - set(fields["go"])),
                  "sample_only_go": [json.loads(k) for k in list(only_go)[:a.max_samples]],
-                 "sample_only_red": [json.loads(k) for k in list(only_red)[:a.max_samples]]}
+                 "sample_only_red": [json.loads(k) for k in list(only_red)[:a.max_samples]],
+                 "value_diffs": value_diffs(only_go, only_red, a.pair_by)}
         report["outputs"][node] = entry
         all_match &= entry["match"]
     if status == "ok" and feeds and all(e["go_count"] == 0 for e in report["outputs"].values()):
@@ -316,9 +319,53 @@ def main():
     print(json.dumps({"status": report["status"], "dropped_inputs": dropped,
                       "outputs": {k: {x: v[x] for x in ("go_count", "red_count", "only_go", "only_red", "match",
                                                          "fields_only_go", "fields_only_red")}
+                                  | {"value_diffs": v["value_diffs"]["fields"][:a.max_samples]}
                                   for k, v in report["outputs"].items()}}, indent=2))
     print(f"report: {a.out / 'report.json'}")
     sys.exit(2 if status != "ok" else 0 if all_match else 1)
+
+
+def value_diffs(only_go, only_red, pair_by):
+    """Pair the unmatched records on pair_by and count the fields whose values differ.
+
+    When every record differs, this usually names the one field responsible.
+    """
+    pool = collections.defaultdict(list)
+    for k in only_red.elements():
+        r = json.loads(k)
+        pool[json.dumps(r.get(pair_by) if isinstance(r, dict) else r, sort_keys=True)].append(r)
+    fields, paired, unpaired = collections.Counter(), 0, 0
+    example = {}
+    for k in only_go.elements():
+        g = json.loads(k)
+        cands = pool.get(json.dumps(g.get(pair_by) if isinstance(g, dict) else g, sort_keys=True))
+        if not cands:
+            unpaired += 1
+            continue
+        r = cands.pop()
+        paired += 1
+        fg, fr = flat_items(g), flat_items(r)
+        for f in set(fg) | set(fr):
+            vg, vr = fg.get(f, "<absent>"), fr.get(f, "<absent>")
+            if vg != vr:
+                fields[f] += 1
+                example.setdefault(f, (vg, vr))
+    return {"pair_by": pair_by, "paired": paired, "unpaired_go": unpaired,
+            "unpaired_red": sum(len(v) for v in pool.values()),
+            "fields": [{"field": f, "count": n, "go": example[f][0], "red": example[f][1]}
+                       for f, n in fields.most_common()]}
+
+
+def flat_items(d, prefix=""):
+    if not isinstance(d, dict):
+        return {prefix[:-1] or "<record>": d}
+    out = {}
+    for k, v in d.items():
+        if isinstance(v, dict) and v:
+            out.update(flat_items(v, f"{prefix}{k}."))
+        else:
+            out[f"{prefix}{k}"] = v
+    return out
 
 
 def flat_keys(d, prefix=""):
