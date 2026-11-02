@@ -137,6 +137,48 @@ delete_key(attributes, "pid") where EDXCoalesce(attributes["pid"], "") == ""
       enabled_stats: [ count ]
 ```
 
+**Patterns from structured (JSON / key=value) logs.** Clustering the raw body
+fails: compact JSON has no spaces, so the whole line is one digit-bearing token
+and masks to a single `*` pattern; `=` is not a token separator, so `k=v` pairs
+fragment into many micro-patterns. Cluster on a projection of stable fields
+instead, and keep the original log as the sample (agent >= v2.23.0 for
+`sample_field_path` / `max_token_count`):
+```yaml
+- type: ottl_transform
+  metadata: '{"name":"Project stable fields for patterns"}'
+  data_types: [log]
+  statements: |-
+    merge_maps(attributes, ParseJSON(body), "upsert") where IsMatch(body, "^\\s*[{]")
+    set(attributes["status_class"], "success") where attributes["status_code"] != nil and Int(attributes["status_code"]) < 400
+    set(attributes["status_class"], "client_error") where attributes["status_code"] != nil and Int(attributes["status_code"]) >= 400 and Int(attributes["status_code"]) < 500
+    set(attributes["status_class"], "server_error") where attributes["status_code"] != nil and Int(attributes["status_code"]) >= 500
+    set(attributes["pattern_input"], Concat(["route", attributes["route"], "method", attributes["method"], "status", attributes["status_class"]], " "))
+- type: log_to_pattern_metric
+  metadata: '{"name":"Patterns from projection"}'
+  keep_item: true
+  data_types: [log]
+  field_path: item["attributes"]["pattern_input"]
+  sample_field_path: item["body"]
+  similarity_threshold: 0.9
+```
+Projection rules: numbers never anchor a pattern (any digit-bearing token is
+masked), so map them to word classes; leave IDs (user_id, request_id) out;
+keep field order and count fixed; prefer `key: value` over `key=value`; with N
+tokens, lines differing in one token merge only if (N-1)/N >= the threshold.
+Zero-config fallback: `set(attributes["pattern_input"], body)` then
+`replace_pattern(attributes["pattern_input"], "[{}\",:]+", " ")`, and raise
+`max_token_count` (10-200, default 50) when logs carry more than ~25 pairs.
+Per-entity counts belong in extract/aggregate metrics or `group_by`, not patterns.
+
+When the user asks to demo or reproduce this, generate both pieces: a small
+script that writes compact JSON lines (~20 keys including route, method,
+numeric status_code, and volatile IDs) to a file, and the pipeline nodes above
+behind a `file_input` on that path. Dry-run the OTTL with `edx pipelines test
+ottl`; pattern nodes cannot be dry-run (`test node` returns 400), so verify
+after deploy with `edx patterns list -q 'service.name:"<svc>"' --lookback 15m`
+once one `reporting_frequency` has passed. Full guide:
+https://docs.edgedelta.com/structured-log-patterns/
+
 Notes: guards matter - `ParseJSON` on a body that starts with `{` but is
 malformed errors the statement (skipped at runtime, so the log passes through
 unparsed). OTTL string literals need doubled backslashes (`\\b` in YAML = `\b`
@@ -181,4 +223,5 @@ POST. Neither cleanly → reconsider the design.
 | `test` rejects the statement | Read the error - usually an undefined OTTL function or a bad regex escape (`\\` in YAML). |
 | Non-OTTL node (log_to_metric, ...) won't dry-run in `test ottl` | Use `edx pipelines test node` with the node as `{"id","type","configuration":{...}}`. |
 | Severity misclassified | Set from the explicit level tag/field *before* free-text keyword matching. |
+| Structured logs collapse into one `*` pattern | Cluster on a projection, not the raw body - see "Patterns from structured logs" above. |
 | Metric/pattern shows nothing in capture | They emit on an interval; extend `--duration` past one `interval`/reporting window. |

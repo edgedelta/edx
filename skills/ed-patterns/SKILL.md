@@ -79,3 +79,7 @@ edx patterns samples -q 'service.name:"api"' --lookback 1h
 1. Widen `--lookback`.
 2. Verify filters: `edx facets options --scope pattern --facet service.name`.
 3. Drop `--negative` (the issue may be neutral-sentiment).
+
+If a service's patterns are a single `*` (or hundreds of near-identical ones),
+its logs are structured JSON or `key=value` clustered on the raw body. The fix
+is a pipeline change; see "Patterns from structured logs" in **ed-pipeline-tuning**.
