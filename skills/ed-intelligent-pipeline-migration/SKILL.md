@@ -35,15 +35,30 @@ Run them in order, and don't move on while the current one is failing.
 ED_BACKEND_DISABLED=1 red --config pipeline.yaml   # Ctrl-C after "pipeline running"
 ```
 
-A startup error is a blocker; record it verbatim. So is
-`WARN node type not implemented; items reaching it are dropped`. RED starts
-when it logs this, but that node drops everything sent to it. The Go agent
-accepts these config shapes, and RED preflight has rejected them before:
+A startup error is a blocker; record it verbatim. So is a warning starting
+with `node type not implemented`. RED starts when it logs this, but that node
+drops everything sent to it.
+
+Two results are caused by running offline, not by RED:
+- With no `ED_API_KEY`, RED logs `ed_output disabled: ED_API_KEY is not set`,
+  and then the `node type not implemented` warning for the `ed_output` node.
+  Ignore both for `ed_output`.
+- A `lookup` with an `ed://` location fails with "needs the Edge Delta
+  backend". To check it, download the table (`edx lookup download <name> --out
+  <file>`), point `location_path` at `file://<file>` in both agents' configs,
+  and include the lookup in stage 2.
+
+The Go agent accepts these config shapes, and RED preflight has rejected them
+before:
 
 - a `sequence` or `compound` inside another sequence's `processors:` list.
   Top-level `sequence` and `compound` nodes are a different case.
 - `telemetrygen_input` with `template_type: metric` or `trace`
 - `ed_debug_output`, which RED starts with but warns about as above
+
+Preflight can pass and the data can still differ. A sequence processor with
+`final: true` started cleanly on RED, but RED ran the processors after it and
+the Go agent did not. Give every `final: true` processor a fixture in stage 2.
 
 ## 2. Side by side: same bytes, diff the outputs
 
