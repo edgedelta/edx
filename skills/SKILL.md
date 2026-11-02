@@ -29,6 +29,7 @@ Delta's SDKs.
 | **ed-investigate** | Cross-signal incident investigation workflow |
 | **ed-ai-teammate** | AI Teammate connectors and activity |
 | **ed-browser-rum** | Browser RUM: page loads, Core Web Vitals and JS errors from real visitors |
+| **ed-intelligent-pipeline-migration** | Move pipelines from the Go agent to RED with a side-by-side output diff |
 
 ## Install
 
