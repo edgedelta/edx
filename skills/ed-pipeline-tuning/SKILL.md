@@ -157,10 +157,15 @@ instead, and keep the original log as the sample (agent >= v2.23.0 for
   metadata: '{"name":"Patterns from projection"}'
   keep_item: true
   data_types: [log]
-  field_path: item["attributes"]["pattern_input"]
-  sample_field_path: item["body"]
+  field_path: attributes["pattern_input"]
+  sample_field_path: body
   similarity_threshold: 0.9
 ```
+Path syntax depends on the node: `log_to_pattern_metric` inside a sequence takes
+OTTL paths (`attributes["x"]`, `body`); the top-level `log_to_pattern` node takes
+CEL paths (`item["attributes"]["x"]`, `item["body"]`). The agent accepts either
+form: a wrong `field_path` emits no patterns (agent log: `resulted in type:
+<nil>`), and a wrong `sample_field_path` falls back to the projected line.
 Projection rules: numbers never anchor a pattern (any digit-bearing token is
 masked), so map them to word classes; leave IDs (user_id, request_id) out;
 keep field order and count fixed; prefer `key: value` over `key=value`; with N
@@ -223,5 +228,6 @@ POST. Neither cleanly → reconsider the design.
 | `test` rejects the statement | Read the error - usually an undefined OTTL function or a bad regex escape (`\\` in YAML). |
 | Non-OTTL node (log_to_metric, ...) won't dry-run in `test ottl` | Use `edx pipelines test node` with the node as `{"id","type","configuration":{...}}`. |
 | Severity misclassified | Set from the explicit level tag/field *before* free-text keyword matching. |
+| Pattern node emits nothing; agent log says `resulted in type: <nil>` | `field_path` uses the wrong path syntax for the node type - see "Path syntax depends on the node" above. |
 | Structured logs collapse into one `*` pattern | Cluster on a projection, not the raw body - see "Patterns from structured logs" above. |
 | Metric/pattern shows nothing in capture | They emit on an interval; extend `--duration` past one `interval`/reporting window. |
