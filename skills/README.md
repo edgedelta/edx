@@ -45,6 +45,7 @@ appear on screen.
 | [ed-investigate](ed-investigate/SKILL.md) | Cross-signal incident investigation workflow |
 | [ed-ai-teammate](ed-ai-teammate/SKILL.md) | AI Teammate connectors and activity |
 | [ed-browser-rum](ed-browser-rum/SKILL.md) | Browser RUM: page-load performance, Core Web Vitals and JS errors from real visitors |
+| [ed-intelligent-pipeline-migration](ed-intelligent-pipeline-migration/SKILL.md) | Move pipelines from the Go agent to RED: preflight, side-by-side output diff, shadow fleet |
 
 ## Setup edx
 
@@ -82,6 +83,7 @@ npx skills add edgedelta/agent-skills \
   --skill ed-investigate \
   --skill ed-ai-teammate \
   --skill ed-browser-rum \
+  --skill ed-intelligent-pipeline-migration \
   --full-depth -y
 ```
 
