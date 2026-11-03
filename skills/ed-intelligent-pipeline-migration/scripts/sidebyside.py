@@ -43,6 +43,12 @@ AGENTS = ("go", "red")
 # time. Pass --no-default-ignore when fixtures carry their own timestamps
 # (OTLP), and add to it with --ignore only for documented nondeterminism.
 DEFAULT_IGNORE = {"timestamp"}
+# Set by a probe in front of every output on items whose timestamp is not an
+# integer. The Go agent reads the timestamp as int64 when it ships an item, so
+# a float timestamp (ParseJSON returns numbers as float64 there) reaches the
+# backend as 0 and the log is dropped. http_output prints the
+# float 1793697822400.0 as 1793697822400, so the diff alone cannot see it.
+BAD_TS = "sidebyside.bad_timestamp"
 
 
 def fail(msg):
@@ -88,8 +94,15 @@ def rewrite(cfg, agent, feeds, ports, capture_port):
                           "endpoint": f"http://127.0.0.1:{capture_port}/{agent}/{name}"})
             continue
         nodes.append(n)
+    links = [l for l in c.get("links", []) if l["from"].split("->")[0] not in dropped]
+    for out in [n["name"] for n in nodes if n["type"] == "http_output"]:
+        probe = f"sidebyside_timestamp_probe_{out}"
+        nodes.append({"name": probe, "type": "sequence", "processors": [{
+            "type": "ottl_transform", "data_types": ["log", "metric"],
+            "statements": f'set(attributes["{BAD_TS}"], true) where not IsInt(timestamp)'}]})
+        links = [dict(l, to=probe) if l["to"] == out else l for l in links] + [{"from": probe, "to": out}]
     c["nodes"] = nodes
-    c["links"] = [l for l in c.get("links", []) if l["from"].split("->")[0] not in dropped]
+    c["links"] = links
     return c, sorted(dropped)
 
 
@@ -296,8 +309,11 @@ def main():
               "ignored_fields": sorted(ignore), "outputs": {}}
     all_match = status == "ok"
     for node in outputs:
-        got = {ag: [normalize(r, ignore, {pt: f"<port:{n}>" for n, pt in ports[ag].items()})
-                    for b in srv.bodies.get((ag, node), []) for r in records(b)]
+        raw = {ag: [r for b in srv.bodies.get((ag, node), []) for r in records(b)] for ag in AGENTS}
+        bad_ts = {ag: sum(1 for r in raw[ag] if isinstance(r, dict)
+                          and (r.get("attributes") or {}).pop(BAD_TS, None) is not None)
+                  for ag in AGENTS}
+        got = {ag: [normalize(r, ignore, {pt: f"<port:{n}>" for n, pt in ports[ag].items()}) for r in raw[ag]]
                for ag in AGENTS}
         (a.out / f"captured-{node}.json").write_text(json.dumps(got, indent=1, sort_keys=True))
         keys = {ag: collections.Counter(json.dumps(r, sort_keys=True) for r in got[ag]) for ag in AGENTS}
@@ -305,7 +321,8 @@ def main():
         only_red = keys["red"] - keys["go"]
         fields = {ag: sorted({k for r in got[ag] if isinstance(r, dict) for k in flat_keys(r)}) for ag in AGENTS}
         entry = {"go_count": len(got["go"]), "red_count": len(got["red"]),
-                 "match": status == "ok" and not only_go and not only_red,
+                 "match": status == "ok" and not only_go and not only_red and not any(bad_ts.values()),
+                 "bad_timestamp": bad_ts,
                  "only_go": sum(only_go.values()), "only_red": sum(only_red.values()),
                  "fields_only_go": sorted(set(fields["go"]) - set(fields["red"])),
                  "fields_only_red": sorted(set(fields["red"]) - set(fields["go"])),
@@ -320,7 +337,7 @@ def main():
         report["status"] = status = "go captured nothing on any output; check go/*.log for a no-op pusher"
     (a.out / "report.json").write_text(json.dumps(report, indent=2, sort_keys=True))
     print(json.dumps({"status": report["status"], "dropped_inputs": dropped,
-                      "outputs": {k: {x: v[x] for x in ("go_count", "red_count", "only_go", "only_red", "match",
+                      "outputs": {k: {x: v[x] for x in ("go_count", "red_count", "only_go", "only_red", "match", "bad_timestamp",
                                                          "fields_only_go", "fields_only_red")}
                                   | {"value_diffs": v["value_diffs"]["fields"][:a.max_samples]}
                                   for k, v in report["outputs"].items()}}, indent=2))
@@ -331,7 +348,9 @@ def main():
 def value_diffs(only_go, only_red, pair_by):
     """Pair the unmatched records on pair_by and count the fields whose values differ.
 
-    When every record differs, this usually names the one field responsible.
+    Records that share a pair_by value are paired with the closest one, so a
+    repeated body does not pair unrelated records. When every record differs,
+    this usually names the one field responsible.
     """
     pool = collections.defaultdict(list)
     for k in only_red.elements():
@@ -345,14 +364,15 @@ def value_diffs(only_go, only_red, pair_by):
         if not cands:
             unpaired += 1
             continue
-        r = cands.pop()
+        fg = flat_items(g)
+        diffs = [[f for f in set(fg) | set(fr) if fg.get(f, "<absent>") != fr.get(f, "<absent>")]
+                 for fr in (flat_items(r) for r in cands)]
+        best = min(range(len(cands)), key=lambda i: len(diffs[i]))
+        fr = flat_items(cands.pop(best))
         paired += 1
-        fg, fr = flat_items(g), flat_items(r)
-        for f in set(fg) | set(fr):
-            vg, vr = fg.get(f, "<absent>"), fr.get(f, "<absent>")
-            if vg != vr:
-                fields[f] += 1
-                example.setdefault(f, (vg, vr))
+        for f in diffs[best]:
+            fields[f] += 1
+            example.setdefault(f, (fg.get(f, "<absent>"), fr.get(f, "<absent>")))
     return {"pair_by": pair_by, "paired": paired, "unpaired_go": unpaired,
             "unpaired_red": sum(len(v) for v in pool.values()),
             "fields": [{"field": f, "count": n, "go": example[f][0], "red": example[f][1]}

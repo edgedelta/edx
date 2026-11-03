@@ -60,6 +60,14 @@ Preflight can pass and the data can still differ. A sequence processor with
 `final: true` started cleanly on RED, but RED ran the processors after it and
 the Go agent did not. Give every `final: true` processor a fixture in stage 2.
 
+Timestamps from parsed JSON need `Int()` on the Go agent. There, `ParseJSON`
+returns numbers as float64, and `set(timestamp, attributes["timestamp"])`
+stores the float. The Go agent reads the timestamp as an integer when it ships
+the item, so it sends 0 and the backend drops the log. RED is not affected.
+Convert first:
+`set(attributes["timestamp"], Int(attributes["timestamp"])) where attributes["timestamp"] != nil`.
+Stage 2 reports this as `bad_timestamp`.
+
 ## 2. Side by side: same bytes, diff the outputs
 
 ```bash
@@ -115,6 +123,10 @@ Reading `report.json`:
   when every record differs; it usually names a single field. For example,
   after `merge_maps` into `attributes` the Go agent sends
   `resource.server.port` as null and RED keeps the port.
+- `bad_timestamp`: per agent, records whose timestamp was not an integer when
+  it reached the output. Any count fails the run. The script finds them with
+  a probe in front of each output, because the captured JSON prints such a
+  float the same way as an integer.
 - A `status` other than `ok` means nothing was compared. If the Go agent
   captured nothing on any output, it may have replaced an output it could not
   build with a no-op; that is logged as an error in `<out>/go/edgedelta.log`.
