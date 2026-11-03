@@ -26,6 +26,7 @@ import http.server
 import json
 import os
 from pathlib import Path
+import re
 import signal
 import socket
 import subprocess
@@ -161,7 +162,9 @@ def normalize(v, ignore, ports):
             except json.JSONDecodeError:
                 pass
         for port, name in ports.items():
-            v = v.replace(str(port), name)
+            # Only a whole number: a port such as 55500 also appears inside
+            # timestamps like 59.555000Z.
+            v = re.sub(rf"(?<!\d){port}(?!\d)", name, v)
     return v
 
 
