@@ -68,6 +68,52 @@ Convert first:
 `set(attributes["timestamp"], Int(attributes["timestamp"])) where attributes["timestamp"] != nil`.
 Stage 2 reports this as `bad_timestamp`.
 
+## Translating legacy Go nodes
+
+RED runs OTTL nodes only. The control plane still accepts legacy Go nodes on a
+RED pipeline, and RED drops their data or refuses to start. Run the translator
+when stage 1 reports `node type not implemented` for a legacy node, or rejects
+a CEL `route`:
+
+```bash
+python3 scripts/translate.py pipeline.yaml migrated.yaml
+```
+
+It rewrites `log_transform`, `generic_transform`, `resource_transform`,
+`regex_filter`, `log_level_detector`, `parse_json_attributes`, CEL `route`,
+`log_to_pattern`, `log_to_metric` and `output_transform` into OTTL nodes, and
+prints a JSON summary of what it changed. Run stage 1 again on `migrated.yaml`,
+then pass it to stage 2 as `--red-config`. A translated pipeline counts as
+verified only after stage 2 passes on it with a negative control.
+
+The script never guesses. Any form outside its rules stops it with
+`<node>: unsupported <what>: <expression>`, and it writes nothing. Rewrite that
+node by hand in OTTL with **ed-pipeline-tuning**, then run the script again.
+Rejected forms include `convert_timestamp`, CEL macros, `ec2_metadata`,
+`from_k8s`, field paths outside `item["attributes"]` and `item["resource"]`,
+`log_to_metric` with `dimension_groups`, and `regex_filter` with `field_path`.
+
+`log_to_metric` becomes a filter, `extract_metric` and `aggregate_metric`
+writing `<name>.count`. It loses:
+- `<name>.anomaly1`, and any monitor or dashboard built on it
+- zero-count intervals: the Go agent reports 0 for a quiet interval, RED
+  emits nothing
+- wall-clock buckets: RED buckets by item timestamp
+- first-log labels: RED keeps only attributes identical across the bucket
+- the `_stat_type` and `__metric_category` metadata
+
+Before migrating a pipeline with `log_to_metric`, search the output of
+`edx monitors list --all` and of `edx dashboards get <id>` for each dashboard
+for `.anomaly1`. If a monitor or dashboard uses it, stop and agree on a
+replacement first.
+
+Add these fixtures to stage 2 for translated nodes:
+- a log missing each field a transform or route reads
+- a log with that field set to an explicit null: CEL `has()` counts it, OTTL
+  `!= nil` does not
+- a string body on any route that indexes `body`
+- a log on each side of every `regex_filter`
+
 ## 2. Side by side: same bytes, diff the outputs
 
 ```bash
@@ -178,3 +224,4 @@ blocked. For writing OTTL, see **ed-pipeline-tuning**.
 | A settle shorter than a processor interval | Settle past the longest `interval` / `reporting_frequency`. |
 | Treating a stage 2 match as covering traces | Compare traces in stage 3. |
 | Adding the diffing field to `--ignore` | Find out why it differs, then fix it or record a blocker. |
+| Translating legacy nodes by hand | Run `scripts/translate.py`. Hand-write only the nodes it rejects. |
