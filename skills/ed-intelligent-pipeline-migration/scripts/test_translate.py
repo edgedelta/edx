@@ -41,12 +41,24 @@ def route_ottl(*conds):
 
 OUT = {"name": "out", "type": "ed_output"}
 L2M = {"name": "m", "type": "log_to_metric", "pattern": "(?i)error", "interval": "1m0s"}
-L2M_SEQ = {"name": "m", "type": "sequence", "processors": [
-    {"type": "ottl_filter", "data_types": ["log"], "filter_mode": "include", "condition": 'IsMatch(body, "(?i)error")'},
-    {"type": "extract_metric", "data_types": ["log"], "keep_item": False,
-     "extract_metric_rules": [{"name": "m.count", "gauge": {"value": "1"}}]},
-    {"type": "aggregate_metric", "data_types": ["metric"], "aggregate_metric_rules": [
-        {"name": "m.count", "interval": "1m0s", "aggregation_type": "sum", "group_by": ['resource["__group_name"]']}]}]}
+
+
+def l2m_seq(metric="m", interval="1m0s"):
+    return {"name": "m", "type": "sequence", "processors": [
+        {"type": "ottl_filter", "data_types": ["log"], "filter_mode": "include", "condition": 'IsMatch(body, "(?i)error")'},
+        {"type": "extract_metric", "data_types": ["log"], "keep_item": False,
+         "extract_metric_rules": [{"name": metric, "gauge": {"value": "1"}}]},
+        {"type": "ottl_filter", "data_types": ["log"], "filter_mode": "exclude", "condition": "true"},
+        {"type": "aggregate_metric", "data_types": ["metric"], "aggregate_metric_rules": [
+            {"name": f"{metric}.count", "conditions": [f'name == "{metric}"'], "interval": interval, "aggregation_type": "count",
+             "group_by": ['resource["__group_name"]', 'resource["__src_name"]']}]},
+        {"type": "ottl_transform", "data_types": ["metric"],
+         "statements": 'set(_stat_type, "count") where IsMatch(name, "\\\\.count$")'}]}
+
+
+L2M_SEQ = l2m_seq()
+NULL_FIX = 'set(attributes["a"], 0) where IsMap(resource) and ContainsValue(Keys(resource), "k") and resource["k"] == nil'
+PACK_IO = [{"name": "in", "type": "compound_input"}, {"name": "out", "type": "compound_output"}]
 LEVEL = 'set(severity_text, "unknown")'
 
 
@@ -80,7 +92,7 @@ class TranslateTest(unittest.TestCase):
                 "desc": "in with default",
                 "in": cfg([lt(up('item["attributes"]["a"]', '"k" in item["resource"] ? item["resource"]["k"] : "d"'))]),
                 "want": cfg([ottl(['set(attributes["a"], "d")',
-                                   'set(attributes["a"], resource["k"]) where resource["k"] != nil'])]),
+                                   'set(attributes["a"], resource["k"]) where resource["k"] != nil', NULL_FIX])]),
             },
             {
                 "desc": "regex_capture",
@@ -100,7 +112,7 @@ class TranslateTest(unittest.TestCase):
                               up('item["attributes"]["b"]', '""', ignore_if_empty=True),
                               up('item["attributes"]["c"]', 'env("K") != "" ? env("K") : "d"', ignore_if_empty=True))]),
                 "want": cfg([ottl(['set(attributes["a"], resource["k"]) where resource["k"] != nil and resource["k"] != ""',
-                                   'set(attributes["c"], "d")',
+                                   NULL_FIX, 'set(attributes["c"], "d")',
                                    'set(attributes["c"], EDXEnv("K", "")) where EDXEnv("K", "") != ""'])]),
             },
             {
@@ -145,8 +157,12 @@ class TranslateTest(unittest.TestCase):
                 "desc": "parse_json_attributes",
                 "in": cfg([{"name": "j", "type": "parse_json_attributes", "process_field": 'item["body"]',
                             "field_path": 'item["attributes"]'}]),
-                "want": cfg([ottl(['set(cache["json"], ParseJSON(body)) where IsString(body)',
-                                   'set(attributes, cache["json"]) where IsMap(cache["json"]) and Len(cache["json"]) > 0'], name="j")]),
+                "accept": ("json-parser",),
+                "want": cfg([ottl(['set(cache["pja"], ParseJSON(body)) where IsString(body)',
+                                   'set(cache["pja"], body) where IsMap(body)',
+                                   'set(cache["fail"], ParseJSON("{")) where not IsMap(cache["pja"])',
+                                   'set(cache["fail"], ParseJSON("{")) where Len(cache["pja"]) == 0',
+                                   'set(attributes, cache["pja"])'], name="j")]),
             },
             {
                 "desc": "route atoms",
@@ -189,10 +205,7 @@ class TranslateTest(unittest.TestCase):
             {
                 "desc": "log_to_metric name and default interval",
                 "in": cfg([{"name": "m", "type": "log_to_metric", "pattern": "(?i)error", "metric_name": "a-b c"}]),
-                "want": cfg([{**L2M_SEQ, "processors": [L2M_SEQ["processors"][0],
-                    {**L2M_SEQ["processors"][1], "extract_metric_rules": [{"name": "a_b_c.count", "gauge": {"value": "1"}}]},
-                    {**L2M_SEQ["processors"][2], "aggregate_metric_rules": [
-                        {"name": "a_b_c.count", "interval": "1m", "aggregation_type": "sum", "group_by": ['resource["__group_name"]']}]}]}]),
+                "want": cfg([l2m_seq("a_b_c", "1m")]),
             },
             {
                 "desc": "comments and lookup",
@@ -208,11 +221,45 @@ class TranslateTest(unittest.TestCase):
                          "key_fields": [{"event_field": 'attributes["a"]', "lookup_field": "a"}],
                          "out_fields": [{"event_field": 'attributes["b"]', "lookup_field": "b"}], "data_types": ["log"]}]}]),
             },
+            {
+                "desc": "json_unroll item prefix, also inside a sequence",
+                "in": cfg([{"name": "u", "type": "json_unroll", "field_path": 'item["body"]', "json_field_path": "Records"},
+                           {"name": "s", "type": "sequence", "processors": [
+                               {"type": "json_unroll", "field_path": "item.body", "json_field_path": "r"},
+                               {"type": "json_unroll", "field_path": 'attributes["x"]', "json_field_path": "r"}]}]),
+                "want": cfg([{"name": "u", "type": "json_unroll", "field_path": "body", "json_field_path": "Records"},
+                             {"name": "s", "type": "sequence", "processors": [
+                                 {"type": "json_unroll", "field_path": "body", "json_field_path": "r"},
+                                 {"type": "json_unroll", "field_path": 'attributes["x"]', "json_field_path": "r"}]}]),
+            },
+            {
+                "desc": "nodes inside a pack",
+                "in": cfg([{"name": "pk", "type": "compound", "nodes": PACK_IO + [
+                    {"name": "f", "type": "regex_filter", "pattern": "a", "negate": True}, L2M],
+                    "links": [{"from": "in", "to": "f"}, {"from": "f", "to": "m"}, {"from": "m", "to": "out"}]}]),
+                "want": cfg([{"name": "pk", "type": "compound", "nodes": PACK_IO + [
+                    {"name": "f", "type": "ottl_filter", "filter_mode": "exclude", "condition": 'IsMatch(body, "a")'}, L2M_SEQ],
+                    "links": [{"from": "in", "to": "f"}, {"from": "f", "to": "m"}, {"from": "m", "to": "out"}]}]),
+            },
+            {
+                "desc": "percentiles accepted",
+                "in": cfg([{**L2M, "enabled_stats": ["p95"]}]),
+                "accept": ("percentiles",),
+                "want_types": ["sequence"],
+            },
+            {
+                "desc": "route form only the earlier rule covers",
+                "in": cfg([route('item["attributes"]["a"] == "x" && has(item["attributes"]["b"])')]),
+                "want": cfg([route_ottl('attributes["a"] == "x" and attributes["b"] != nil')]),
+            },
         ]
         for tc in cases:
             with self.subTest(tc["desc"]):
                 got = copy.deepcopy(tc["in"])
-                translate.translate(got)
+                translate.translate(got, tc.get("accept", ()))
+                if "want_types" in tc:
+                    self.assertEqual([n["type"] for n in got["nodes"]], tc["want_types"])
+                    continue
                 if got != tc["want"]:
                     self.fail(f"{tc['desc']}: got: {got}, want: {tc['want']}")
 
@@ -220,7 +267,8 @@ class TranslateTest(unittest.TestCase):
         c = cfg([lt(up('item["attributes"]["a"]', '"x"')), L2M, {"name": "ot", "type": "output_transform"}, OUT],
                 [{"from": "m", "to": "ot"}, {"from": "ot", "to": "out"}])
         got = translate.translate(c)
-        want = {"translated": {"log_to_metric": 1, "log_transform": 1}, "removed": ["ot"], "log_to_metric": ["m"]}
+        want = {"translated": {"log_to_metric": 1, "log_transform": 1}, "removed": ["ot"], "log_to_metric": ["m"],
+                "structure": [], "accepted": {}}
         if got != want:
             self.fail(f"summary: got: {got}, want: {want}")
 
@@ -254,9 +302,9 @@ class TranslateTest(unittest.TestCase):
              "d: unsupported empty fallback_value: INFO"),
             ("several groups", cfg([{"name": "d", "type": "log_level_detector", "pattern": "(a)(b)", "fallback_value": "x"}]),
              "d: unsupported pattern with several capture groups: (a)(b)"),
-            ("parse_json_attributes field_path", cfg([{"name": "j", "type": "parse_json_attributes", "process_field": 'item["body"]',
-                                                       "field_path": 'item["attributes"]["j"]'}]),
-             'j: unsupported field_path: item["attributes"]["j"]'),
+            ("parse_json_attributes needs accept", cfg([{"name": "j", "type": "parse_json_attributes", "process_field": 'item["body"]',
+                                                         "field_path": 'item["attributes"]'}]),
+             "j: unsupported without accept='json-parser': " + translate.accept_flags()["json-parser"]),
             ("route negation", cfg([route('!(item["attributes"]["a"] == "x")')]),
              'r: unsupported route condition: !(item["attributes"]["a"] == "x")'),
             ("route _type", cfg([route('item["_type"] == "log"')]),
@@ -265,8 +313,13 @@ class TranslateTest(unittest.TestCase):
              'r: unsupported route condition: size(item["attributes"]["a"]) == "1"'),
             ("route single quotes", cfg([route("item['attributes']['a'] == 'x'")]),
              "r: unsupported route condition: item['attributes']['a'] == 'x'"),
-            ("dimension_groups", cfg([{**L2M, "dimension_groups": [{"field_dimensions": ['item["attributes"]["a"]']}]}]),
-             "m: unsupported key: dimension_groups"),
+            ("percentiles need accept", cfg([{**L2M, "enabled_stats": ["count", "p95"]}]),
+             "m: unsupported enabled_stats: p95 (rerun with --accept percentiles)"),
+            ("old outputs with node health", cfg([{"name": "h", "type": "ed_node_health_input"}, {"name": "eh", "type": "ed_health_output"}],
+                                                 [{"from": "h", "to": "eh"}]),
+             None),
+            ("v2 config", {"version": "v2", "inputs": {}},
+             "config: unsupported format: no node list (a v2 pipeline has to be rebuilt in v3 first)"),
             ("output_transform to other output", cfg([L2M, {"name": "ot", "type": "output_transform"}, {"name": "h", "type": "http_output"}],
                                                      [{"from": "m", "to": "ot"}, {"from": "ot", "to": "h"}]),
              "ot: unsupported output_transform feeding: h"),
@@ -284,8 +337,52 @@ class TranslateTest(unittest.TestCase):
                     got = None
                 except translate.Unsupported as e:
                     got = str(e)
+                if desc == "old outputs with node health":
+                    # The reason is structure.py's; only the hint is checked here.
+                    self.assertTrue(got and got.endswith("(rerun with --accept drop-node-health)"), got)
+                    continue
                 if got != want:
                     self.fail(f"{desc}: got: {got}, want: {want}")
+
+    def test_structure(self):
+        pack = {"type": "compound", "data_types": ["log"], "nodes": PACK_IO + [ottl(['set(attributes["p"], "1")'], name="x")],
+                "links": [{"from": "in", "to": "x"}, {"from": "x", "to": "out"}]}
+        c = cfg([{"name": "s", "type": "sequence", "processors": [
+            {"type": "ottl_transform", "statements": 'set(attributes["a"], "1")'}, pack,
+            {"type": "ottl_transform", "statements": 'set(attributes["z"], "1")'}]}, OUT], [{"from": "s", "to": "out"}])
+        got = translate.translate(c)
+        self.assertEqual(got["structure"], ["lift_nested_packs"])
+        types = [n["type"] for n in c["nodes"]]
+        self.assertEqual(types.count("compound"), 1, types)
+        self.assertFalse(any(p.get("type") == "compound" for n in c["nodes"] for p in n.get("processors") or []), c["nodes"])
+        names = {n["name"] for n in c["nodes"]}
+        for l in c["links"]:
+            self.assertIn(l["from"].split("->")[0], names, l)
+            self.assertIn(l["to"].split("->")[0], names, l)
+
+        old = cfg([{"name": "i", "type": "http_input"}, {"name": "h", "type": "ed_node_health_input"},
+                   {"name": "lo", "type": "ed_logs_output"}, {"name": "eh", "type": "ed_health_output"}],
+                  [{"from": "i", "to": "lo"}, {"from": "h", "to": "eh"}])
+        got = translate.translate(old, ("drop-node-health",))
+        self.assertEqual((got["structure"], got["accepted"]), (["old_outputs"], {"drop-node-health": 1}))
+        self.assertEqual(sorted(n["type"] for n in old["nodes"]), ["ed_output", "http_input"])
+
+    def test_accept_cli(self):
+        c = cfg([{"name": "j", "type": "parse_json_attributes", "process_field": "item.body"}])
+        with tempfile.TemporaryDirectory() as d:
+            src, dst = os.path.join(d, "go.yaml"), os.path.join(d, "red.yaml")
+            with open(src, "w") as f:
+                yaml.safe_dump(c, f)
+            run = lambda *a: subprocess.run([sys.executable, os.path.join(HERE, "translate.py"), *a], capture_output=True, text=True)
+            p = run(src, dst)
+            self.assertEqual((p.returncode, os.path.exists(dst)), (1, False), p.stderr)
+            self.assertIn("accept='json-parser'", p.stderr)
+            p = run("--accept", "json-parser", src, dst)
+            self.assertEqual(p.returncode, 0, p.stderr)
+            self.assertEqual(yaml.safe_load(p.stdout)["accepted"], {"json-parser": 1})
+            self.assertEqual(run("--accept", "all", src, dst).returncode, 0)
+            self.assertEqual(run("--accept", "nope", src, dst).returncode, 2)
+            self.assertIn("json-parser", run("--list-accept").stdout)
 
     def test_cli(self):
         cases = [

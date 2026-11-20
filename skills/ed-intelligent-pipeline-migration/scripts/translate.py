@@ -5,27 +5,36 @@ RED runs OTTL nodes only. Each legacy node and CEL form listed below maps to a
 fixed rewrite that keeps the Go agent's behaviour; every other form raises an
 error naming the node, and nothing is written. The translator never guesses.
 
-  log_transform, generic_transform  -> ottl_transform
+  log_transform, generic_transform  -> ottl_transform                 (small.py)
   resource_transform                -> route_ottl + <name>__apply ottl_transform
-  regex_filter                      -> ottl_filter
+  regex_filter                      -> ottl_filter                    (small.py)
   log_level_detector                -> ottl_transform
-  parse_json_attributes             -> ottl_transform
-  route (CEL)                       -> route_ottl
+  parse_json_attributes, mask, unescape_json, grok -> ottl_transform  (small.py)
+  route (CEL)                       -> route_ottl                     (small.py)
   log_to_pattern                    -> sequence [log_to_pattern_metric]
-  log_to_metric                     -> sequence [ottl_filter, extract_metric, aggregate_metric]
+  log_to_metric                     -> sequence [filter, extract_metric, aggregate_metric]  (l2m.py)
   output_transform                  -> removed when it only feeds ed_output
+  a pack in a sequence's processors -> a top-level pack behind a gate  (structure.py)
+  old ed_*_output set               -> one ed_output                   (structure.py)
 
-Whole config: `//` comment lines are stripped from OTTL statements, and
-`lookup` event_field paths are converted to OTTL, with those lookups wrapped in
-a sequence.
+The rules apply at the top level and inside packs. Whole config: `//` comment
+lines are stripped from OTTL statements, `lookup` event_field paths are
+converted to OTTL with those lookups wrapped in a sequence, and a json_unroll
+field_path written item["body"] or item.body becomes body.
+
+Some rewrites match the Go agent on ordinary input and differ on specific
+inputs. Those are refused unless the difference is named with --accept.
 
 Usage:
   python3 translate.py go.yaml red.yaml
+  python3 translate.py --accept json-parser,percentiles go.yaml red.yaml   # or --accept all
+  python3 translate.py --list-accept
 
 Prints a JSON summary to stdout. Exits 1 with `<node>: unsupported <what>:
 <expression>` on stderr when a node cannot be translated.
 """
 import collections
+import copy
 import json
 import re
 import sys
@@ -504,30 +513,90 @@ def lookup_paths(n):
     return changed
 
 
-def translate(c):
-    """Translates a parsed Go config in place and returns the summary."""
+# Differences from the Go agent that a translation is only made with when the caller accepts
+# them by name. small.py lists the ones that belong to its node types.
+ACCEPT = {
+    "percentiles":
+        "log_to_metric with p95 or p99: Go interpolates between samples, RED takes the nearest rank, so the "
+        "values differ (15 against 20 for two samples, 190 against 190.95 for 200).",
+    "drop-node-health":
+        "old ed_*_output set fed by ed_node_health_input: that input also emits metrics, which ed_health_output "
+        "never took and a single ed_output would. RED has no such input, so the node is removed.",
+}
+
+
+EARLIER = {"log_transform": transform_node, "generic_transform": transform_node, "route": route,
+           "log_to_pattern": log_to_pattern}
+
+
+def accept_flags():
+    import small
+    return {**small.DIFFERENCES, **ACCEPT}
+
+
+def _apply(fn, node, kind, accept, used):
+    """Runs a rule strictly. When it refuses only for a difference the caller accepted, runs it
+    again with that difference accepted and counts it in used."""
+    taken = []
+    while True:
+        try:
+            if kind == "log_to_metric":
+                return fn(node, approx_percentiles="percentiles" in taken)
+            return fn(node, accept=tuple(taken)) if taken else fn(node)
+        except Unsupported as e:
+            m = re.search(r"unsupported without accept='([\w-]+)'", str(e))
+            flag = m.group(1) if m else None
+            if kind == "log_to_metric" and re.search(r"unsupported enabled_stats: p\d", str(e)):
+                flag = "percentiles"
+            if flag is None or flag in taken:
+                # The forms small.py has no rule for keep the rule this file had before it.
+                if flag is None and kind in EARLIER:
+                    return EARLIER[kind](node)
+                raise
+            if flag not in accept:
+                raise Unsupported(f"{e} (rerun with --accept {flag})" if "without accept" not in str(e) else str(e))
+            taken.append(flag)
+            used[flag] += 1
+
+
+def unroll_paths(n):
+    # Go reads json_unroll's field_path item["body"] / item.body as the body. RED up to 3.16.0
+    # reads it as a path rooted at `item`, finds nothing and drops every log.
+    changed = False
+    if n.get("type") == "json_unroll" and str(n.get("field_path", "")).replace(" ", "") in ('item["body"]', "item.body"):
+        n["field_path"], changed = "body", True
+    for p in n.get("processors") or []:
+        changed = unroll_paths(p) or changed
+    return changed
+
+
+def _level(c, accept, summary, where=""):
+    """Translates c["nodes"] and c["links"] in place: the top level, or the inside of one pack."""
+    import l2m
+    import small
+    rules = {**small.RULES, "log_level_detector": log_level_detector, "log_to_metric": l2m.log_to_metric}
     links = list(c.get("links") or [])
     types = {n["name"]: n["type"] for n in c["nodes"]}
-    translated, l2m, removed, nodes, wrap = collections.Counter(), [], [], [], set()
-    simple = {"log_transform": transform_node, "generic_transform": transform_node, "regex_filter": regex_filter,
-              "log_level_detector": log_level_detector, "parse_json_attributes": parse_json_attributes,
-              "log_to_pattern": log_to_pattern, "log_to_metric": log_to_metric}
+    translated, nodes, wrap = summary["translated"], [], set()
     for n in c["nodes"]:
         t, name = n["type"], n["name"]
-        if t in simple:
-            nodes.append(simple[t](n))
+        if t == "compound":
+            _level(n, accept, summary, f"{where}{name}->")
+            nodes.append(n)
+            continue
+        if t in rules and not (t == "route" and n.get("expression_type", "cel") != "cel"):
+            nodes.append(_apply(rules[t], n, t, accept, summary["accepted"]))
         elif t == "resource_transform":
             out, links = resource_transform(n, links)
             nodes += out
-        elif t == "route" and n.get("expression_type", "cel") == "cel":
-            nodes.append(route(n))
         elif t == "output_transform":
             links = remove_output_transform(name, types, links)
-            removed.append(name)
+            summary["removed"].append(where + name)
             continue
         else:
             n = dict(n)
             changed = strip_comments(n)
+            changed = unroll_paths(n) or changed
             if lookup_paths(n):
                 changed = True
                 if t == "lookup":
@@ -538,7 +607,7 @@ def translate(c):
             continue
         translated[t] += 1
         if t == "log_to_metric":
-            l2m.append(name)
+            summary["log_to_metric"].append(where + name)
         if t in ("log_to_pattern", "log_to_metric"):
             wrap.add(name)
     # The control plane accepts log_to_pattern_metric and OTTL lookup paths only inside a sequence.
@@ -553,24 +622,69 @@ def translate(c):
                 raise unsupported(l["from"], "failure link", f"{l['to']} differs from its success links")
     c["nodes"] = nodes
     c["links"] = [l for l in links if not (l["from"] in wrap and l.get("path") == "failure")]
-    return {"translated": dict(sorted(translated.items())), "removed": removed, "log_to_metric": l2m}
+
+
+def translate(c, accept=()):
+    """Translates a parsed Go config in place and returns the summary.
+
+    accept names the differences from the Go agent the caller takes (see accept_flags()).
+    On Unsupported the config may be partly rewritten, so translate a copy.
+    """
+    import structure
+    if not isinstance(c.get("nodes"), list):
+        raise Unsupported("config: unsupported format: no node list (a v2 pipeline has to be rebuilt in v3 first)")
+    summary = {"translated": collections.Counter(), "removed": [], "log_to_metric": [],
+               "structure": [], "accepted": collections.Counter()}
+    before = json.dumps(c, sort_keys=True, default=str)
+    structure.lift_nested_packs(c)
+    if json.dumps(c, sort_keys=True, default=str) != before:
+        summary["structure"].append("lift_nested_packs")
+    if any(n["type"] in structure.OLD_ED_OUTPUTS for n in c["nodes"]):
+        try:
+            structure.old_outputs(copy.deepcopy(c))
+            structure.old_outputs(c)
+        except Unsupported as e:
+            if "ed_node_health_input" not in str(e) or "drop-node-health" not in accept:
+                hint = " (rerun with --accept drop-node-health)" if "ed_node_health_input" in str(e) else ""
+                raise Unsupported(f"{e}{hint}")
+            structure.old_outputs(c, drop_types=("ed_node_health_input",))
+            summary["accepted"]["drop-node-health"] += 1
+        summary["structure"].append("old_outputs")
+    _level(c, accept, summary)
+    summary["translated"] = dict(sorted(summary["translated"].items()))
+    summary["accepted"] = dict(sorted(summary["accepted"].items()))
+    return summary
 
 
 def main():
-    if len(sys.argv) != 3:
+    args, accept = sys.argv[1:], set()
+    if args[:1] == ["--list-accept"]:
+        for k, v in sorted(accept_flags().items()):
+            print(f"{k}\n    {v}")
+        return
+    while args[:1] == ["--accept"] and len(args) >= 2:
+        accept |= set(accept_flags()) if args[1] == "all" else set(args[1].split(","))
+        args = args[2:]
+    unknown = accept - set(accept_flags())
+    if len(args) != 2 or unknown:
         print(__doc__, file=sys.stderr)
+        if unknown:
+            print(f"unknown --accept value: {', '.join(sorted(unknown))}", file=sys.stderr)
         sys.exit(2)
-    with open(sys.argv[1]) as f:
+    with open(args[0]) as f:
         c = yaml.safe_load(f)
     try:
-        summary = translate(c)
+        summary = translate(c, accept)
     except Unsupported as e:
         print(e, file=sys.stderr)
         sys.exit(1)
-    with open(sys.argv[2], "w") as f:
+    with open(args[1], "w") as f:
         yaml.safe_dump(c, f, sort_keys=False, width=1000, allow_unicode=True)
     print(json.dumps(summary, indent=2))
 
 
 if __name__ == "__main__":
-    main()
+    # The rule modules import this file as `translate`. Run that copy, so there is
+    # one Unsupported class and their refusals are caught here.
+    import translate
+    translate.main()
