@@ -4,7 +4,9 @@
 Both agents get a copy of the same config in which every input node is replaced
 by a local receiver (http_input for line fixtures, otlp_input for OTLP/HTTP JSON
 fixtures) and every output node by an http_output pointing at a capture server
-in this process. The same fixture bytes are posted to both agents. After
+in this process. The same fixture bytes are posted to both agents. A fed
+file_input node is kept as it is and pointed at one local file that both agents
+tail; its fixture is appended to that file --file-wait seconds after start. After
 --settle seconds both are stopped with SIGTERM, and the captured records are
 normalized and compared per output node. Set --settle longer than the longest
 processor interval: the Go agent was observed to exit without emitting an open
@@ -18,6 +20,10 @@ Exit code 0 means every output node matched after normalization; 1 means a
 diff; 2 means the harness itself failed (bad arguments, a trace fixture, an
 agent that did not open its inputs, a rejected feed, or a Go agent that
 captured nothing on any output).
+
+Inside a container, start this script under an init process (`docker run
+--init`). As a child of PID 1 the Go agent takes itself for a service, ignores
+`-c` and looks for config.yml next to its binary.
 """
 import argparse
 import collections
@@ -83,6 +89,12 @@ def rewrite(cfg, agent, feeds, ports, capture_port):
             if name not in feeds:
                 dropped.add(name)
                 continue
+            if t == "file_input":
+                # A file input keeps its settings and tails a local file that both agents
+                # share, so path-based fields are comparable; the feed is appended to it
+                # once both agents are up.
+                nodes.append(dict(n, path=str(FILE_FEEDS[name])))
+                continue
             port = ports[agent][name]
             if feeds[name].name.endswith(".otlp.json"):
                 nodes.append({"name": name, "type": "otlp_input", "port": port, "protocol": "http"})
@@ -138,7 +150,9 @@ def records(body):
         return []
     try:
         v = json.loads(text)
-        return v if isinstance(v, list) else [v]
+        v = v if isinstance(v, list) else [v]
+        # A record an agent sent as a bare string or number is kept, so it shows in the diff.
+        return [x if isinstance(x, dict) else {"__nondict__": x} for x in v]
     except json.JSONDecodeError:
         out = []
         for line in text.splitlines():
@@ -200,8 +214,13 @@ def post(url, data, ctype):
         return r.status
 
 
+FILE_FEEDS = {}
+
+
 def feed(agent, feeds, ports, batch):
     for name, path in feeds.items():
+        if name in FILE_FEEDS:
+            continue
         port = ports[agent][name]
         if path.name.endswith(".otlp.json"):
             # One OTLP/HTTP JSON request per line; the signal comes from the top-level key.
@@ -228,6 +247,8 @@ def main():
                    help="lines file -> http_input, *.otlp.json (one request per line) -> otlp_input")
     p.add_argument("--out", type=Path, required=True)
     p.add_argument("--settle", type=float, default=15, help="seconds to wait after feeding, before stopping")
+    p.add_argument("--file-wait", type=float, default=10,
+                   help="seconds to wait before appending the feed of a file_input, so both agents have opened the file")
     p.add_argument("--startup", type=float, default=60, help="seconds to wait for each agent's inputs")
     p.add_argument("--batch", type=int, default=100, help="lines per POST")
     p.add_argument("--ignore", action="append", default=[], help="extra field name to drop before comparing")
@@ -251,7 +272,11 @@ def main():
     srcs = {"go": yaml.safe_load(a.config.read_text()),
             "red": yaml.safe_load((a.red_config or a.config).read_text())}
     capture_port = free_port()
-    ports = {ag: {n: free_port() for n in feeds} for ag in AGENTS}
+    for n in srcs["go"].get("nodes", []):
+        if n.get("type") == "file_input" and n["name"] in feeds:
+            FILE_FEEDS[n["name"]] = (a.out / ("input-" + re.sub(r"\W+", "_", n["name"]) + ".log")).resolve()
+            FILE_FEEDS[n["name"]].write_bytes(b"")
+    ports = {ag: {n: free_port() for n in feeds if n not in FILE_FEEDS} for ag in AGENTS}
     dropped = {}
     for ag in AGENTS:
         cfg, dropped[ag] = rewrite(srcs[ag], ag, feeds, ports, capture_port)
@@ -284,6 +309,11 @@ def main():
                 if not wait_port(port, procs[ag], a.startup):
                     status = f"{ag} did not open input {name} on :{port}; see {a.out / ag} and {a.out / (ag + '.log')}"
                     raise RuntimeError(status)
+        if FILE_FEEDS:
+            time.sleep(a.file_wait)  # a file input has no port to wait for
+            for name, dst in FILE_FEEDS.items():
+                with dst.open("ab") as f:
+                    f.write(feeds[name].read_bytes())
         threads = [threading.Thread(target=feed, args=(ag, feeds, ports, a.batch)) for ag in AGENTS]
         [t.start() for t in threads]
         [t.join() for t in threads]
@@ -311,7 +341,7 @@ def main():
     for node in outputs:
         raw = {ag: [r for b in srv.bodies.get((ag, node), []) for r in records(b)] for ag in AGENTS}
         bad_ts = {ag: sum(1 for r in raw[ag] if isinstance(r, dict)
-                          and (r.get("attributes") or {}).pop(BAD_TS, None) is not None)
+                          and isinstance(r.get("attributes"), dict) and r["attributes"].pop(BAD_TS, None) is not None)
                   for ag in AGENTS}
         got = {ag: [normalize(r, ignore, {pt: f"<port:{n}>" for n, pt in ports[ag].items()}) for r in raw[ag]]
                for ag in AGENTS}

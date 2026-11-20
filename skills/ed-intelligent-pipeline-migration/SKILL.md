@@ -2,7 +2,7 @@
 name: ed-intelligent-pipeline-migration
 description: Use when moving an Edge Delta pipeline or fleet (including cloud/hosted fleets) from the Go agent to the Rust (RED) agent, when agents crash-loop or stop reporting after switching agent builds, or when someone asks whether a pipeline "behaves the same" on the new agent.
 metadata:
-  version: "0.1.0"
+  version: "0.2.0"
   author: edgedelta
   repository: https://github.com/edgedelta/agent-skills
   tags: edgedelta,red,rust,migration,parity,pipelines,hosted-agents
@@ -51,8 +51,12 @@ Two results are caused by running offline, not by RED:
 The Go agent accepts these config shapes, and RED preflight has rejected them
 before:
 
-- a `sequence` or `compound` inside another sequence's `processors:` list.
-  Top-level `sequence` and `compound` nodes are a different case.
+- a `compound` (pack) inside a sequence's `processors:` list, on RED up to
+  3.16.0. The translator below lifts it to a top-level pack. Top-level
+  `sequence` and `compound` nodes are a different case.
+- a `json_unroll` whose `field_path` is written `item["body"]` or `item.body`:
+  RED up to 3.16.0 starts, then drops every log at that node. The translator
+  rewrites the path to `body`.
 - `telemetrygen_input` with `template_type: metric` or `trace`
 - `ed_debug_output`, which RED starts with but warns about as above
 
@@ -72,40 +76,81 @@ Stage 2 reports this as `bad_timestamp`.
 
 RED runs OTTL nodes only. The control plane still accepts legacy Go nodes on a
 RED pipeline, and RED drops their data or refuses to start. Run the translator
-when stage 1 reports `node type not implemented` for a legacy node, or rejects
-a CEL `route`:
+when stage 1 reports `node type not implemented` for a legacy node, rejects a
+CEL `route`, a pack inside a sequence, or finds no output it can run:
 
 ```bash
 python3 scripts/translate.py pipeline.yaml migrated.yaml
+python3 scripts/translate.py --accept json-parser,percentiles pipeline.yaml migrated.yaml
+python3 scripts/translate.py --list-accept
 ```
 
-It rewrites `log_transform`, `generic_transform`, `resource_transform`,
-`regex_filter`, `log_level_detector`, `parse_json_attributes`, CEL `route`,
-`log_to_pattern`, `log_to_metric` and `output_transform` into OTTL nodes, and
-prints a JSON summary of what it changed. Run stage 1 again on `migrated.yaml`,
-then pass it to stage 2 as `--red-config`. A translated pipeline counts as
-verified only after stage 2 passes on it with a negative control.
+It rewrites these, at the top level and inside packs, and prints a JSON summary
+of what it changed:
+
+| Legacy form | Becomes |
+| --- | --- |
+| `log_transform`, `generic_transform`, `resource_transform`, `log_level_detector` | `ottl_transform` (plus a `route_ottl` for `resource_transform`) |
+| `parse_json_attributes`, `mask`, `unescape_json`, `grok` | `ottl_transform` |
+| `regex_filter` | `ottl_filter` |
+| CEL `route` | `route_ottl` |
+| `log_to_pattern` | sequence with `log_to_pattern_metric` |
+| `log_to_metric`, with `enabled_stats` and `dimension_groups` | sequence of filter, `extract_metric`, `aggregate_metric` |
+| `output_transform` feeding only `ed_output` | removed |
+| a pack inside a sequence's `processors:` | a top-level pack behind a `route_ottl` gate |
+| `ed_logs_output`, `ed_archive_output`, `ed_metrics_output`, `ed_health_output`, `ed_patterns_output` | one `ed_output` |
+| `json_unroll` with `field_path: item["body"]` or `item.body` | `field_path: body` |
+| `//` comment lines in OTTL, `item[...]` paths in `lookup` | removed, converted |
+
+Run stage 1 again on `migrated.yaml`, then pass it to stage 2 as
+`--red-config`. A translated pipeline counts as verified only after stage 2
+passes on it with a negative control.
 
 The script never guesses. Any form outside its rules stops it with
 `<node>: unsupported <what>: <expression>`, and it writes nothing. Rewrite that
 node by hand in OTTL with **ed-pipeline-tuning**, then run the script again.
-Rejected forms include `convert_timestamp`, CEL macros, `ec2_metadata`,
-`from_k8s`, field paths outside `item["attributes"]` and `item["resource"]`,
-`log_to_metric` with `dimension_groups`, and `regex_filter` with `field_path`.
+Rejected forms include v2 configs, CEL macros, `ec2_metadata`, `from_k8s`,
+`log_to_metric` with two dimensions of the same name or a stat other than
+count, sum, avg, min, max, p95 and p99, `regex_filter` with `field_path`, and a
+`lookup` keyed on `regex_capture(...)`.
 
-`log_to_metric` becomes a filter, `extract_metric` and `aggregate_metric`
-writing `<name>.count`. It loses:
-- `<name>.anomaly1`, and any monitor or dashboard built on it
-- zero-count intervals: the Go agent reports 0 for a quiet interval, RED
-  emits nothing
+### Differences you have to accept by name
+
+Some rewrites match the Go agent on ordinary input and differ on specific
+inputs. The script refuses those until you name the difference with
+`--accept`; `--list-accept` prints each one in full. The summary's `accepted`
+key counts the ones a pipeline actually needed. Read them before you pass
+`--accept all`.
+
+| Flag | Where the agents differ |
+| --- | --- |
+| `json-parser` | `parse_json_attributes`: malformed JSON the Go reader tolerates (`01`, `+1`, `.5`, a raw tab in a string) fails on RED |
+| `percentiles` | `log_to_metric` p95/p99: Go interpolates, RED takes the nearest rank |
+| `timestamp-unparseable` | `convert_timestamp`: Go writes an empty timestamp when the value does not parse, RED leaves it |
+| `mask-first-occurrence` | `mask` with a capture group: Go masks the first occurrence of the captured text, RED the captured position |
+| `grok-unquote`, `grok-number-forms` | `grok`: Go unescapes a body with backslashes first and converts more number spellings |
+| `unescape-text` | `unescape_json`: same JSON value, different key order and number text |
+| `drop-node-health` | old output set: `ed_node_health_input` has no RED equivalent and is removed |
+
+### What log_to_metric loses
+
+Count, sum, avg, min and max match the Go node, and `_stat_type` is set. The
+translation still differs in these ways:
+- no `<name>.anomaly1`, and any monitor or dashboard built on it
+- zero-count intervals: unless `only_report_nonzeros` is true, the Go agent
+  reports 0 for a quiet interval and RED emits nothing
 - wall-clock buckets: RED buckets by item timestamp
-- first-log labels: RED keeps only attributes identical across the bucket
-- the `_stat_type` and `__metric_category` metadata
+- extra attributes: Go stamps a series with the first log's string attributes,
+  RED keeps the attributes identical across the bucket
+- a maximum over negative values only: Go reports 0, RED the true maximum
 
 Before migrating a pipeline with `log_to_metric`, search the output of
 `edx monitors list --all` and of `edx dashboards get <id>` for each dashboard
 for `.anomaly1`. If a monitor or dashboard uses it, stop and agree on a
 replacement first.
+
+`log_to_pattern` becomes pattern metrics instead of cluster records. Stage 2
+cannot compare the two shapes record by record; compare patterns in stage 3.
 
 Add these fixtures to stage 2 for translated nodes:
 - a log missing each field a transform or route reads
@@ -113,6 +158,7 @@ Add these fixtures to stage 2 for translated nodes:
   `!= nil` does not
 - a string body on any route that indexes `body`
 - a log on each side of every `regex_filter`
+- a log that takes each path through a lifted pack, and one that skips it
 
 ## 2. Side by side: same bytes, diff the outputs
 
@@ -126,6 +172,8 @@ python3 scripts/sidebyside.py --config pipeline.yaml \
 The script writes `go.yaml` and `red.yaml`. In each one:
 - every input named by `--feed` becomes a local receiver: `http_input` for line
   files, `otlp_input` for `*.otlp.json` (one OTLP/HTTP JSON request per line)
+- a fed `file_input` keeps its settings and tails one local file both agents
+  share; the lines are appended `--file-wait` seconds after start
 - every output becomes an `http_output` to a local capture server
 - inputs you don't feed are dropped and listed in `dropped_inputs`
 
@@ -153,6 +201,10 @@ explain, never to make a diff go away.
 Both agents run offline with every inherited `ED_*` variable removed. The Go
 agent also needs `ED_COORDINATOR_CLIENT_DISABLED=1`, or it never opens its
 inputs; the script sets it. The Go agent's log is `<out>/go/edgedelta.log`.
+
+To run both linux binaries on another host, run the script in a container with
+`docker run --init --network none`. Without `--init` the Go agent is a child of
+PID 1, takes itself for a service and ignores its config flag.
 
 Before trusting a pass, run a negative control: a `--red-config` with one
 processor removed must produce exactly the expected `only_*` records.
@@ -225,3 +277,4 @@ blocked. For writing OTTL, see **ed-pipeline-tuning**.
 | Treating a stage 2 match as covering traces | Compare traces in stage 3. |
 | Adding the diffing field to `--ignore` | Find out why it differs, then fix it or record a blocker. |
 | Translating legacy nodes by hand | Run `scripts/translate.py`. Hand-write only the nodes it rejects. |
+| Passing `--accept all` to get past a refusal | Read `--list-accept` and accept only the differences the pipeline can live with. |
