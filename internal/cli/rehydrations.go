@@ -218,8 +218,9 @@ func newRehydrationsCreateCmd() *cobra.Command {
 time range are validated into the eligible archive-source/destination combos,
 which are listed for confirmation and then submitted as a batch.
 
-Use --dry-run to stop after the validation step, and --source/--destination to
-narrow which of the eligible combos are created.`,
+Use --dry-run to stop after the validation step, --source to narrow which of
+the eligible combos are created, and --destination to send every job to that
+destination (required when the filter maps to no destination).`,
 		Example: `  edx rehydrations create --query 'service.name:"api"' --from 2026-08-15T08:00:00.000Z --to 2026-08-15T09:00:00.000Z
   edx rehydrations create --query 'ed.tag:"prod"' --lookback 30m --dry-run`,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -264,6 +265,13 @@ narrow which of the eligible combos are created.`,
 				if p.FilterErrorMessage != "" {
 					fmt.Fprintf(os.Stderr, "skipping %s -> %s: %s\n", p.Source, p.Destination, p.FilterErrorMessage)
 					continue
+				}
+				// The API only maps a destination through mapping rules, so the flag is applied here.
+				if destination != "" {
+					p.Destination = destination
+				}
+				if p.Destination == "" {
+					return fmt.Errorf("no destination is mapped for this filter; pass --destination")
 				}
 				jobs = append(jobs, p)
 			}
@@ -316,7 +324,7 @@ narrow which of the eligible combos are created.`,
 	cmd.Flags().BoolVar(&excludeOverlap, "exclude-overlap", true, "skip data already rehydrated by previous jobs")
 	cmd.Flags().BoolVar(&dryRun, "dry-run", false, "only show the eligible jobs, do not create anything")
 	cmd.Flags().StringVar(&source, "source", "", "restrict to one archive source integration")
-	cmd.Flags().StringVar(&destination, "destination", "", "override the mapped destination")
+	cmd.Flags().StringVar(&destination, "destination", "", "destination for every job, overriding the mapped one")
 	tf.register(cmd, "1h")
 	return cmd
 }

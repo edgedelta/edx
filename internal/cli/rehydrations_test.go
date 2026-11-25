@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -238,6 +239,72 @@ func TestRehydrationsCreateBatch(t *testing.T) {
 		"to": "2026-08-15T09:00:00.000Z",
 		"exclude_overlap": true
 	}]`)
+}
+
+func TestRehydrationsCreateDestination(t *testing.T) {
+	const validateUnmapped = `{
+	"total_jobs": 1,
+	"potential_rehydrations": [
+		{"destination": "", "archive_source": {"tag":"prod","node_name":"arch","type":"gcs_output","bucket":"bucket-a"}}
+	]
+}`
+	tests := []struct {
+		desc     string
+		validate string
+		flags    []string
+		wantDest string
+		wantErr  string
+	}{
+		{desc: "mapped destination is kept", validate: validateTwoJobs, wantDest: "dest-1"},
+		{desc: "flag overrides the mapped destination", validate: validateTwoJobs, flags: []string{"--destination", "gcl-rehydration"}, wantDest: "gcl-rehydration"},
+		{desc: "flag fills an unmapped destination", validate: validateUnmapped, flags: []string{"--destination", "gcl-rehydration"}, wantDest: "gcl-rehydration"},
+		{desc: "unmapped destination without flag is an error", validate: validateUnmapped, wantErr: "--destination"},
+	}
+	for _, tc := range tests {
+		var log []rehydrationReq
+		srv := rehydrationServer(t, map[string]string{
+			"GET /rehydration/validate":           tc.validate,
+			"POST /rehydration/rehydration_batch": `[{"rehydration_id":"rh-new","status":"created"}]`,
+		}, &log)
+		useAPIEnv(t, srv.URL)
+
+		args := append([]string{"rehydrations", "create",
+			"--query", `ed.tag:"prod"`,
+			"--from", "2026-08-15T08:00:00.000Z", "--to", "2026-08-15T09:00:00.000Z",
+			"--yes"}, tc.flags...)
+		err := runEdx(t, args...)
+		srv.Close()
+
+		if tc.wantErr != "" {
+			if err == nil || !strings.Contains(err.Error(), tc.wantErr) {
+				t.Errorf("%s: got: %v, want: error containing %q", tc.desc, err, tc.wantErr)
+			}
+			if len(log) != 1 {
+				t.Errorf("%s: got: %d request(s), want: 1 (validate only)", tc.desc, len(log))
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("%s: got: %v, want: no error", tc.desc, err)
+			continue
+		}
+		if len(log) != 2 {
+			t.Errorf("%s: got: %d request(s), want: 2 (validate + batch)", tc.desc, len(log))
+			continue
+		}
+		var batch []struct {
+			Destination string `json:"destination"`
+		}
+		if err := json.Unmarshal(log[1].body, &batch); err != nil {
+			t.Errorf("%s: could not parse batch body: %v", tc.desc, err)
+			continue
+		}
+		for _, j := range batch {
+			if j.Destination != tc.wantDest {
+				t.Errorf("%s: got: %q, want: %q", tc.desc, j.Destination, tc.wantDest)
+			}
+		}
+	}
 }
 
 func TestRehydrationsCreateDryRun(t *testing.T) {
