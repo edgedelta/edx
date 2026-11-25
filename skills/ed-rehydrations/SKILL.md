@@ -76,7 +76,8 @@ edx rehydrations create -q 'service.name:"api"' \
 
 - `--exclude-overlap` (default true) skips data already rehydrated by
   previous jobs — keep it on to avoid duplicate delivery.
-- `--source` / `--destination` narrow which eligible combos are created.
+- `--source` narrows which eligible combos are created. `--destination` sends
+  every job to that destination; pass it when `validate` shows no destination.
 - Start with a small time window; a wide range over a busy archive is a
   large, costly job. Estimate first (see above).
 
